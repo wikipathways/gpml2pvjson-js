@@ -1,5 +1,5 @@
 {
-  "name": "gpml2pvjson",
+  "name": "gpml2json",
   "version": "0.0.0",
   "description": "convert GPML (XML) to pvjson (json)",
   "main": "gpml.js",
