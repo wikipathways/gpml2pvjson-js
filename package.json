@@ -1,0 +1,37 @@
+{
+  "name": "gpml-to-pvjson",
+  "version": "0.0.0",
+  "description": "convert GPML (XML) to pvjson (json)",
+  "main": "gpml.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gpml",
+    "pathway"
+  ],
+  "author": "Anders Riutta",
+  "license": "Apache 2",
+  "dependencies": {
+    "d3": "~3.4.6",
+    "xmlhttprequest": "~1.6.0",
+    "jsdom": "~0.10.5",
+    "async": "~0.7.0",
+    "cheerio": "~0.16.0",
+    "lodash": "~2.4.1",
+    "csv": "~0.3.7",
+    "rgbcolor": "0.0.3",
+    "he": "~0.4.1",
+    "biopax2json": "wikipathways/biopax2json",
+    "bridgedbjs": "wikipathways/bridgedbjs",
+    "tower-strcase": "~0.5.0",
+    "uuid": "~1.4.1"
+  },
+  "devDependencies": {
+    "pretty-data": "~0.40.0",
+    "colors": "~0.6.2",
+    "figlet": "~1.0.8",
+    "csv": "~0.3.7",
+    "node-csv": "~0.1.2"
+  }
+}

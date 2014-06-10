@@ -1,0 +1,247 @@
+{
+  "@context": {
+    "id": "@id",
+    "type": "@type",
+    "@vocab": "http://www.biopax.org/release/biopax-level3.owl#",
+    "anchor": "http://jsplumbtoolkit.com/doc/anchors",
+    "author": {
+      "@id": "bp:author",
+      "@type": "@vocab"
+    },
+    "backgroundColor": "css2:colors.html#propdef-background-color",
+    "backgroundImage": "css2:colors.html#propdef-background-image",
+    "borderColor": "css2:box.html#propdef-border-color",
+    "borderStyle": "css2:box.html#propdef-border-style",
+    "borderWidth": "css2:box.html#propdef-border-width",
+    "boxSizing": {
+      "@id": "css3Ui:box-sizing",
+      "@value": "border-box"
+    },
+    "bp": {
+      "@id": "http://www.biopax.org/release/biopax-level3.owl#",
+      "@type": "@id"
+    },
+    "cellularLocation": {
+      "@id": "bp:cellularLocation",
+      "@type": "@vocab"
+    },
+    "color": "css2:colors.html#propdef-color",
+    "contains": {
+      "@reverse": "isPartOf",
+      "@type": "@id"
+    },
+    "css2": "http://www.w3.org/TR/CSS2/",
+    "css3Ui": "http://www.w3.org/TR/css3-ui/#",
+    "cssTransform": "http://www.w3.org/TR/css-transforms-1/#",
+    "dataSource": {
+      "@id": "bp:dataSource",
+      "@type": "@id"
+    },
+    "dbId": {
+      "@id": "bp:id",
+      "@type": "xsd:string"
+    },
+    "dbName": {
+      "@id": "bp:db",
+      "@type": "xsd:string"
+    },
+    "dcterms": "http://purl.org/dc/terms/",
+    "Dna": {
+      "@id": "bp:Dna",
+      "@type": "@id"
+    },
+    "DnaReference": {
+      "@id": "bp:DnaReference",
+      "@type": "@id"
+    },
+    "ex": "http://www.example.org/",
+    "fontFamily": "css2:fonts.html#font-family-prop",
+    "fontSize": "css2:fonts.html#propdef-font-size",
+    "fontStyle": "css2:fonts.html#propdef-font-style",
+    "fontWeight": "css2:fonts.html#propdef-font-weight",
+    "functionalEntity": {
+      "@id": "http://identifiers.org/biomodels.sbo/SBO:0000241",
+      "@type": "@id"
+    },
+    "Gene": {
+      "@id": "bp:Gene",
+      "@type": "@id"
+    },
+    "gpml": "http://vocabularies.wikipathways.org/gpml#",
+    "group": {
+      "@container": "@list",
+      "@id": "gpml:Group"
+    },
+    "height": "css2:visudet.html#propdef-height",
+    "image": "schema:image",
+    "Interaction": {
+      "@id": "bp:Interaction",
+      "@type": "@id"
+    },
+    "relationGraph": "@graph",
+    "relationTypes": {
+      "@id": "bp:interactionType",
+      "@type": "@vocab"
+    },
+    "relation": {
+      "@id": "dcterms:relation",
+      "@type": "@id"
+    },
+    "isPartOf": {
+      "@id": "dcterms:isPartOf",
+      "@type": "@id"
+    },
+    "lastModified": "gpml:Last-Modified",
+    "markerEnd": "svg:painting.html#MarkerEndProperty",
+    "markerStart": "svg:painting.html#MarkerStartProperty",
+    "media": "http://www.w3.org/TR/mediaont-10/",
+    "name": "http://xmlns.com/foaf/0.1/name",
+    "organism": {
+      "@id": "bp:organism",
+      "@type": "@vocab"
+    },
+    "padding": "css2:box.html#propdef-padding",
+    "elements": "@graph",
+    "Pathway": {
+      "@id": "bp:Pathway",
+      "@type": "@id"
+    },
+    "pathwayComponents": {
+      "@id": "bp:pathwayComponent",
+      "@type": "@id"
+    },
+    "points": {
+      "@container": "@list",
+      "@id": "gpml:Point"
+    },
+    "position": "css2:visuren.html#propdef-position",
+    "Protein": {
+      "@id": "bp:Protein",
+      "@type": "@id"
+    },
+    "ProteinReference": {
+      "@id": "bp:ProteinReference",
+      "@type": "@vocab"
+    },
+    "PublicationXref": {
+      "@id": "bp:PublicationXref",
+      "@type": "@id",
+      "@container": "@list"
+    },
+    "references": {
+      "@id": "dcterms:references",
+      "@type": "@id"
+    },
+    "RelationshipXref": {
+      "@id": "bp:RelationshipXref",
+      "@type": "@id",
+      "@container": "@list"
+    },
+    "Rna": {
+      "@id": "bp:Rna",
+      "@type": "@id"
+    },
+    "RnaReference": {
+      "@id": "bp:RnaReference",
+      "@type": "@id"
+    },
+    "rotation": {
+      "@id": "cssTransform:funcdef-rotate",
+      "@type": "xsd:integer"
+    },
+    "schema": "http://schema.org/",
+    "shape": "shape-library:shape",
+    "shape-library": "ex:shape-library/",
+    "SmallMolecule": {
+      "@id": "bp:SmallMolecule",
+      "@type": "@id"
+    },
+    "SmallMoleculeReference": {
+      "@id": "bp:SmallMoleculeReference",
+      "@type": "@id"
+    },
+    "stroke": "svg:painting.html#StrokeProperty",
+    "strokeWidth": "svg:painting.html#StrokeWidthProperty",
+    "svg": "http://www.w3.org/TR/SVG11/",
+    "textAlign": "css2:text.html#propdef-text-align",
+    "textContent": {
+      "@id": "bp:displayName",
+      "@type": "xsd:string"
+    },
+    "UnificationXref": {
+      "@id": "bp:UnificationXref",
+      "@type": "@id",
+      "@container": "@list"
+    },
+    "verticalAlign": "css2:visudet.html#propdef-vertical-align",
+    "width": "css2:visudet.html#propdef-width",
+    "wp": "http://vocabularies.wikipathways.org/wp#",
+    "x": {
+      "@id": "css2:visuren.html#propdef-left",
+      "@type": "xsd:integer"
+    },
+    "xref": {
+      "@id": "bp:xref",
+      "@type": "@id",
+      "@container": "@list"
+    },
+    "xrefs": {
+      "@id": "bp:xref",
+      "@type": "@id",
+      "@container": "@list"
+    },
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "y": {
+      "@id": "css2:visuren.html#propdef-top",
+      "@type": "xsd:integer"
+    },
+    "zIndex": {
+      "@id": "css2:z-index",
+      "@type": "xsd:integer"
+    },
+    "Cell": "http://identifiers.org/go/GO:0005623",
+    "Nucleus": "http://identifiers.org/go/GO:0005634",
+    "Endoplasmic Reticulum": "http://identifiers.org/go/GO:0005783",
+    "Golgi Apparatus": "http://identifiers.org/go/GO:0005794",
+    "Sarcoplasmic Reticulum": "http://identifiers.org/go/GO:0016529",
+    "Organelle": "http://identifiers.org/go/GO:0043226",
+    "Vesicle": "http://identifiers.org/go/GO:0031982",
+    "Extracellular region": "http://identifiers.org/go/GO:0005576",
+    "Mitochondria": "http://identifiers.org/go/GO:0005739",
+    "Addition of a chemical group": "http://identifiers.org/biomodels.sbo/SBO:0000210",
+    "Catalysis": "http://identifiers.org/biomodels.sbo/SBO:0000172",
+    "Cleavage": "http://identifiers.org/biomodels.sbo/SBO:0000178",
+    "Consumption": "http://identifiers.org/biomodels.sbo/SBO:0000394",
+    "Conversion": "http://identifiers.org/biomodels.sbo/SBO:0000182",
+    "Inhibition": "http://identifiers.org/biomodels.sbo/SBO:0000169",
+    "Necessary stimulation": "http://identifiers.org/biomodels.sbo/SBO:0000171",
+    "Non-covalent binding": "http://identifiers.org/biomodels.sbo/SBO:0000177",
+    "Production": "http://identifiers.org/biomodels.sbo/SBO:0000393",
+    "Stimulation": "http://identifiers.org/biomodels.sbo/SBO:0000170",
+    "Transcription": "http://identifiers.org/biomodels.sbo/SBO:0000183",
+    "Translation": "http://identifiers.org/biomodels.sbo/SBO:0000184",
+    "Anopheles gambiae": "http://identifiers.org/taxonomy/7165",
+    "Arabidopsis thaliana": "http://identifiers.org/taxonomy/3702",
+    "Bacillus subtilis": "http://identifiers.org/taxonomy/1423",
+    "Bos taurus": "http://identifiers.org/taxonomy/9913",
+    "Caenorhabditis elegans": "http://identifiers.org/taxonomy/6239",
+    "Canis familiaris": "http://identifiers.org/taxonomy/9615",
+    "Danio rerio": "http://identifiers.org/taxonomy/7955",
+    "Drosophila melanogaster": "http://identifiers.org/taxonomy/7227",
+    "Escherichia coli": "http://identifiers.org/taxonomy/562",
+    "Equus caballus": "http://identifiers.org/taxonomy/9796",
+    "Gallus gallus": "http://identifiers.org/taxonomy/9031",
+    "Gibberella zeae": "http://identifiers.org/taxonomy/5518",
+    "Homo sapiens": "http://identifiers.org/taxonomy/9606",
+    "Hordeum vulgare": "http://identifiers.org/taxonomy/4513",
+    "Mus musculus": "http://identifiers.org/taxonomy/10090",
+    "Mycobacterium tuberculosis": "http://identifiers.org/taxonomy/1773",
+    "Oryza sativa": "http://identifiers.org/taxonomy/4530",
+    "Pan troglodytes": "http://identifiers.org/taxonomy/9598",
+    "Rattus norvegicus": "http://identifiers.org/taxonomy/10116",
+    "Saccharomyces cerevisiae": "http://identifiers.org/taxonomy/4932",
+    "Solanum lycopersicum": "http://identifiers.org/taxonomy/4081",
+    "Sus scrofa": "http://identifiers.org/taxonomy/9823",
+    "Zea mays": "http://identifiers.org/taxonomy/4577"
+  }
+}
