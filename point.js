@@ -2,10 +2,6 @@ var Strcase = require('tower-strcase')
   , _ = require('lodash')
   , Cheerio = require('cheerio')
   ;
-  //* for dev only
-  var DeveloperNotifications = require('./notifications.js')
-    ;
-  //*/
 
 module.exports = (function(){
   'use strict';
