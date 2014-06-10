@@ -18,11 +18,6 @@ var GpmlUtilities = require('./gpml-utilities.js')
   // , Text = require('./text.js')
   ;
 
-  //* for dev only
-  var pd = require('pretty-data').pd
-    ;
-  //*/
-
 module.exports = {
   toPvjson: function(gpmlSelection, pathwayMetadata, callbackOutside){
     /*
