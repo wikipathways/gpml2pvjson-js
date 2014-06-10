@@ -33,5 +33,13 @@
     "figlet": "~1.0.8",
     "csv": "~0.3.7",
     "node-csv": "~0.1.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:wikipathways/gpml2json.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wikipathways/gpml2json/issues"
+  },
+  "homepage": "https://github.com/wikipathways/gpml2json"
 }
