@@ -29,18 +29,14 @@ module.exports = {
 
     var pathwayIri = 'http://identifiers.org/wikipathways/' + pathwayMetadata.dbId;
 
-    /*
-    var globalContext = JSON.parse(fs.readFileSync('./pathway.jsonld'));
-    pvjson['@context'] = globalContext['@context'];
-    //*/
-
-    //*
     var globalContext = [];
     // TODO update this to remove test2.
     globalContext.push('http://test2.wikipathways.org/v2/contexts/pathway.jsonld');
     pvjson['@context'] = globalContext;
-    //*/
-    pvjson['@context']['@base'] = pathwayIri + '/';
+    var localContext = {};
+    localContext = {};
+    localContext['@base'] = pathwayIri + '/';
+    pvjson['@context'].push(localContext);
     pvjson.type = 'Pathway';
     pvjson.id = pathwayIri;
     pvjson.idVersion = pathwayMetadata.idVersion;
