@@ -78,14 +78,9 @@
       "@id": "bp:Interaction",
       "@type": "@id"
     },
-    "relationGraph": "@graph",
-    "relationTypes": {
+    "interactionType": {
       "@id": "bp:interactionType",
       "@type": "@vocab"
-    },
-    "relation": {
-      "@id": "dcterms:relation",
-      "@type": "@id"
     },
     "isPartOf": {
       "@id": "dcterms:isPartOf",
@@ -128,7 +123,7 @@
       "@type": "@id",
       "@container": "@list"
     },
-    "references": {
+    "isAttachedTo": {
       "@id": "dcterms:references",
       "@type": "@id"
     },

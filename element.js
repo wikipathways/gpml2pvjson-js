@@ -9,116 +9,7 @@ var BiopaxRef = require('./biopax-ref.js')
 
 // ...element includes all GPML elements and is the parent of both ...node and ...edge.
 module.exports = {
-  /* I think these can all be deleted - AR
-  gpmlColorToCssColor: function(gpmlColor, pathvisioDefault) {
-    var color;
-    if (gpmlColor !== pathvisioDefault) {
-      if (!!gpmlColor) {
-        color = new RGBColor(gpmlColor);
-        if (color.ok) {
-          return color.toHex();
-        }
-        else {
-          return 'black';
-        }
-      }
-      else {
-        return 'black';
-      }
-    }
-    else {
-      return null;
-    }
-  },
-
-  setColorAsJson: function(jsonElement, currentGpmlColorValue, defaultGpmlColorValue) {
-    var jsonColor;
-    if (currentGpmlColorValue !== defaultGpmlColorValue) {
-      jsonColor = this.gpmlColorToCssColor(currentGpmlColorValue, defaultGpmlColorValue);
-      jsonElement.color = jsonColor;
-      jsonElement.borderColor = jsonColor;
-      if (jsonElement.hasOwnProperty('text')) {
-        jsonElement.text.color = jsonColor;
-      }
-    }
-    return jsonElement;
-  },
-
-  // TODO can we delete this function?
-  getLineStyle: function(gpmlElement) {
-    var LineStyle, attributes;
-    var graphics = gpmlElement.select('Graphics');
-    if (!!graphics) {
-      LineStyle = graphics.attr('LineStyle');
-      if (!!LineStyle) {
-        return LineStyle;
-      }
-      else {
-
-        // As currently specified, a given element can only have one LineStyle.
-        // This one LineStyle can be solid, dashed (broken) or double.
-        // If no value is specified in GPML for LineStyle, then we need to check
-        // for whether the element has LineStyle of double.
-
-        attributes = gpmlElement.selectAll('Attribute');
-        if (attributes.length > 0) {
-          LineStyle = attributes.filter(function(d, i) {
-            return d3.select(this).attr('Key') === 'org.pathvisiojs.DoubleLineProperty' && d3.select(this).attr('Value') === 'Double';
-          });
-
-          if (LineStyle[0].length > 0) {
-            return 'double';
-          }
-          else {
-            return null;
-          }
-        }
-        else {
-          return null;
-        }
-      }
-    }
-  },
-
-  getBorderStyle: function(gpmlLineStyle, pathvisioDefault) {
-
-    // Double-lined EntityNodes will be handled by using a symbol with double lines.
-    // Double-lined edges will be rendered as single-lined, solid edges, because we
-    // shouldn't need double-lined edges other than for cell walls/membranes, which
-    // should be symbols. Any double-lined edges are curation issues.
-
-    var lineStyleToBorderStyleMapping = {
-      'Solid':'solid',
-      'Double':'solid',
-      'Broken':'dashed'
-    };
-    var borderStyle;
-    if (gpmlLineStyle !== pathvisioDefault) {
-      if (!!gpmlLineStyle) {
-        borderStyle = lineStyleToBorderStyleMapping[gpmlLineStyle];
-        if (borderStyle) {
-          return borderStyle;
-        }
-        else {
-          console.warn('LineStyle "' + gpmlLineStyle + '" does not have a corresponding borderStyle. Using "solid"');
-          return 'solid';
-        }
-      }
-      else {
-        return 'solid';
-      }
-    }
-    else {
-
-      // TODO use code to actually get the default
-
-      return 'whatever the default value is';
-    }
-  },
-  //*/
-
-  //*
-  toPvjson: function(pvjs, gpmlSelection, elementSelection, pvjsonElement, callback) {
+  toPvjson: function(pvjson, gpmlSelection, elementSelection, pvjsonElement, callback) {
     var attribute
       , i
       , pvjsonHeight
@@ -146,8 +37,8 @@ module.exports = {
     } else {
       type = 'gpml:' + tagName;
     }
-    pvjsonElement['type'] = pvjsonElement['type'] || [];
-    pvjsonElement['type'].push(type);
+    pvjsonElement.type = pvjsonElement.type || [];
+    pvjsonElement.type.push(type);
 
     var attributeDependencyOrder = [
       'GraphId',
@@ -161,6 +52,9 @@ module.exports = {
     var gpmlToPvjsonConverter = {
       GraphId: function(gpmlGraphIdValue){
         // TODO this is a hack so we don't have two items with the same ID while I'm building out the code to create the flattened data structure
+        // Not sure about the above comment, but we should have globally unique element ids if we expand the id to include the pathway id, e.g.,
+        // element "abc123" in pathway WP1 would have the globally unique id "http://identifiers.org/wikipathways/WP525/abc123"
+        // this expansion can be done with JSON-LD as jsonld.expand();
         pvjsonElement.id = gpmlGraphIdValue;
         return gpmlGraphIdValue;
       },
@@ -192,7 +86,7 @@ module.exports = {
         return gpmlIsPartOfValue;
       },
       GraphRef: function(gpmlGraphRefValue){
-        pvjsonElement.references = gpmlGraphRefValue;
+        pvjsonElement.isAttachedTo = gpmlGraphRefValue;
         return gpmlGraphRefValue;
       },
     };
@@ -200,8 +94,41 @@ module.exports = {
     var gpmlToPvjsonConverterKeys = _.keys(gpmlToPvjsonConverter);
     var attributeKeys = _.keys(elementSelection[0].attribs);
     var attributeKeysWithHandler = _.intersection(gpmlToPvjsonConverterKeys, attributeKeys);
-      //TODO warn for the keys without a handler
+    //TODO warn for the keys without a handler
 
+    var biopaxRefsSelection = elementSelection.find('BiopaxRef');
+    // TODO don't repeat this code with the same code in gpml.js
+    if (biopaxRefsSelection.length > 0) {
+      pvjsonElement.xrefs = pvjsonElement.xrefs || [];
+      biopaxRefsSelection.each(function() {
+        var biopaxRefSelection = $( this );
+        var biopaxRefIdUsed = biopaxRefSelection.text();
+        var biopaxRefId = pvjson.entities.filter(function(entity) {
+          var entityId = entity.deprecatedId || entity.id;
+          return entityId === biopaxRefIdUsed;
+        })[0].id;
+        pvjsonElement.xrefs.push(biopaxRefId);
+      });
+    }
+
+    var attributeList = _.map(attributeKeysWithHandler, function(attributeKey) {
+      return {
+        name: attributeKey,
+        value: elementSelection[0].attribs[attributeKey],
+        dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
+      };
+    });
+    attributeList.sort(function(a, b) {
+      return a.dependencyOrder - b.dependencyOrder;
+    });
+    var attributeListItemName;
+    _(attributeList).forEach(function(attributeListItem) {
+      gpmlToPvjsonConverter[attributeListItem.name](attributeListItem.value);
+    });
+
+    callback(pvjsonElement);
+
+    /*
     BiopaxRef.getAllAsPvjson(elementSelection, function(publicationXrefs) {
       if (!!publicationXrefs) {
         pvjsonElement.publicationXrefs = publicationXrefs;
@@ -222,5 +149,6 @@ module.exports = {
       });
       callback(pvjsonElement);
     });
+    //*/
   }
 };

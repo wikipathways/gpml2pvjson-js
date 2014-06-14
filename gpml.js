@@ -1,6 +1,6 @@
 var GpmlUtilities = require('./gpml-utilities.js')
   , Async = require('async')
-  , Biopax2Json = require('biopax2json')
+  , Biopax = require('biopax2json')
   // , Anchor = require('./anchor.js')
   , BiopaxRef = require('./biopax-ref.js')
   // , Comment = require('./comment.js')
@@ -20,16 +20,11 @@ var GpmlUtilities = require('./gpml-utilities.js')
 
 module.exports = {
   toPvjson: function(gpmlSelection, pathwayMetadata, callbackOutside){
-    /*
-    var gpmlAsStringRaw = gpmlSelection('*').html();
-    var prettyGpmlRaw = pd.xml(gpmlAsStringRaw);
-    DeveloperNotifications.log('raw gpml', prettyGpmlRaw);
-    //*/
 
     var gpmlPathwaySelection = $('Pathway')
         , xmlns = gpmlPathwaySelection.attr('xmlns')
         ;
-    var updatedGpmlSelection = this.addIsPartOfAttribute(this.makeExplicit(gpmlSelection));
+    var updatedGpmlSelection = this.fixBiopax(this.addIsPartOfAttribute(this.makeExplicit(gpmlSelection)));
     var pvjson = {};
 
     var pathwayIri = 'http://identifiers.org/wikipathways/' + pathwayMetadata.dbId;
@@ -49,13 +44,21 @@ module.exports = {
     pvjson.type = 'Pathway';
     pvjson.id = pathwayIri;
     pvjson.idVersion = pathwayMetadata.idVersion;
+    pvjson.xrefs = [];
     //pvjson['@context'][pathwayMetadata.dbId.toString()] = '@graph';
 
     pvjson.entities = [];
 
-    /*
-    var gpmlAsStringProcessed = updatedGpmlSelection('*').html();
-    var prettyGpmlProcessed = pd.xml(gpmlAsStringProcessed);
+    //* Dev only
+    var pd = require('pretty-data').pd;
+    var rawGpmlAsString = gpmlSelection('*').html();
+    var rawGpmlAsPrettyString = pd.xml(rawGpmlAsString);
+    //console.log('rawGpmlAsPrettyString');
+    //console.log(rawGpmlAsPrettyString);
+    var updatedGpmlAsString = updatedGpmlSelection('*').html();
+    var processedGpmlAsPrettyString = pd.xml(updatedGpmlAsString);
+    console.log('processedGpmlAsPrettyString');
+    console.log(processedGpmlAsPrettyString);
     //*/
 
     // test for whether file is GPML
@@ -68,282 +71,300 @@ module.exports = {
         callbackOutside('Pathvisiojs may not fully support the version of GPML provided (xmlns: ' + xmlns + '). Please convert to the supported version of GPML (xmlns: ' + GpmlUtilities.supportedNamespaces[0] + ').', {});
       } else {
 
-        Async.parallel({
-          publicationXref: function(callback){
-            BiopaxRef.getAllAsPvjson(gpmlPathwaySelection, function(pvjsonEntities) {
-              if (!!pvjsonEntities && pvjsonEntities.length > 0) {
-                pvjson.entities = pvjson.entities.concat(pvjsonEntities);
-                callback(null, 'BiopaxRefs are all converted.');
-              }
-              else {
-                callback(null, 'No biopaxRefs to convert.');
-              }
-            });
-          },
-          dataSource: function(callback){
-            var jsonDataSource = gpmlPathwaySelection.attr('Data-Source');
-            if (!!jsonDataSource) {
-              pvjson.dataSource = jsonDataSource;
-              callback(null, 'DataSource converted.');
+        var xmlBiopaxSelection = updatedGpmlSelection('Biopax');
+        if (!!xmlBiopaxSelection && xmlBiopaxSelection.length > 0) {
+          // look at http://www.biopax.org/owldoc/Level3/ for correct terms
+          // TODO look at whether ontology terms or other items need to be updated
+          var biopaxString = xmlBiopaxSelection.toString().replace(/bp:ID/g, 'bp:id').replace(/bp:DB/g, 'bp:db').replace(/bp:TITLE/g, 'bp:title').replace(/bp:SOURCE/g, 'bp:source').replace(/bp:YEAR/g, 'bp:year').replace(/bp:AUTHORS/g, 'bp:author');
+          Biopax.toJson(biopaxString, pathwayMetadata, function(err, jsonBiopax) {
+            if (!!jsonBiopax && !!jsonBiopax.entities && jsonBiopax.entities.length > 0) {
+              pvjson.entities = pvjson.entities.concat(jsonBiopax.entities);
             }
-            else {
-              callback(null, 'No DataSource to convert.');
-            }
-          },
-          version: function(callback){
-            var jsonVersion = gpmlPathwaySelection.attr('Version');
-            if (!!jsonVersion) {
-              pvjson.idVersion = jsonVersion;
-              callback(null, 'Version converted.');
-            }
-            else {
-              callback(null, 'No Version to convert.');
-            }
-          },
-          author: function(callback){
-            var jsonAuthor = gpmlPathwaySelection.attr('Author');
-            if (!!jsonAuthor) {
-              pvjson.author = jsonAuthor;
-              callback(null, 'Author converted.');
-            }
-            else {
-              callback(null, 'No Author to convert.');
-            }
-          },
-          maintainer: function(callback){
-            var jsonMaintainer = gpmlPathwaySelection.attr('Maintainer');
-            if (!!jsonMaintainer) {
-              pvjson.maintainer = jsonMaintainer;
-              callback(null, 'Maintainer converted.');
-            }
-            else {
-              callback(null, 'No Maintainer to convert.');
-            }
-          },
-          email: function(callback){
-            var jsonEmail = gpmlPathwaySelection.attr('Email');
-            if (!!jsonEmail) {
-              pvjson.email = jsonEmail;
-              callback(null, 'Email converted.');
-            }
-            else {
-              callback(null, 'No Email to convert.');
-            }
-          },
-          lastModified: function(callback){
-            var jsonLastModified = gpmlPathwaySelection.attr('Last-Modified');
-            if (!!jsonLastModified) {
-              pvjson.lastModified = jsonLastModified;
-              callback(null, 'LastModified converted.');
-            }
-            else {
-              callback(null, 'No LastModified to convert.');
-            }
-          },
-          license: function(callback){
-            var jsonLicense = gpmlPathwaySelection.attr('License');
-            if (!!jsonLicense) {
-              pvjson.license = jsonLicense;
-              callback(null, 'License converted.');
-            }
-            else {
-              callback(null, 'No License to convert.');
-            }
-          },
-          name: function(callback){
-            var jsonName = gpmlPathwaySelection.attr('Name');
-            if (!!jsonName) {
-              pvjson.displayName = jsonName;
-              callback(null, 'Name converted.');
-            }
-            else {
-              callback(null, 'No Name to convert.');
-            }
-          },
-          organism: function(callback){
-            var jsonOrganism = gpmlPathwaySelection.attr('Organism');
-            if (!!jsonOrganism) {
-              pvjson.organism = jsonOrganism;
-              callback(null, 'Organism converted.');
-            }
-            else {
-              callback(null, 'No Organism to convert.');
-            }
-          },
-          image: function(callback){
-            pvjson.image = {
-              '@context': {
-                '@vocab': 'http://schema.org/'
-              },
-              'width':parseFloat(updatedGpmlSelection('Pathway Graphics').attr('BoardWidth')),
-              'height':parseFloat(updatedGpmlSelection('Pathway Graphics').attr('BoardHeight'))
-            };
-            callback(null, pvjson.image);
-          },
-          Biopax: function(callback){
-            var xmlBiopax = updatedGpmlSelection('Biopax');
-            //var xmlBiopaxPubs = updatedGpmlSelection('Biopax > PublicationXref');
-            if (!!xmlBiopax && xmlBiopax.length > 0) {
-              Biopax2Json.toJson({
-                data: xmlBiopax,
-                jsonld: false
-              }, function(err, jsonBiopax) {
-                if (!!jsonBiopax && !!jsonBiopax.publicationXref && jsonBiopax.publicationXref.length > 0) {
-                  pvjson.push(jsonBiopax.publicationXref);
-                }
-              });
-              callback(null, 'Biopax all converted.');
-            } else {
-              callback(null, 'No Biopax to convert.');
-            }
-          },
-          dataNode: function(callback){
-            var dataNodeSelection, dataNodesSelection = updatedGpmlSelection('DataNode');
-            if (dataNodesSelection.length > 0) {
-              Async.each(dataNodesSelection, 
-                function(d, callbackEach) {
-                  dataNodeSelection = $( d );
-                    //callbackEach(null);
-                    //*
-                  DataNode.toPvjson(pvjson, updatedGpmlSelection, dataNodeSelection, function(pvjsonEntities) {
-                    pvjson.entities = pvjson.entities.concat(pvjsonEntities);
-                    callbackEach(null);
+
+            Async.parallel({
+              BiopaxRef: function(callback){
+                var biopaxRefsSelection = updatedGpmlSelection('Pathway > BiopaxRef');
+                // TODO don't repeat this code with the same code in element.js
+                if (biopaxRefsSelection.length > 0) {
+                  pvjson.xrefs = pvjson.xrefs || [];
+                  biopaxRefsSelection.each(function() {
+                    var biopaxRefSelection = $( this );
+                    var biopaxRefIdUsed = biopaxRefSelection.text();
+                    var biopaxRefId = jsonBiopax.entities.filter(function(entity) {
+                      var entityId = entity.deprecatedId || entity.id;
+                      return entityId === biopaxRefIdUsed;
+                    })[0].id;
+                    pvjson.xrefs.push(biopaxRefId);
                   });
-                  //*/
-                },
-                function(err) {
-                  callback(null, 'DataNodes are all converted.');
-              });
-            }
-            else {
-              callback(null, 'No dataNodes to convert.');
-            }
-          },
-          label: function(callback){
-            var labelSelection, labelsSelection = updatedGpmlSelection('Label');
-            if (labelsSelection.length > 0) {
-              updatedGpmlSelection('Label').each(function() {
-                labelSelection = $( this );
-                Label.toPvjson(pvjson, updatedGpmlSelection, labelSelection, function(pvjsonEntities) {
-                  pvjson.entities = pvjson.entities.concat(pvjsonEntities);
-                });
-              });
-              callback(null, 'Labels are all converted.');
-            }
-            else {
-              callback(null, 'No labels to convert.');
-            }
-          },
-          shape: function(callback){
-            var shapeSelection, shapesSelection = updatedGpmlSelection('Shape');
-            if (shapesSelection.length > 0) {
-              updatedGpmlSelection('Shape').each(function() {
-                shapeSelection = $( this );
-                Shape.toPvjson(pvjson, updatedGpmlSelection, shapeSelection, function(pvjsonEntities) {
-                  pvjson.entities = pvjson.entities.concat(pvjsonEntities);
-                });
-              });
-              callback(null, 'Shapes are all converted.');
-            }
-            else {
-              callback(null, 'No shapes to convert.');
-            }
-          },
-          /*
-          Anchor: function(callback){
-            var anchorSelection, anchorsSelection = updatedGpmlSelection.selectAll('Anchor');
-            if (anchorsSelection[0].length > 0) {
-              pvjson.anchors = [];
-              anchorsSelection.each(function() {
-                anchorSelection = d3.select(this);
-                pathvisiojs.formatConverter.gpml.anchor.toPvjson(updatedGpmlSelection, anchorSelection, function(pvjsonEntities) {
-                  pvjson.anchors = pvjsonEntities;
-                  pvjson.selectedPathway = pvjson.selectedPathway.concat(pvjsonEntities);
-                });
-              });
-              callback(null, 'Anchors are all converted.');
-            }
-            else {
-              callback(null, 'No anchors to convert.');
-            }
-          },
-          //*/
-          state: function(callback){
-            var stateSelection, statesSelection = updatedGpmlSelection('State');
-            if (statesSelection.length > 0) {
-              statesSelection.each(function() {
-                stateSelection = $( this );
-                State.toPvjson(pvjson, updatedGpmlSelection, stateSelection, function(pvjsonEntities) {
-                  pvjson.entities = pvjson.entities.concat(pvjsonEntities);
-                });
-              });
-              callback(null, 'States are all converted.');
-            }
-            else {
-              callback(null, 'No states to convert.');
-            }
-          },
-          graphicalLine: function(callback){
-            var graphicalLineSelection, graphicalLinesSelection = updatedGpmlSelection('GraphicalLine');
-            if (graphicalLinesSelection.length > 0) {
-              updatedGpmlSelection('GraphicalLine').each(function() {
-                graphicalLineSelection = $( this );
-                GraphicalLine.toPvjson(pvjson, updatedGpmlSelection, graphicalLineSelection, function(pvjsonEntities) {
-                  pvjson.entities = pvjson.entities.concat(pvjsonEntities);
-                });
-              });
-              callback(null, 'GraphicalLines are all converted.');
-            }
-            else {
-              callback(null, 'No graphicalLines to convert.');
-            }
-          },
-          interaction: function(callback){
-            var interactionSelection, interactionsSelection = updatedGpmlSelection('Interaction');
-            if (interactionsSelection.length > 0) {
-              updatedGpmlSelection('Interaction').each(function() {
-                interactionSelection = $( this );
-                Interaction.toPvjson(pvjson, updatedGpmlSelection, interactionSelection, function(pvjsonEntities) {
-                  pvjson.entities = pvjson.entities.concat(pvjsonEntities);
-                });
-              });
-              callback(null, 'Interactions are all converted.');
-            }
-            else {
-              callback(null, 'No interactions to convert.');
-            }
-          }
-        },
-        function(err, results) {
-          var contents,
-            index,
-            entitiesBefore,
-            entitiesAfter,
-            textEntitiesDescribingGroup,
-            text;
+                  callback(null, 'biopaxRefs are all converted.');
+                }
+                else {
+                  callback(null, 'No biopaxRefs to convert.');
+                }
+              },
+              dataSource: function(callback){
+                var jsonDataSource = gpmlPathwaySelection.attr('Data-Source');
+                if (!!jsonDataSource) {
+                  pvjson.dataSource = jsonDataSource;
+                  callback(null, 'DataSource converted.');
+                }
+                else {
+                  callback(null, 'No DataSource to convert.');
+                }
+              },
+              version: function(callback){
+                var jsonVersion = gpmlPathwaySelection.attr('Version');
+                if (!!jsonVersion) {
+                  pvjson.idVersion = jsonVersion;
+                  callback(null, 'Version converted.');
+                }
+                else {
+                  callback(null, 'No Version to convert.');
+                }
+              },
+              author: function(callback){
+                var jsonAuthor = gpmlPathwaySelection.attr('Author');
+                if (!!jsonAuthor) {
+                  pvjson.author = jsonAuthor;
+                  callback(null, 'Author converted.');
+                }
+                else {
+                  callback(null, 'No Author to convert.');
+                }
+              },
+              maintainer: function(callback){
+                var jsonMaintainer = gpmlPathwaySelection.attr('Maintainer');
+                if (!!jsonMaintainer) {
+                  pvjson.maintainer = jsonMaintainer;
+                  callback(null, 'Maintainer converted.');
+                }
+                else {
+                  callback(null, 'No Maintainer to convert.');
+                }
+              },
+              email: function(callback){
+                var jsonEmail = gpmlPathwaySelection.attr('Email');
+                if (!!jsonEmail) {
+                  pvjson.email = jsonEmail;
+                  callback(null, 'Email converted.');
+                }
+                else {
+                  callback(null, 'No Email to convert.');
+                }
+              },
+              lastModified: function(callback){
+                var jsonLastModified = gpmlPathwaySelection.attr('Last-Modified');
+                if (!!jsonLastModified) {
+                  pvjson.lastModified = jsonLastModified;
+                  callback(null, 'LastModified converted.');
+                }
+                else {
+                  callback(null, 'No LastModified to convert.');
+                }
+              },
+              license: function(callback){
+                var jsonLicense = gpmlPathwaySelection.attr('License');
+                if (!!jsonLicense) {
+                  pvjson.license = jsonLicense;
+                  callback(null, 'License converted.');
+                }
+                else {
+                  callback(null, 'No License to convert.');
+                }
+              },
+              name: function(callback){
+                var jsonName = gpmlPathwaySelection.attr('Name');
+                if (!!jsonName) {
+                  pvjson.displayName = jsonName;
+                  callback(null, 'Name converted.');
+                }
+                else {
+                  callback(null, 'No Name to convert.');
+                }
+              },
+              organism: function(callback){
+                var jsonOrganism = gpmlPathwaySelection.attr('Organism');
+                if (!!jsonOrganism) {
+                  pvjson.organism = jsonOrganism;
+                  callback(null, 'Organism converted.');
+                }
+                else {
+                  callback(null, 'No Organism to convert.');
+                }
+              },
+              image: function(callback){
+                pvjson.image = {
+                  '@context': {
+                    '@vocab': 'http://schema.org/'
+                  },
+                  'width':parseFloat(updatedGpmlSelection('Pathway Graphics').attr('BoardWidth')),
+                  'height':parseFloat(updatedGpmlSelection('Pathway Graphics').attr('BoardHeight'))
+                };
+                callback(null, pvjson.image);
+              },
+              dataNode: function(callback){
+                var dataNodeSelection, dataNodesSelection = updatedGpmlSelection('DataNode');
+                if (dataNodesSelection.length > 0) {
+                  Async.each(dataNodesSelection, 
+                    function(d, callbackEach) {
+                      dataNodeSelection = $( d );
+                        //callbackEach(null);
+                        //*
+                      DataNode.toPvjson(pvjson, updatedGpmlSelection, dataNodeSelection, function(pvjsonEntities) {
+                        pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                        callbackEach(null);
+                      });
+                      //*/
+                    },
+                    function(err) {
+                      callback(null, 'DataNodes are all converted.');
+                  });
+                }
+                else {
+                  callback(null, 'No dataNodes to convert.');
+                }
+              },
+              label: function(callback){
+                var labelSelection, labelsSelection = updatedGpmlSelection('Label');
+                if (labelsSelection.length > 0) {
+                  updatedGpmlSelection('Label').each(function() {
+                    labelSelection = $( this );
+                    Label.toPvjson(pvjson, updatedGpmlSelection, labelSelection, function(pvjsonEntities) {
+                      pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                    });
+                  });
+                  callback(null, 'Labels are all converted.');
+                }
+                else {
+                  callback(null, 'No labels to convert.');
+                }
+              },
+              shape: function(callback){
+                var shapeSelection, shapesSelection = updatedGpmlSelection('Shape');
+                if (shapesSelection.length > 0) {
+                  updatedGpmlSelection('Shape').each(function() {
+                    shapeSelection = $( this );
+                    Shape.toPvjson(pvjson, updatedGpmlSelection, shapeSelection, function(pvjsonEntities) {
+                      pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                    });
+                  });
+                  callback(null, 'Shapes are all converted.');
+                }
+                else {
+                  callback(null, 'No shapes to convert.');
+                }
+              },
+              /*
+              Anchor: function(callback){
+                var anchorSelection, anchorsSelection = updatedGpmlSelection.selectAll('Anchor');
+                if (anchorsSelection[0].length > 0) {
+                  pvjson.anchors = [];
+                  anchorsSelection.each(function() {
+                    anchorSelection = d3.select(this);
+                    pathvisiojs.formatConverter.gpml.anchor.toPvjson(updatedGpmlSelection, anchorSelection, function(pvjsonEntities) {
+                      pvjson.anchors = pvjsonEntities;
+                      pvjson.selectedPathway = pvjson.selectedPathway.concat(pvjsonEntities);
+                    });
+                  });
+                  callback(null, 'Anchors are all converted.');
+                }
+                else {
+                  callback(null, 'No anchors to convert.');
+                }
+              },
+              //*/
+              state: function(callback){
+                var stateSelection, statesSelection = updatedGpmlSelection('State');
+                if (statesSelection.length > 0) {
+                  statesSelection.each(function() {
+                    stateSelection = $( this );
+                    State.toPvjson(pvjson, updatedGpmlSelection, stateSelection, function(pvjsonEntities) {
+                      pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                    });
+                  });
+                  callback(null, 'States are all converted.');
+                }
+                else {
+                  callback(null, 'No states to convert.');
+                }
+              },
+              graphicalLine: function(callback){
+                var graphicalLineSelection, graphicalLinesSelection = updatedGpmlSelection('GraphicalLine');
+                if (graphicalLinesSelection.length > 0) {
+                  updatedGpmlSelection('GraphicalLine').each(function() {
+                    graphicalLineSelection = $( this );
+                    GraphicalLine.toPvjson(pvjson, updatedGpmlSelection, graphicalLineSelection, function(pvjsonEntities) {
+                      pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                    });
+                  });
+                  callback(null, 'GraphicalLines are all converted.');
+                }
+                else {
+                  callback(null, 'No graphicalLines to convert.');
+                }
+              },
+              interaction: function(callback){
+                var interactionSelection, interactionsSelection = updatedGpmlSelection('Interaction');
+                if (interactionsSelection.length > 0) {
+                  updatedGpmlSelection('Interaction').each(function() {
+                    interactionSelection = $( this );
+                    Interaction.toPvjson(pvjson, updatedGpmlSelection, interactionSelection, function(pvjsonEntities) {
+                      pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                    });
+                  });
+                  callback(null, 'Interactions are all converted.');
+                }
+                else {
+                  callback(null, 'No interactions to convert.');
+                }
+              }
+            },
+            function(err, results) {
+              var contents,
+                index,
+                entitiesBefore,
+                entitiesAfter,
+                textEntitiesDescribingGroup,
+                text;
 
-          // Note: this calculates all the data for each group-node, except for its dimensions.
-          // The dimenensions can only be calculated once all the rest of the entities have been
-          // converted from GPML to JSON.
-          var groupSelection, groupsSelection = updatedGpmlSelection('Group');
-          if (groupsSelection.length > 0) {
-            var groups = [];
-            updatedGpmlSelection('Group').each(function() {
-              var groupSelection = $( this );
-              Group.toPvjson(pvjson, pvjson.entities, updatedGpmlSelection, groupSelection, function(pvjsonEntities) {
-                pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+              // Note: this calculates all the data for each group-node, except for its dimensions.
+              // The dimenensions can only be calculated once all the rest of the entities have been
+              // converted from GPML to JSON.
+              var groupSelection, groupsSelection = updatedGpmlSelection('Group');
+              if (groupsSelection.length > 0) {
+                var groups = [];
+                updatedGpmlSelection('Group').each(function() {
+                  var groupSelection = $( this );
+                  Group.toPvjson(pvjson, pvjson.entities, updatedGpmlSelection, groupSelection, function(pvjsonEntities) {
+                    pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                  });
+                });
+              }
+              pvjson.entities.sort(function(a, b) {
+                return a.zIndex - b.zIndex;
               });
+              //pvjson.entities.unshift(selectedPathway);
+
+              callbackOutside(null, pvjson);
             });
-          }
-          pvjson.entities.sort(function(a, b) {
-            return a.zIndex - b.zIndex;
           });
-          //pvjson.entities.unshift(selectedPathway);
-
-          callbackOutside(null, pvjson);
-        });
+        }
       }
     }
+  },
+
+  // Corrects some errors in current Biopax embedded in GPML
+  fixBiopax: function(gpmlSelection) {
+    var xmlBiopaxSelection = gpmlSelection('Biopax');
+    xmlBiopaxSelection.find('bp\\:PublicationXref').each(function() {
+      var xmlPublicationXrefSelection = $( this );
+      var publicationXrefId = xmlPublicationXrefSelection.attr('rdf:id');
+      xmlPublicationXrefSelection.attr('rdf:id', null);
+      xmlPublicationXrefSelection.attr('rdf:about', publicationXrefId);
+      // still need to lowercaes Biopax element names, e.g., bp:ID and bp:DB to bp:id and bp:db
+      // will do it with a simple string regex before passing it into the Biopax library
+    });
+    return gpmlSelection;
   },
 
   // Removes confusion of GroupId vs. GraphId by just using GraphId to identify containing entities

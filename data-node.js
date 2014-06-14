@@ -19,13 +19,42 @@ module.exports = {
     'GeneProduct':['Dna','Gene','Rna','Protein'],
     'Pathway':['Pathway']
   },
+  generateEntityReference: function(dataSourceName, dbId, organism, entityType, callback){
+    var bridgeDbDataSourcesRow
+      , bridgeDbDbNameCode
+      , entityReference = {}
+      , entityReferenceType
+      ;
+
+    entityReference.type = entityType + 'Reference';
+    // get external database namespace (as specified at identifiers.org) from GPML Xref Database attribute value.
+    bridgeDbDataSourcesRow = BridgeDbDataSources.filter(function(dataSource) {
+      return dataSource.dataSourceName.toLowerCase().replace(/[^a-z0-9]/gi,'') === dataSourceName.toLowerCase().replace(/[^a-z0-9]/gi,'');
+    })[0];
+    var dbName = bridgeDbDataSourcesRow.namespace;
+    // this is an alias BridgeDB uses for database names, e.g. Entrez Gene is "L"
+    bridgeDbDbNameCode = bridgeDbDataSourcesRow.systemCode;
+
+    entityReference.id = 'http://identifiers.org/' + dbName + '/' + dbId;
+
+    if (!!organism && !!bridgeDbDbNameCode && !!dbName && !!dbId) {
+      // This URL is what BridgeDB currently uses. Note it currently returns TSV.
+      // It would be nice to change the URL to something like the second version below. It would also be nice to return JSON-LD.
+      entityReference.xrefs = [encodeURI('http://webservice.bridgedb.org/' + organism + '/xrefs/' + bridgeDbDbNameCode + '/' + dbId)];
+
+      /*
+         entityReference.xrefs = encodeURI('http://bridgedb.org/' + dbName + '/' + dbId + '/xref');
+      //*/
+
+      if (dbName === 'ensembl' || dbName === 'ncbigene') {
+        entityReference.xrefs.push(encodeURI('http://mygene.info/v2/gene/' + dbId));
+      }
+    }
+    callback(null, entityReference);
+  },
   toPvjson: function(pathway, gpmlSelection, dataNodeSelection, callbackInside) {
     var generateEntityReference = this.generateEntityReference
-      , bridgeDbDataSourcesRow
-      , bridgeDbDbNameCode
-      , organism
-      , entityReferenceIri
-      , entityReferenceType
+      , organism = pathway.organism
       , pvjsonElements
       , entity = {}
       , gpmlDataNodeType = dataNodeSelection.attr('Type')
@@ -44,57 +73,41 @@ module.exports = {
 
     GpmlElement.toPvjson(pathway, gpmlSelection, dataNodeSelection, entity, function(entity) {
       Graphics.toPvjson(pathway, gpmlSelection, dataNodeSelection, entity, function(entity) {
-        var entityReferences = [entity.id];
-        var dbName, dataSourceName, dbId, userSpecifiedXref,
-          xrefSelection = dataNodeSelection.find('Xref');
-        if (xrefSelection.length > 0) {
+        var entityReferences = [entity.id]
+          , dataSourceName
+          , dbId
+          , userSpecifiedXref
+          , xrefSelection = dataNodeSelection.find('Xref')
+          ;
+        if (xrefSelection.length > 0 && entityTypes.indexOf('Pathway') === -1) {
           dataSourceName = xrefSelection.attr('Database');
           dbId = xrefSelection.attr('ID');
           if (!!dataSourceName && !!dbId) {
-            // get external database namespace (as specified at identifiers.org) from GPML Xref Database attribute value.
-            bridgeDbDataSourcesRow = BridgeDbDataSources.filter(function(dataSource) {
-              return dataSource.dataSourceName.toLowerCase().replace(/[^a-z0-9]/gi,'') === dataSourceName.toLowerCase().replace(/[^a-z0-9]/gi,'');
-            })[0];
-            dbName = bridgeDbDataSourcesRow.namespace;
-            // this is an alias BridgeDB uses for database names, e.g. Entrez Gene is "L"
-            bridgeDbDbNameCode = bridgeDbDataSourcesRow.systemCode;
+            generateEntityReference(dataSourceName, dbId, organism, entityTypes[0], function(err, entityReference) {
+              var entityReferenceId = entityReference.id;
+              entity.entityReference = entityReferenceId;
 
-            entityReferenceIri = 'http://identifiers.org/' + dbName + '/' + dbId;
-            entity.entityReference = entityReferenceIri;
+              var entityReferenceExists = pathway.entities.filter(function(entity) {
+                return entity.id === entityReferenceId;
+              }).length > 0;
 
-
-            if (!!pathway.organism && !!bridgeDbDbNameCode && !!dbName && !!dbId) {
-              // This URL is what BridgeDB currently uses. Note it currently returns TSV.
-              // It would be nice to change the URL to something like the lower down version. It would also be nice to return JSON-LD.
-              entity.xrefs = [encodeURI('http://webservice.bridgedb.org/' + pathway.organism + '/xrefs/' + bridgeDbDbNameCode + '/' + dbId)];
-              /*
-              //entityReference.xrefs = encodeURI('http://bridgedb.org/' + dbName + '/' + dbId + '/xref');
-              //*/
-              if (dbName === 'ensembl' || dbName === 'ncbigene') {
-                //mygene.info/v2/gene/ENSG00000170248
-                entity.xrefs.push(encodeURI('http://mygene.info/v2/gene/' + dbId));
-              }
-            }
-            pvjsonElements = [entity];
-            callbackInside(pvjsonElements);
-            /*
-            BridgeDb.convertToEnsembl(userSpecifiedXref.organism, dbId, dbName, 'label', 'desc', function(ensemblUri) {
-              if (!!ensemblUri) {
-                entity.unificationXref = ensemblUri;
+              if (!entityReferenceExists) {
+                pvjsonElements = [entity, entityReference];
+              } else {
                 pvjsonElements = [entity];
-                callbackInside(pvjsonElements);
               }
-              else {
-                pvjsonElements = [entity];
-                callbackInside(pvjsonElements);
-              }
+              callbackInside(pvjsonElements);
             });
-            //*/
           } else {
+            // this would indicate incorrect GPML
             pvjsonElements = [entity];
+            console.warn('GPML Xref missing DataSource and/or ID');
             callbackInside(pvjsonElements);
           }
         } else {
+          if (entityTypes.indexOf('Pathway') > -1) {
+            entity.organism = organism;
+          }
           pvjsonElements = [entity];
           callbackInside(pvjsonElements);
         }

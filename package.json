@@ -15,7 +15,6 @@
   "dependencies": {
     "d3": "~3.4.6",
     "xmlhttprequest": "~1.6.0",
-    "jsdom": "~0.10.5",
     "async": "~0.7.0",
     "cheerio": "~0.16.0",
     "lodash": "~2.4.1",
@@ -30,9 +29,7 @@
   "devDependencies": {
     "pretty-data": "~0.40.0",
     "colors": "~0.6.2",
-    "figlet": "~1.0.8",
-    "csv": "~0.3.7",
-    "node-csv": "~0.1.2"
+    "figlet": "~1.0.8"
   },
   "repository": {
     "type": "git",

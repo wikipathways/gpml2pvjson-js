@@ -19,20 +19,17 @@ module.exports = (function(){
     if (relativeToUpperLeftCorner < 0 || relativeToUpperLeftCorner > 1) {
       if (identifier === 'RelX') {
         referencedElementDimension = referencedElement.attr('Width');
-      }
-      else {
+      } else {
         referencedElementDimension = referencedElement.attr('Height');
       }
       if (relativeToUpperLeftCorner < 0) {
         position = 0;
         result.offset = relativeToUpperLeftCorner * referencedElementDimension;
-      }
-      else {
+      } else {
         position = 1;
         result.offset = (relativeToUpperLeftCorner - 1) * referencedElementDimension;
       }
-    }
-    else {
+    } else {
       position = relativeToUpperLeftCorner;
     }
     result.position = position;
@@ -62,7 +59,7 @@ module.exports = (function(){
       , referencedElement
       , referencedElementTag
       , referencedElements = []
-      , referencedElementsTags = []
+      , referencedElementTags = []
       ;
 
       gpmlEdgeSelection.find('Point').each(function(index) {
@@ -163,8 +160,8 @@ module.exports = (function(){
           if (referencedNodeTag !== 'anchor') {
             referencedElement = referencedNode;
             referencedElementTag = referencedNodeTag;
-            // the id of the element this point references (is attached to)
-            explicitPoint.references = gpmlGraphRefValue;
+            // the id of the element this point is attached to (references)
+            explicitPoint.isAttachedTo = gpmlGraphRefValue;
           } else {
             // here we are converting from GPML Anchor (an element representing a node on an edge) to jsplumb anchor (just a reference to a position along an edge)
             // since this jsplumb-anchor is specified relative to an edge, it only has one dimension (position along the edge),
@@ -181,19 +178,18 @@ module.exports = (function(){
             referencedElementTag = referencedEdgeTag;
             var referencedEdgeSelection = $(referencedEdge);
             var referencedEdgeId = referencedEdgeSelection.attr('GraphId');
-            // the id of the edge (IMPORTANT NOTE: NOT the GPML Anchor!) that this pvjson point references (is attached to)
-            explicitPoint.references = referencedEdgeId;
+            // the id of the edge (IMPORTANT NOTE: NOT the GPML Anchor!) that this pvjson point is attached to (references)
+            explicitPoint.isAttachedTo = referencedEdgeId;
           }
           referencedElements.push(referencedElement);
-          referencedElementsTags.push(referencedElementTag);
+          referencedElementTags.push(referencedElementTag);
           return gpmlGraphRefValue;
         },
         ArrowHead: function(gpmlArrowHeadValue) {
           pvjsonMarker = Strcase.camelCase(gpmlArrowHeadValue);
           if (index === 0) {
             pvjsonEdge.markerStart = pvjsonMarker;
-          }
-          else {
+          } else {
             pvjsonEdge.markerEnd = pvjsonMarker;
           }
           return pvjsonMarker;
@@ -230,25 +226,21 @@ module.exports = (function(){
         console.warn('Too many points for a straight line!');
       }
       pvjsonPoints = explicitPoints;
-    }
-    else if (type === 'Segmented'){
+    } else if (type === 'Segmented'){
       pvjsonPoints = explicitPoints;
-    }
-    else if (type === 'Elbow'){
-      pvjsonPoints = calculatePvjsonPoints(gpmlSelection, explicitPoints, referencedElements, referencedElementsTags);
-    }
-    else if (type === 'Curved'){
-      pvjsonPoints = calculatePvjsonPoints(gpmlSelection, explicitPoints, referencedElements, referencedElementsTags);
-    }
-    else {
+    } else if (type === 'Elbow'){
+      pvjsonPoints = calculatePvjsonPoints(gpmlSelection, explicitPoints, referencedElements, referencedElementTags);
+    } else if (type === 'Curved'){
+      pvjsonPoints = calculatePvjsonPoints(gpmlSelection, explicitPoints, referencedElements, referencedElementTags);
+    } else {
       console.warn('Unknown connector type: ' + type);
     }
 
     pvjsonEdge.points = pvjsonPoints;
-    callback(pvjsonEdge);
+    callback(pvjsonEdge, referencedElementTags);
   }
 
-  function calculatePvjsonPoints(gpmlSelection, explicitPoints, referencedElements, referencedElementsTags) {
+  function calculatePvjsonPoints(gpmlSelection, explicitPoints, referencedElements, referencedElementTags) {
     // [side comparison, reroutingRequired, expected total point count]
 
     var firstPoint = explicitPoints[0]
@@ -303,6 +295,7 @@ module.exports = (function(){
       //
       //  -------------------*-------------------
       //  |                                     |
+      //  |                                     |
       //  *                                     *
       // 
       //
@@ -312,6 +305,7 @@ module.exports = (function(){
       //                                        |
       //                                        |
       //  -------------------*-------------------
+      //  |
       //  |
       //  *
       //
@@ -328,6 +322,7 @@ module.exports = (function(){
       } else if (expectedPointCount === 4){
       //
       //  ------------------*--------------------
+      //  |                                     | 
       //  |                                     | 
       //  *                                     | 
       //                                        *
