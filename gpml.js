@@ -49,7 +49,7 @@ module.exports = {
 
     pvjson.entities = [];
 
-    //* Dev only
+    /* Dev only
     var pd = require('pretty-data').pd;
     var rawGpmlAsString = gpmlSelection('*').html();
     var rawGpmlAsPrettyString = pd.xml(rawGpmlAsString);
