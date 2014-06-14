@@ -19,13 +19,14 @@ module.exports = {
     'GeneProduct':['Dna','Gene','Rna','Protein'],
     'Pathway':['Pathway']
   },
-  generateEntityReference: function(dataSourceName, dbId, organism, entityType, callback){
+  generateEntityReference: function(displayName, dataSourceName, dbId, organism, entityType, callback){
     var bridgeDbDataSourcesRow
       , bridgeDbDbNameCode
       , entityReference = {}
       , entityReferenceType
       ;
 
+    entityReference.displayName = displayName;
     entityReference.type = entityType + 'Reference';
     // get external database namespace (as specified at identifiers.org) from GPML Xref Database attribute value.
     bridgeDbDataSourcesRow = BridgeDbDataSources.filter(function(dataSource) {
@@ -83,7 +84,7 @@ module.exports = {
           dataSourceName = xrefSelection.attr('Database');
           dbId = xrefSelection.attr('ID');
           if (!!dataSourceName && !!dbId) {
-            generateEntityReference(dataSourceName, dbId, organism, entityTypes[0], function(err, entityReference) {
+            generateEntityReference(entity.textContent, dataSourceName, dbId, organism, entityTypes[0], function(err, entityReference) {
               var entityReferenceId = entityReference.id;
               entity.entityReference = entityReferenceId;
 

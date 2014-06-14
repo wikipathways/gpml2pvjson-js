@@ -175,7 +175,14 @@ module.exports = {
               name: function(callback){
                 var jsonName = gpmlPathwaySelection.attr('Name');
                 if (!!jsonName) {
-                  pvjson.displayName = jsonName;
+                  var splitName = jsonName.split(' (');
+                  if (!!splitName && splitName.length === 2 && !!jsonName.match(/\(/g) && jsonName.match(/\(/g).length === 1 && !!jsonName.match(/\)/g) && jsonName.match(/\)/g).length === 1) {
+                    pvjson.standardName = splitName[0];
+                    pvjson.displayName = splitName[1].replace(')', '');
+                  } else {
+                    pvjson.standardName = jsonName;
+                    pvjson.displayName = jsonName;
+                  }
                   callback(null, 'Name converted.');
                 }
                 else {
