@@ -43,7 +43,7 @@ module.exports = {
     //localContext['@base'] = pathwayIri + '/';
     pvjson['@context'].push(localContext);
     pvjson.type = 'Pathway';
-    pvjson.wikipathwaysId = pathwayMetadata.dbId;
+    pvjson.id = pathwayMetadata.dbId;
     pvjson.idVersion = pathwayMetadata.idVersion;
     pvjson.xrefs = [];
     //pvjson['@context'][pathwayMetadata.dbId.toString()] = '@graph';
