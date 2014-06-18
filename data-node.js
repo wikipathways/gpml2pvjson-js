@@ -89,7 +89,7 @@ module.exports = {
               var entityReferenceId = entityReference.id;
               entity.entityReference = entityReferenceId;
 
-              var entityReferenceExists = pathway.graph.filter(function(entity) {
+              var entityReferenceExists = pathway.elements.filter(function(entity) {
                 return entity.id === entityReferenceId;
               }).length > 0;
 

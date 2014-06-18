@@ -106,7 +106,7 @@ module.exports = {
       biopaxRefsSelection.each(function() {
         var biopaxRefSelection = $( this );
         var biopaxRefIdUsed = biopaxRefSelection.text();
-        var biopaxRef = pvjson.graph.filter(function(entity) {
+        var biopaxRef = pvjson.elements.filter(function(entity) {
           var entityId = entity.deprecatedId || entity.id;
           return entityId === biopaxRefIdUsed;
         })[0];

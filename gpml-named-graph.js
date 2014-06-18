@@ -15,7 +15,6 @@ var GpmlUtilities = require('./gpml-utilities.js')
   // , Point = require('./point.js')
   , Shape = require('./shape.js')
   , State = require('./state.js')
-  , _ = require('lodash')
   // , Text = require('./text.js')
   ;
 
@@ -47,8 +46,9 @@ module.exports = {
     pvjson.id = pathwayIri;
     pvjson.idVersion = pathwayMetadata.idVersion;
     pvjson.xrefs = [];
+    //pvjson['@context'][pathwayMetadata.dbId.toString()] = '@graph';
 
-    pvjson.elements = [];
+    pvjson.graph = [];
 
     /* Dev only
     var pd = require('pretty-data').pd;
@@ -79,7 +79,7 @@ module.exports = {
           var biopaxString = xmlBiopaxSelection.toString().replace(/bp:ID/g, 'bp:id').replace(/bp:DB/g, 'bp:db').replace(/bp:TITLE/g, 'bp:title').replace(/bp:SOURCE/g, 'bp:source').replace(/bp:YEAR/g, 'bp:year').replace(/bp:AUTHORS/g, 'bp:author');
           Biopax.toJson(biopaxString, pathwayMetadata, function(err, jsonBiopax) {
             if (!!jsonBiopax && !!jsonBiopax.entities && jsonBiopax.entities.length > 0) {
-              pvjson.elements = pvjson.elements.concat(jsonBiopax.entities);
+              pvjson.graph = pvjson.graph.concat(jsonBiopax.entities);
             }
 
             Async.parallel({
@@ -219,7 +219,7 @@ module.exports = {
                         //callbackEach(null);
                         //*
                       DataNode.toPvjson(pvjson, updatedGpmlSelection, dataNodeSelection, function(pvjsonElements) {
-                        pvjson.elements = pvjson.elements.concat(pvjsonElements);
+                        pvjson.graph = pvjson.graph.concat(pvjsonElements);
                         callbackEach(null);
                       });
                       //*/
@@ -238,7 +238,7 @@ module.exports = {
                   updatedGpmlSelection('Label').each(function() {
                     labelSelection = $( this );
                     Label.toPvjson(pvjson, updatedGpmlSelection, labelSelection, function(pvjsonElements) {
-                      pvjson.elements = pvjson.elements.concat(pvjsonElements);
+                      pvjson.graph = pvjson.graph.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'Labels are all converted.');
@@ -253,7 +253,7 @@ module.exports = {
                   updatedGpmlSelection('Shape').each(function() {
                     shapeSelection = $( this );
                     Shape.toPvjson(pvjson, updatedGpmlSelection, shapeSelection, function(pvjsonElements) {
-                      pvjson.elements = pvjson.elements.concat(pvjsonElements);
+                      pvjson.graph = pvjson.graph.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'Shapes are all converted.');
@@ -287,7 +287,7 @@ module.exports = {
                   statesSelection.each(function() {
                     stateSelection = $( this );
                     State.toPvjson(pvjson, updatedGpmlSelection, stateSelection, function(pvjsonElements) {
-                      pvjson.elements = pvjson.elements.concat(pvjsonElements);
+                      pvjson.graph = pvjson.graph.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'States are all converted.');
@@ -302,7 +302,7 @@ module.exports = {
                   updatedGpmlSelection('GraphicalLine').each(function() {
                     graphicalLineSelection = $( this );
                     GraphicalLine.toPvjson(pvjson, updatedGpmlSelection, graphicalLineSelection, function(pvjsonElements) {
-                      pvjson.elements = pvjson.elements.concat(pvjsonElements);
+                      pvjson.graph = pvjson.graph.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'GraphicalLines are all converted.');
@@ -317,7 +317,7 @@ module.exports = {
                   updatedGpmlSelection('Interaction').each(function() {
                     interactionSelection = $( this );
                     Interaction.toPvjson(pvjson, updatedGpmlSelection, interactionSelection, function(pvjsonElements) {
-                      pvjson.elements = pvjson.elements.concat(pvjsonElements);
+                      pvjson.graph = pvjson.graph.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'Interactions are all converted.');
@@ -343,23 +343,23 @@ module.exports = {
                 var groups = [];
                 updatedGpmlSelection('Group').each(function() {
                   var groupSelection = $( this );
-                  Group.toPvjson(pvjson, pvjson.elements, updatedGpmlSelection, groupSelection, function(pvjsonElements) {
-                    pvjson.elements = pvjson.elements.concat(pvjsonElements);
+                  Group.toPvjson(pvjson, pvjson.graph, updatedGpmlSelection, groupSelection, function(pvjsonElements) {
+                    pvjson.graph = pvjson.graph.concat(pvjsonElements);
                   });
                 });
               }
 
-              pvjson.elements.filter(function(element) {
+              pvjson.graph.filter(function(element) {
                 return element.type === 'PublicationXref';
               }).forEach(function(publicationXref) {
                 delete publicationXref.deprecatedId;
               });
               
 
-              pvjson.elements.sort(function(a, b) {
+              pvjson.graph.sort(function(a, b) {
                 return a.zIndex - b.zIndex;
               });
-              //pvjson.elements.unshift(selectedPathway);
+              //pvjson.graph.unshift(selectedPathway);
 
               callbackOutside(null, pvjson);
             });
@@ -868,124 +868,4 @@ module.exports = {
 
     return gpmlSelection;
   },
-
-
-  toBiopaxjson: function(gpmlSelection, pathwayMetadata, callback){
-    this.toPvjson(gpmlSelection, pathwayMetadata, function(err, pvjson) {
-      var biopaxjson = {};
-      biopaxjson['@context'] = pvjson['@context'];
-      biopaxjson['@graph'] = [];
-
-
-      var pathway = {};
-      pathway.id = pvjson.id;
-      pathway.idVersion = pvjson.idVersion;
-      pathway.type = pvjson.type;
-      if (!!pvjson.xrefs) {
-        pathway.xrefs = pvjson.xrefs;
-      }
-      if (!!pvjson.standardName) {
-        pathway.standardName = pvjson.standardName;
-      }
-      if (!!pvjson.displayName) {
-        pathway.displayName = pvjson.displayName;
-      }
-      if (!!pvjson.organism) {
-        pathway.organism = pvjson.organism;
-      }
-
-      var biopaxElements = [
-        'PublicationXref',
-        'UnificationXref',
-        'RelationshipXref',
-        'ProteinReference',
-        'ProteinReference',
-        'Dna',
-        'DnaReference',
-        'Rna',
-        'SmallMolecule',
-        'SmallMoleculeReference',
-        'Gene',
-        'GeneReference',
-        'PhysicalEntity',
-        'Interaction',
-        'Control',
-        'TemplateReactionRegulation',
-        'Catalysis',
-        'Modulation',
-        'Conversion',
-        'BiochemicalReaction',
-        'TransportWithBiochemicalReaction',
-        'ComplexAssembly',
-        'Degradation',
-        'Transport',
-        'TransportWithBiochemicalReaction',
-        'GeneticInteraction',
-        'MolecularInteraction',
-        'TemplateReaction'
-      ];
-
-      var biopaxEdgeTypes = [
-        'Interaction',
-        'Control',
-        'TemplateReactionRegulation',
-        'Catalysis',
-        'Modulation',
-        'Conversion',
-        'BiochemicalReaction',
-        'TransportWithBiochemicalReaction',
-        'ComplexAssembly',
-        'Degradation',
-        'Transport',
-        'TransportWithBiochemicalReaction',
-        'GeneticInteraction',
-        'MolecularInteraction',
-        'TemplateReaction'
-      ];
-
-      var pathwayComponent = [];
-      pvjson.elements.forEach(function(entity) {
-        if (!!entity.type) {
-          var type = entity.type;
-          if (!_.isArray(type)) {
-            type = [type];
-          }
-          var intersectionBetweenTypesAndBiopaxElements = _.intersection(type, biopaxElements);
-          if (intersectionBetweenTypesAndBiopaxElements.length > 0) {
-            entity.type = intersectionBetweenTypesAndBiopaxElements[0];
-            delete entity['backgroundColor'];
-            delete entity['borderWidth'];
-            delete entity['color'];
-            delete entity['displayId'];
-            delete entity['fontSize'];
-            delete entity['fontWeight'];
-            delete entity['gpml:element'];
-            delete entity['gpml:Type'];
-            delete entity['height'];
-            delete entity['isPartOf'];
-            delete entity['padding'];
-            delete entity['rotation'];
-            delete entity['shape'];
-            delete entity['textAlign'];
-            delete entity['verticalAlign'];
-            delete entity['width'];
-            delete entity['x'];
-            delete entity['y'];
-            delete entity['zIndex'];
-            delete entity['points'];
-            delete entity['markerStart'];
-            delete entity['markerEnd'];
-            biopaxjson['@graph'].push(entity);
-          }
-          var intersectionBetweenTypesAndBiopaxEdgeTypes = _.intersection(type, biopaxEdgeTypes);
-          if (intersectionBetweenTypesAndBiopaxEdgeTypes.length > 0) {
-            pathwayComponent.push(entity.id);
-          }
-        }
-      });
-      pathway.pathwayComponent = pathwayComponent;
-      biopaxjson['@graph'].push(pathway);
-      callback(null, biopaxjson);
-    });
-  }
 };
