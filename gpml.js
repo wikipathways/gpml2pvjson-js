@@ -39,11 +39,11 @@ module.exports = {
     pvjson['@context'] = globalContext;
     var localContext = {};
     localContext = {};
-    localContext['@base'] = pathwayIri;
-    //localContext['@base'] = pathwayIri + '/';
+    localContext['@base'] = pathwayIri + '/';
     pvjson['@context'].push(localContext);
     pvjson.type = 'Pathway';
-    pvjson.id = pathwayMetadata.dbId;
+    // using full IRI, because otherwise I would have to indicate the id as something like "/", which is ugly.
+    pvjson.id = pathwayIri;
     pvjson.idVersion = pathwayMetadata.idVersion;
     pvjson.xrefs = [];
     //pvjson['@context'][pathwayMetadata.dbId.toString()] = '@graph';
