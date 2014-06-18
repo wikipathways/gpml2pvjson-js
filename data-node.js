@@ -12,13 +12,13 @@ var GpmlElement = require('./element.js')
 module.exports = {
   // Insert preferred Biopax term first, with other terms following.
   gpmlToBiopaxMappings: {
-    'Metabolite':['SmallMolecule'],
-    'Protein':['Protein'],
-    'RNA':['Rna'],
-    'Unknown':['PhysicalEntity'],
-    'GeneProduct':['Dna'],
+    'Metabolite':'SmallMolecule',
+    'Protein':'Protein',
+    'RNA':'Rna',
+    'Unknown':'PhysicalEntity',
+    'GeneProduct':'Dna',
     //'GeneProduct':['Dna','Gene','Rna','Protein'],
-    'Pathway':['Pathway']
+    'Pathway':'Pathway'
   },
   generateEntityReference: function(displayName, dataSourceName, dbId, organism, entityType, callback){
     var bridgeDbDataSourcesRow
@@ -66,11 +66,10 @@ module.exports = {
       gpmlDataNodeType = 'Unknown';
     }
 
-    entity.type = entity.type || [];
     // this is a Biopax class, like Protein or SmallMolecule
-    var entityTypes = this.gpmlToBiopaxMappings[gpmlDataNodeType];
-    if (!!entityTypes && entityTypes.length > 0) {
-      entity.type = entity.type.concat(entityTypes);
+    var entityType = this.gpmlToBiopaxMappings[gpmlDataNodeType];
+    if (!!entityType) {
+      entity.type = entityType;
     }
 
     GpmlElement.toPvjson(pathway, gpmlSelection, dataNodeSelection, entity, function(entity) {
@@ -81,11 +80,11 @@ module.exports = {
           , userSpecifiedXref
           , xrefSelection = dataNodeSelection.find('Xref')
           ;
-        if (xrefSelection.length > 0 && entityTypes.indexOf('Pathway') === -1) {
+        if (xrefSelection.length > 0 && entityType !== 'Pathway') {
           dataSourceName = xrefSelection.attr('Database');
           dbId = xrefSelection.attr('ID');
           if (!!dataSourceName && !!dbId) {
-            generateEntityReference(entity.textContent, dataSourceName, dbId, organism, entityTypes[0], function(err, entityReference) {
+            generateEntityReference(entity.textContent, dataSourceName, dbId, organism, entityType, function(err, entityReference) {
               var entityReferenceId = entityReference.id;
               entity.entityReference = entityReferenceId;
 
@@ -107,7 +106,7 @@ module.exports = {
             callbackInside(pvjsonElements);
           }
         } else {
-          if (entityTypes.indexOf('Pathway') > -1) {
+          if (entityType === 'Pathway') {
             entity.organism = organism;
           }
           pvjsonElements = [entity];
