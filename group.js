@@ -65,7 +65,7 @@ var Group = {
     GpmlElement.toPvjson(pvjson, gpmlSelection, groupSelection, pvjsonPath, function(pvjsonPath) {
       Graphics.toPvjson(pvjson, gpmlSelection, groupSelection, pvjsonPath, function(pvjsonPath) {
           var contents = elementsPossiblyInGroup.filter(function(element){
-            return element.isContainedBy === pvjsonPath.elementId;
+            return element.isContainedBy === pvjsonPath.id;
           });
           if (contents.length > 0) {
             pvjsonPath.contains = contents;

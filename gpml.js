@@ -32,9 +32,9 @@ module.exports = {
     var globalContext = [];
     // TODO update this to remove test2.
     //globalContext.push('http://test2.wikipathways.org/v2/contexts/pathway.jsonld');
-    globalContext.push('http://test2.wikipathways.org/v2/contexts/display.jsonld');
-    globalContext.push('http://test2.wikipathways.org/v2/contexts/organism.jsonld');
     globalContext.push('http://test2.wikipathways.org/v2/contexts/biopax.jsonld');
+    globalContext.push('http://test2.wikipathways.org/v2/contexts/organism.jsonld');
+    globalContext.push('http://test2.wikipathways.org/v2/contexts/display.jsonld');
     //globalContext.push('http://test2.wikipathways.org/v2/contexts/interaction-type.jsonld');
     pvjson['@context'] = globalContext;
     var localContext = {};

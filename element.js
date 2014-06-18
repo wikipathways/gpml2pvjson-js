@@ -56,7 +56,7 @@ module.exports = {
         // Not sure about the above comment, but we should have globally unique element ids if we expand the id to include the pathway id, e.g.,
         // element "abc123" in pathway WP1 would have the globally unique id "http://identifiers.org/wikipathways/WP525/abc123"
         // this expansion can be done with JSON-LD as jsonld.expand();
-        pvjsonElement.elementId = gpmlGraphIdValue;
+        pvjsonElement.id = gpmlGraphIdValue;
         return gpmlGraphIdValue;
       },
       Style: function(gpmlStyleValue){
@@ -109,7 +109,7 @@ module.exports = {
         var biopaxRefId = pvjson.graph.filter(function(entity) {
           var entityId = entity.deprecatedId || entity.id;
           return entityId === biopaxRefIdUsed;
-        })[0].elementId;
+        })[0].id;
         pvjsonElement.xrefs.push(biopaxRefId);
       });
     }
