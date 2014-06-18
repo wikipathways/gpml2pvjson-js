@@ -106,11 +106,13 @@ module.exports = {
       biopaxRefsSelection.each(function() {
         var biopaxRefSelection = $( this );
         var biopaxRefIdUsed = biopaxRefSelection.text();
-        var biopaxRefId = pvjson.graph.filter(function(entity) {
+        var biopaxRef = pvjson.graph.filter(function(entity) {
           var entityId = entity.deprecatedId || entity.id;
           return entityId === biopaxRefIdUsed;
-        })[0].id;
-        pvjsonElement.xrefs.push(biopaxRefId);
+        })[0];
+        if (!!biopaxRef && typeof(biopaxRef.id) !== 'undefined') {
+          pvjsonElement.xrefs.push(biopaxRef.id);
+        }
       });
     }
 
