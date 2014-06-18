@@ -10,7 +10,7 @@ var markerNameToIdentifierMappings = {
     biopax:{
       name:'Interaction'
     },
-    sbo:['SBO:0000182', 'SBO:0000393', 'SBO:0000394']
+    sbo:['SBO:0000167', 'SBO:0000393', 'SBO:0000394']
   },
   't-bar': {
     biopax:{
@@ -22,20 +22,17 @@ var markerNameToIdentifierMappings = {
   'mim-gap': { // are there Biopax and SBO mappings for this?
     biopax:{
       name:'Interaction'
-    },
-    sbo:['gpml:MimGap']
+    }
   },
   'mim-branching-right': { // are there Biopax and SBO mappings for this?
     biopax:{
       name:'Interaction'
-    },
-    sbo:['gpml:MimBranchingRight']
+    }
   },
   'mim-branching-left': { // are there Biopax and SBO mappings for this?
     biopax:{
       name:'Interaction'
-    },
-    sbo:['gpml:MimBranchingLeft']
+    }
   },
   'mim-inhibition':{
     biopax:{
@@ -180,7 +177,9 @@ module.exports = {
               }
               //*/
 
-              pvjsonPath.interactionType = identifierMappings.sbo || [strcase.classCase(marker)];
+              if (!!identifierMappings.sbo && identifierMappings.sbo.length > 0) {
+                pvjsonPath.interactionType = identifierMappings.sbo;
+              }
             }
 
             pvjsonElements = [pvjsonPath].concat(pvjsonAnchor);
