@@ -186,7 +186,7 @@ module.exports = (function(){
           return gpmlGraphRefValue;
         },
         ArrowHead: function(gpmlArrowHeadValue) {
-          pvjsonMarker = Strcase.camelCase(gpmlArrowHeadValue);
+          pvjsonMarker = Strcase.paramCase(gpmlArrowHeadValue);
           if (index === 0) {
             pvjsonEdge.markerStart = pvjsonMarker;
           } else {
