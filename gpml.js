@@ -43,7 +43,7 @@ module.exports = {
     //localContext['@base'] = pathwayIri + '/';
     pvjson['@context'].push(localContext);
     pvjson.type = 'Pathway';
-    pvjson.id = pathwayIri;
+    pvjson.wikipathwaysId = pathwayMetadata.dbId;
     pvjson.idVersion = pathwayMetadata.idVersion;
     pvjson.xrefs = [];
     //pvjson['@context'][pathwayMetadata.dbId.toString()] = '@graph';
@@ -348,6 +348,14 @@ module.exports = {
                   });
                 });
               }
+
+              pvjson.graph.filter(function(element) {
+                return element.type === 'PublicationXref';
+              }).forEach(function(publicationXref) {
+                delete publicationXref.deprecatedId;
+              });
+              
+
               pvjson.graph.sort(function(a, b) {
                 return a.zIndex - b.zIndex;
               });
