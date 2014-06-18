@@ -350,6 +350,13 @@ module.exports = {
               }
 
               pvjson.elements.filter(function(element) {
+                return element.type === 'undefined' || element.type === undefined;
+              }).forEach(function(publicationXref) {
+                console.log('undefined publicationXref');
+                console.log(publicationXref);
+              });
+
+              pvjson.elements.filter(function(element) {
                 return element.type === 'PublicationXref';
               }).forEach(function(publicationXref) {
                 delete publicationXref.deprecatedId;
