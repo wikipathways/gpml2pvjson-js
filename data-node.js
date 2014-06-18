@@ -15,8 +15,9 @@ module.exports = {
     'Metabolite':['SmallMolecule'],
     'Protein':['Protein'],
     'RNA':['Rna'],
-    'Unknown':['Entity'],
-    'GeneProduct':['Dna','Gene','Rna','Protein'],
+    'Unknown':['PhysicalEntity'],
+    'GeneProduct':['Dna'],
+    //'GeneProduct':['Dna','Gene','Rna','Protein'],
     'Pathway':['Pathway']
   },
   generateEntityReference: function(displayName, dataSourceName, dbId, organism, entityType, callback){
@@ -88,7 +89,7 @@ module.exports = {
               var entityReferenceId = entityReference.id;
               entity.entityReference = entityReferenceId;
 
-              var entityReferenceExists = pathway.entities.filter(function(entity) {
+              var entityReferenceExists = pathway.graph.filter(function(entity) {
                 return entity.id === entityReferenceId;
               }).length > 0;
 

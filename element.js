@@ -28,17 +28,18 @@ module.exports = {
       ;
 
     var tagName = elementSelection[0].name;
+    /*
     var tagNameToBiopaxMappings = {
       'Interaction':'Interaction'
     };
     var biopaxType = tagNameToBiopaxMappings[tagName];
     if (!!biopaxType) {
-      type = biopaxType;
-    } else {
-      type = 'gpml:' + tagName;
+      pvjsonElement.type = pvjsonElement.type || [];
+      pvjsonElement.type.push(biopaxType);
     }
-    pvjsonElement.type = pvjsonElement.type || [];
-    pvjsonElement.type.push(type);
+    //*/
+
+    pvjsonElement['gpml:element'] = 'gpml:' + tagName;
 
     var attributeDependencyOrder = [
       'GraphId',
@@ -73,12 +74,14 @@ module.exports = {
         return pvjsonTextContent;
       },
       Type: function(gpmlTypeValue){
-        pvjsonElement.type = pvjsonElement.type || [];
-        pvjsonElement.type.push('gpml:' + gpmlTypeValue);
+        pvjsonElement['gpml:Type'] = 'gpml:' + gpmlTypeValue;
         return gpmlTypeValue;
       },
       CellularComponent: function(gpmlCellularComponentValue){
-        pvjsonElement.cellularLocation = gpmlCellularComponentValue;
+        pvjsonElement.type = pvjsonElement.type || [];
+        pvjsonElement.type.push('PhysicalEntity');
+        pvjsonElement.type.push('CellularComponent');
+        pvjsonElement.entityReference = gpmlCellularComponentValue;
         return gpmlCellularComponentValue;
       },
       IsPartOf: function(gpmlIsPartOfValue){
@@ -103,7 +106,7 @@ module.exports = {
       biopaxRefsSelection.each(function() {
         var biopaxRefSelection = $( this );
         var biopaxRefIdUsed = biopaxRefSelection.text();
-        var biopaxRefId = pvjson.entities.filter(function(entity) {
+        var biopaxRefId = pvjson.graph.filter(function(entity) {
           var entityId = entity.deprecatedId || entity.id;
           return entityId === biopaxRefIdUsed;
         })[0].id;

@@ -31,11 +31,16 @@ module.exports = {
 
     var globalContext = [];
     // TODO update this to remove test2.
-    globalContext.push('http://test2.wikipathways.org/v2/contexts/pathway.jsonld');
+    //globalContext.push('http://test2.wikipathways.org/v2/contexts/pathway.jsonld');
+    globalContext.push('http://test2.wikipathways.org/v2/contexts/display.jsonld');
+    globalContext.push('http://test2.wikipathways.org/v2/contexts/organism.jsonld');
+    globalContext.push('http://test2.wikipathways.org/v2/contexts/biopax.jsonld');
+    //globalContext.push('http://test2.wikipathways.org/v2/contexts/interaction-type.jsonld');
     pvjson['@context'] = globalContext;
     var localContext = {};
     localContext = {};
-    localContext['@base'] = pathwayIri + '/';
+    localContext['@base'] = pathwayIri;
+    //localContext['@base'] = pathwayIri + '/';
     pvjson['@context'].push(localContext);
     pvjson.type = 'Pathway';
     pvjson.id = pathwayIri;
@@ -43,7 +48,7 @@ module.exports = {
     pvjson.xrefs = [];
     //pvjson['@context'][pathwayMetadata.dbId.toString()] = '@graph';
 
-    pvjson.entities = [];
+    pvjson.graph = [];
 
     /* Dev only
     var pd = require('pretty-data').pd;
@@ -74,7 +79,7 @@ module.exports = {
           var biopaxString = xmlBiopaxSelection.toString().replace(/bp:ID/g, 'bp:id').replace(/bp:DB/g, 'bp:db').replace(/bp:TITLE/g, 'bp:title').replace(/bp:SOURCE/g, 'bp:source').replace(/bp:YEAR/g, 'bp:year').replace(/bp:AUTHORS/g, 'bp:author');
           Biopax.toJson(biopaxString, pathwayMetadata, function(err, jsonBiopax) {
             if (!!jsonBiopax && !!jsonBiopax.entities && jsonBiopax.entities.length > 0) {
-              pvjson.entities = pvjson.entities.concat(jsonBiopax.entities);
+              pvjson.graph = pvjson.graph.concat(jsonBiopax.entities);
             }
 
             Async.parallel({
@@ -87,8 +92,8 @@ module.exports = {
                     var biopaxRefSelection = $( this );
                     var biopaxRefIdUsed = biopaxRefSelection.text();
                     var biopaxRefId = jsonBiopax.entities.filter(function(entity) {
-                      var entityId = entity.deprecatedId || entity.id;
-                      return entityId === biopaxRefIdUsed;
+                      var elementId = entity.deprecatedId || entity.id;
+                      return elementId === biopaxRefIdUsed;
                     })[0].id;
                     pvjson.xrefs.push(biopaxRefId);
                   });
@@ -213,8 +218,8 @@ module.exports = {
                       dataNodeSelection = $( d );
                         //callbackEach(null);
                         //*
-                      DataNode.toPvjson(pvjson, updatedGpmlSelection, dataNodeSelection, function(pvjsonEntities) {
-                        pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                      DataNode.toPvjson(pvjson, updatedGpmlSelection, dataNodeSelection, function(pvjsonElements) {
+                        pvjson.graph = pvjson.graph.concat(pvjsonElements);
                         callbackEach(null);
                       });
                       //*/
@@ -232,8 +237,8 @@ module.exports = {
                 if (labelsSelection.length > 0) {
                   updatedGpmlSelection('Label').each(function() {
                     labelSelection = $( this );
-                    Label.toPvjson(pvjson, updatedGpmlSelection, labelSelection, function(pvjsonEntities) {
-                      pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                    Label.toPvjson(pvjson, updatedGpmlSelection, labelSelection, function(pvjsonElements) {
+                      pvjson.graph = pvjson.graph.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'Labels are all converted.');
@@ -247,8 +252,8 @@ module.exports = {
                 if (shapesSelection.length > 0) {
                   updatedGpmlSelection('Shape').each(function() {
                     shapeSelection = $( this );
-                    Shape.toPvjson(pvjson, updatedGpmlSelection, shapeSelection, function(pvjsonEntities) {
-                      pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                    Shape.toPvjson(pvjson, updatedGpmlSelection, shapeSelection, function(pvjsonElements) {
+                      pvjson.graph = pvjson.graph.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'Shapes are all converted.');
@@ -264,9 +269,9 @@ module.exports = {
                   pvjson.anchors = [];
                   anchorsSelection.each(function() {
                     anchorSelection = d3.select(this);
-                    pathvisiojs.formatConverter.gpml.anchor.toPvjson(updatedGpmlSelection, anchorSelection, function(pvjsonEntities) {
-                      pvjson.anchors = pvjsonEntities;
-                      pvjson.selectedPathway = pvjson.selectedPathway.concat(pvjsonEntities);
+                    pathvisiojs.formatConverter.gpml.anchor.toPvjson(updatedGpmlSelection, anchorSelection, function(pvjsonElements) {
+                      pvjson.anchors = pvjsonElements;
+                      pvjson.selectedPathway = pvjson.selectedPathway.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'Anchors are all converted.');
@@ -281,8 +286,8 @@ module.exports = {
                 if (statesSelection.length > 0) {
                   statesSelection.each(function() {
                     stateSelection = $( this );
-                    State.toPvjson(pvjson, updatedGpmlSelection, stateSelection, function(pvjsonEntities) {
-                      pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                    State.toPvjson(pvjson, updatedGpmlSelection, stateSelection, function(pvjsonElements) {
+                      pvjson.graph = pvjson.graph.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'States are all converted.');
@@ -296,8 +301,8 @@ module.exports = {
                 if (graphicalLinesSelection.length > 0) {
                   updatedGpmlSelection('GraphicalLine').each(function() {
                     graphicalLineSelection = $( this );
-                    GraphicalLine.toPvjson(pvjson, updatedGpmlSelection, graphicalLineSelection, function(pvjsonEntities) {
-                      pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                    GraphicalLine.toPvjson(pvjson, updatedGpmlSelection, graphicalLineSelection, function(pvjsonElements) {
+                      pvjson.graph = pvjson.graph.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'GraphicalLines are all converted.');
@@ -311,8 +316,8 @@ module.exports = {
                 if (interactionsSelection.length > 0) {
                   updatedGpmlSelection('Interaction').each(function() {
                     interactionSelection = $( this );
-                    Interaction.toPvjson(pvjson, updatedGpmlSelection, interactionSelection, function(pvjsonEntities) {
-                      pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                    Interaction.toPvjson(pvjson, updatedGpmlSelection, interactionSelection, function(pvjsonElements) {
+                      pvjson.graph = pvjson.graph.concat(pvjsonElements);
                     });
                   });
                   callback(null, 'Interactions are all converted.');
@@ -325,28 +330,28 @@ module.exports = {
             function(err, results) {
               var contents,
                 index,
-                entitiesBefore,
-                entitiesAfter,
-                textEntitiesDescribingGroup,
+                elementsBefore,
+                elementsAfter,
+                textElementsDescribingGroup,
                 text;
 
               // Note: this calculates all the data for each group-node, except for its dimensions.
-              // The dimenensions can only be calculated once all the rest of the entities have been
+              // The dimenensions can only be calculated once all the rest of the elements have been
               // converted from GPML to JSON.
               var groupSelection, groupsSelection = updatedGpmlSelection('Group');
               if (groupsSelection.length > 0) {
                 var groups = [];
                 updatedGpmlSelection('Group').each(function() {
                   var groupSelection = $( this );
-                  Group.toPvjson(pvjson, pvjson.entities, updatedGpmlSelection, groupSelection, function(pvjsonEntities) {
-                    pvjson.entities = pvjson.entities.concat(pvjsonEntities);
+                  Group.toPvjson(pvjson, pvjson.graph, updatedGpmlSelection, groupSelection, function(pvjsonElements) {
+                    pvjson.graph = pvjson.graph.concat(pvjsonElements);
                   });
                 });
               }
-              pvjson.entities.sort(function(a, b) {
+              pvjson.graph.sort(function(a, b) {
                 return a.zIndex - b.zIndex;
               });
-              //pvjson.entities.unshift(selectedPathway);
+              //pvjson.graph.unshift(selectedPathway);
 
               callbackOutside(null, pvjson);
             });
@@ -370,17 +375,17 @@ module.exports = {
     return gpmlSelection;
   },
 
-  // Removes confusion of GroupId vs. GraphId by just using GraphId to identify containing entities
+  // Removes confusion of GroupId vs. GraphId by just using GraphId to identify containing elements
   addIsPartOfAttribute: function(gpmlSelection) {
     gpmlSelection('Group').each(function() {
       var groupSelection = $(this);
       var groupId = groupSelection.attr('GroupId');
       groupSelection.attr('GroupId', null);
       var graphId = groupSelection.attr('GraphId');
-      var groupedEntitiesSelection = gpmlSelection('[GroupRef=' + groupId + ']').each(function(groupedEntitySelection){
-        groupedEntitySelection = $( this );
-        groupedEntitySelection.attr('IsPartOf', graphId);
-        groupedEntitySelection.attr('GroupRef', null);
+      var groupedElementsSelection = gpmlSelection('[GroupRef=' + groupId + ']').each(function(groupedElementSelection){
+        groupedElementSelection = $( this );
+        groupedElementSelection.attr('IsPartOf', graphId);
+        groupedElementSelection.attr('GroupRef', null);
       });
     });
     return gpmlSelection;
@@ -388,21 +393,21 @@ module.exports = {
 
   selectByMultipleTagNames: function(args){
     var gpmlSelection = args.gpmlSelection;
-    var entityTags = args.entityTags;
-    var entitiesSelection;
-    var newEntitiesSelection;
-    entityTags.forEach(function(entityTag){
-      newEntitiesSelection = gpmlSelection(entityTag);
-      if (!!newEntitiesSelection[0][0]) {
-        if (!!entitiesSelection) {
-          entitiesSelection[0] = entitiesSelection[0].concat(newEntitiesSelection[0]);
+    var elementTags = args.elementTags;
+    var elementsSelection;
+    var newElementsSelection;
+    elementTags.forEach(function(elementTag){
+      newElementsSelection = gpmlSelection(elementTag);
+      if (!!newElementsSelection[0][0]) {
+        if (!!elementsSelection) {
+          elementsSelection[0] = elementsSelection[0].concat(newElementsSelection[0]);
         }
         else {
-          entitiesSelection = newEntitiesSelection;
+          elementsSelection = newElementsSelection;
         }
       }
     });
-    return entitiesSelection;
+    return elementsSelection;
   },
 
   // Fills in implicit values
@@ -411,9 +416,9 @@ module.exports = {
       groupGraphicsSelection, groupGroupGraphicsSelection, groupNoneGraphicsSelection, groupPathwayGraphicsSelection, groupComplexGraphicsSelection,
       graphId, graphIdStub, graphIdStubs = [];
 
-    var selectAllGraphicalEntitiesArgs = {};
-    selectAllGraphicalEntitiesArgs.gpmlSelection = gpmlSelection;
-    selectAllGraphicalEntitiesArgs.entityTags = [
+    var selectAllGraphicalElementsArgs = {};
+    selectAllGraphicalElementsArgs.gpmlSelection = gpmlSelection;
+    selectAllGraphicalElementsArgs.elementTags = [
       'DataNode',
       'Label',
       'Shape',
@@ -423,13 +428,13 @@ module.exports = {
       'GraphicalLine',
       'Group'
     ];
-    var selector = selectAllGraphicalEntitiesArgs.entityTags.join(', ');
-    var graphicalEntitiesSelection = gpmlSelection(selector);
+    var selector = selectAllGraphicalElementsArgs.elementTags.join(', ');
+    var graphicalElementsSelection = gpmlSelection(selector);
     // graphIdStub is whatever follows 'id' at the beginning of the GraphId string
-    if (graphicalEntitiesSelection.length > 0) {
-      graphicalEntitiesSelection.filter(function(){
-        var graphicalEntitySelection = $( this );
-        return (!!graphicalEntitySelection.attr('GraphId'));
+    if (graphicalElementsSelection.length > 0) {
+      graphicalElementsSelection.filter(function(){
+        var graphicalElementSelection = $( this );
+        return (!!graphicalElementSelection.attr('GraphId'));
       }).each(function(){
         var filteredResult = $( this );
         graphId = filteredResult.attr('GraphId');
@@ -443,11 +448,11 @@ module.exports = {
       });
       var largestGraphIdStub = graphIdStubs[graphIdStubs.length - 1] || 0;
 
-      // Add a GraphId to every entity missing a GraphId by converting the largest graphIdStub to int, incrementing,
+      // Add a GraphId to every element missing a GraphId by converting the largest graphIdStub to int, incrementing,
       // converting back to base32 and appending it to the string 'id'.
-      graphicalEntitiesSelection.filter(function(){
-        var graphicalEntitySelection = $( this );
-        return (!graphicalEntitySelection.attr('GraphId'));
+      graphicalElementsSelection.filter(function(){
+        var graphicalElementSelection = $( this );
+        return (!graphicalElementSelection.attr('GraphId'));
       }).each(function(){
         var filteredResult = $( this );
         largestGraphIdStub = (parseInt(largestGraphIdStub, 32) + 1).toString(32);
@@ -487,13 +492,6 @@ module.exports = {
 
       if (groupsSelection.length > 0) {
         groupsSelection.filter(function(){
-          /*
-          var groupSelection = cheerio.load(this, {
-            normalizeWhitespace: true,
-            xmlMode: true,
-            decodeEntities: true
-          });
-          //*/
           var groupSelection = $( this );
           var graphicsSelection = groupSelection.find('Graphics');
           return (!graphicsSelection.attr('ShapeType'));
@@ -536,13 +534,13 @@ module.exports = {
       // nodesSelection does not include Groups
       var selectAllNodesArgs = {};
       selectAllNodesArgs.gpmlSelection = gpmlSelection;
-      selectAllNodesArgs.entityTags = [
+      selectAllNodesArgs.elementTags = [
         'DataNode',
         'Label',
         'Shape',
         'State'
       ];
-      var nodesSelector = selectAllNodesArgs.entityTags.join(', ');
+      var nodesSelector = selectAllNodesArgs.elementTags.join(', ');
       var nodesSelection = gpmlSelection(nodesSelector);
       if (nodesSelection.length > 0) {
         var labelsSelection = gpmlSelection('Label');
@@ -797,11 +795,11 @@ module.exports = {
 
       var selectAllEdgesArgs = {};
       selectAllEdgesArgs.gpmlSelection = gpmlSelection;
-      selectAllEdgesArgs.entityTags = [
+      selectAllEdgesArgs.elementTags = [
         'Interaction',
         'GraphicalLine'
       ];
-      var edgesSelector = selectAllEdgesArgs.entityTags.join(', ');
+      var edgesSelector = selectAllEdgesArgs.elementTags.join(', ');
       var edgesSelection = gpmlSelection(edgesSelector);
 
       if (edgesSelection.length > 0) {

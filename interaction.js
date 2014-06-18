@@ -6,21 +6,100 @@ var GpmlElement = require('./element.js')
   ;
 
 var markerNameToIdentifierMappings = {
-  'arrow': ['Conversion', 'Production', 'Consumption'],
-  't-bar': ['Inhibition'],
-  'mim-gap': ['gpml:MimGap'],
-  'mim-branching-right': ['gpml:MimBranchingRight'],
-  'mim-branching-left': ['gpml:MimBranchingLeft'],
-  'mim-inhibition':['Inhibition'],
-  'mim-conversion':['Conversion'],
-  'mim-necessary-stimulation':['Necessary stimulation'],
-  'mim-binding':['Non-covalent binding'], // this is non-covalent binding in SBO
-  'mim-stimulation':['Stimulation'],
-  'mim-modification':['Addition of a chemical group'],
-  'mim-catalysis':['Catalysis'],
-  'mim-cleavage':['Cleavage'],
-  'mim-covalent-bond':['Addition of a chemical group'], // this doesn't exactly match, but it seems the closest
-  'mim-transcription-translation':['Transcription', 'Translation']
+  'arrow': {
+    biopax:{
+      name:'Interaction'
+    },
+    sbo:['SBO:0000182', 'SBO:0000393', 'SBO:0000394']
+  },
+  't-bar': {
+    biopax:{
+      name:'Control',
+      controlType:'INHIBITION'
+    },
+    sbo:['SBO:0000169']
+  },
+  'mim-gap': { // are there Biopax and SBO mappings for this?
+    biopax:{
+      name:'Interaction'
+    },
+    sbo:['gpml:MimGap']
+  },
+  'mim-branching-right': { // are there Biopax and SBO mappings for this?
+    biopax:{
+      name:'Interaction'
+    },
+    sbo:['gpml:MimBranchingRight']
+  },
+  'mim-branching-left': { // are there Biopax and SBO mappings for this?
+    biopax:{
+      name:'Interaction'
+    },
+    sbo:['gpml:MimBranchingLeft']
+  },
+  'mim-inhibition':{
+    biopax:{
+      name:'Control',
+      controlType:'INHIBITION'
+    },
+    sbo:['SBO:0000169']
+  },
+  'mim-conversion':{
+    biopax:{
+      name:'Conversion'
+    },
+    sbo:['SBO:0000182']
+  },
+  'mim-necessary-stimulation':{
+    biopax:{
+      name:'Control',
+      controlType:'ACTIVATION' // does anyone object?
+    },
+    sbo:['SBO:0000171']
+  },
+  'mim-binding':{
+    biopax:{
+      name:'MolecularInteraction' // what about ComplexAssembly?
+    },
+    sbo:['SBO:0000177'] // this is non-covalent binding in SBO
+  },
+  'mim-stimulation':{
+    biopax:{
+      name:'Control',
+      controlType:'ACTIVATION' // does anyone object?
+    },
+    sbo:['SBO:0000170']
+  },
+  'mim-modification':{
+    biopax:{
+      name:'BiochemicalReaction'
+    },
+    sbo:['SBO:0000210']
+  },
+  'mim-catalysis':{
+    biopax:{
+      name:'Catalysis'
+    },
+    sbo:['SBO:0000172']
+  },
+  'mim-cleavage':{
+    biopax:{
+      name:'Degradation'
+    },
+    sbo:['SBO:0000178']
+  },
+  'mim-covalent-bond':{
+    biopax:{
+      name:'BiochemicalReaction'
+    },
+    sbo:['SBO:0000210'], // this doesn't exactly match, but it seems the closest
+  },
+  'mim-transcription-translation':{
+    biopax:{
+      name:'GeneticInteraction'
+    },
+    sbo:['SBO:0000183', 'SBO:0000184']
+  }
 };
 
 module.exports = {
@@ -44,30 +123,64 @@ module.exports = {
       Graphics.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath) {
         Point.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath, referencedElementTags) {
           Anchor.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonAnchor) {
-            var startNode, endNode, marker;
+            var sourceNode, targetNode, marker;
             if (!!pvjsonPath.markerStart) {
               marker = pvjsonPath.markerStart;
-              startNode = pvjsonPath.points[pvjsonPath.points.length - 1].isAttachedTo;
-              endNode = pvjsonPath.points[0].isAttachedTo;
+              // sometimes the graphical terminology (startMarker, endMarker) won't line up with the graph terminology.
+              sourceNode = pvjsonPath.points[pvjsonPath.points.length - 1].isAttachedTo;
+              targetNode = pvjsonPath.points[0].isAttachedTo;
             } else if (!!pvjsonPath.markerEnd) {
               marker = pvjsonPath.markerEnd;
-              startNode = pvjsonPath.points[0].isAttachedTo;
-              endNode = pvjsonPath.points[pvjsonPath.points.length - 1].isAttachedTo;
+              sourceNode = pvjsonPath.points[0].isAttachedTo;
+              targetNode = pvjsonPath.points[pvjsonPath.points.length - 1].isAttachedTo;
             }
 
-            if (!!startNode && !!endNode) {
+            if (!!sourceNode && !!targetNode) {
+              var markerInStringCase = strcase.paramCase(marker);
+              var identifierMappings = markerNameToIdentifierMappings[markerInStringCase] || {biopax: 'Interaction'};
+              var biopaxType = identifierMappings.biopax.name;
+              pvjsonPath.type = biopaxType;
+
               /* this below is an attempt to model interactions using named graphs
               pvjsonPath.relationGraph = [{
-                id: startNode,
-                relation: endNode
+                id: sourceNode,
+                relation: targetNode
               }];
               //*/
+              
               // and this is an attempt to model interactions using Biopax
-              // TODO look into getting more specific with this, e.g. using bp:left, bp:right, bp:controlled, bp:controller, etc.
-              pvjsonPath.participants = [];
-              pvjsonPath.participants.push(startNode);
-              pvjsonPath.participants.push(endNode);
-              pvjsonPath.interactionType = markerNameToIdentifierMappings[strcase.paramCase(marker)] || [strcase.classCase(marker)];
+              // TODO still need to consider things like CovalentBindingFeature, etc.
+              if (biopaxType === 'Interaction' && !!identifierMappings.controlType) {
+                pvjsonPath.participants = [];
+                pvjsonPath.participants.push(sourceNode);
+                pvjsonPath.participants.push(targetNode);
+              } else if (biopaxType === 'Control' || biopaxType === 'Catalysis') {
+                if (!!identifierMappings.controlType) {
+                  pvjsonPath.controlType = identifierMappings.controlType;
+                }
+                pvjsonPath.controller = sourceNode;
+                pvjsonPath.controlled = targetNode;
+              } else if (biopaxType === 'Conversion' || biopaxType === 'BiochemicalReaction') {
+                if (!!pvjsonPath.markerStart && !!pvjsonPath.markerEnd) { // TODO this isn't actually checking the other marker to make sure it also indicates conversion
+                  pvjsonPath.conversionDirection = 'REVERSIBLE';
+                } else {
+                  pvjsonPath.conversionDirection = 'LEFT-TO-RIGHT';
+                }
+                pvjsonPath.left = sourceNode;
+                pvjsonPath.right = targetNode;
+              } else {
+                pvjsonPath.participants = [];
+                pvjsonPath.participants.push(sourceNode);
+                pvjsonPath.participants.push(targetNode);
+              }
+
+              /*
+              if (markerInStringCase === 'mim-binding' || markerInStringCase === 'mim-covalent-bond') {
+                // TODO something with entityFeature, BindingFeature, CovalentBindingFeature, bindsTo...
+              }
+              //*/
+
+              pvjsonPath.interactionType = identifierMappings.sbo || [strcase.classCase(marker)];
             }
 
             pvjsonElements = [pvjsonPath].concat(pvjsonAnchor);
