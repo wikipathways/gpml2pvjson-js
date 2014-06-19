@@ -4,7 +4,7 @@ var GpmlElement = require('./element.js')
   , Graphics = require('./graphics.js')
   , fs = require('fs')
   , BridgeDb = require('bridgedbjs')
-  , BridgeDbDataSources = require('../tmp/data-sources.json')
+  , BridgeDbDataSources = require('./data-sources.json')
   ;
 
 //var BridgeDbDataSources = JSON.parse(fs.readFileSync('../data-sources.json'));
