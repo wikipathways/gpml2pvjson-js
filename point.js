@@ -16,8 +16,6 @@ module.exports = (function(){
     var result = {}, position, referencedElementDimension;
 
     var relativeToUpperLeftCorner = (relValue + 1) / 2;
-    console.log('args');
-    console.log(args);
     if (relativeToUpperLeftCorner < 0 || relativeToUpperLeftCorner > 1) {
       if (identifier === 'RelX') {
         referencedElementDimension = $(referencedElement).find('Graphics').attr('Width');

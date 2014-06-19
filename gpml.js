@@ -94,8 +94,6 @@ module.exports = {
             }
           },
           function(jsonBiopax, callbackWaterfall) {
-            console.log('jsonBiopax');
-            console.log(jsonBiopax);
             Async.parallel({
               BiopaxRef: function(callback){
                 var biopaxRefsSelection = updatedGpmlSelection('Pathway > BiopaxRef');
@@ -364,6 +362,15 @@ module.exports = {
                   });
                 });
               }
+
+              /*
+              pvjson.elements.filter(function(element) {
+                return (element.type === 'undefined' || element.type === undefined) && element['gpml:element'] === 'gpml:Interaction';
+              }).forEach(function(undefinedElement) {
+                console.log('undefinedElement');
+                console.log(undefinedElement);
+              });
+              //*/
 
               pvjson.elements.filter(function(element) {
                 return element.type === 'PublicationXref';

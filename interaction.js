@@ -118,12 +118,6 @@ module.exports = {
 
     GpmlElement.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath) {
       Graphics.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath) {
-
-
-        console.log('pvjsonPath');
-        console.log(pvjsonPath);
-
-
         Point.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath, referencedElementTags) {
           Anchor.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonAnchor) {
             var sourceNode, targetNode, marker;
@@ -138,11 +132,14 @@ module.exports = {
               targetNode = pvjsonPath.points[pvjsonPath.points.length - 1].isAttachedTo;
             }
 
+            // this can be overridden with a more specific term below
+            var biopaxType = 'Interaction';
             if (!!sourceNode && !!targetNode) {
               var markerInStringCase = strcase.paramCase(marker);
-              var identifierMappings = markerNameToIdentifierMappings[markerInStringCase] || {biopax: 'Interaction'};
-              var biopaxType = identifierMappings.biopax.name;
-              pvjsonPath.type = biopaxType;
+              var identifierMappings = markerNameToIdentifierMappings[markerInStringCase];
+              if (!!identifierMappings && !!identifierMappings.biopax && !!identifierMappings.biopax.name) {
+                biopaxType = identifierMappings.biopax.name;
+              }
 
               /* this below is an attempt to model interactions using named graphs
               pvjsonPath.relationGraph = [{
@@ -153,12 +150,12 @@ module.exports = {
               
               // and this is an attempt to model interactions using Biopax
               // TODO still need to consider things like CovalentBindingFeature, etc.
-              if (biopaxType === 'Interaction' && !!identifierMappings.controlType) {
+              if (biopaxType === 'Interaction' && !!identifierMappings && !!identifierMappings.controlType) {
                 pvjsonPath.participants = [];
                 pvjsonPath.participants.push(sourceNode);
                 pvjsonPath.participants.push(targetNode);
               } else if (biopaxType === 'Control' || biopaxType === 'Catalysis') {
-                if (!!identifierMappings.controlType) {
+                if (!!identifierMappings && !!identifierMappings.controlType) {
                   pvjsonPath.controlType = identifierMappings.controlType;
                 }
                 pvjsonPath.controller = sourceNode;
@@ -183,10 +180,13 @@ module.exports = {
               }
               //*/
 
-              if (!!identifierMappings.sbo && identifierMappings.sbo.length > 0) {
+              if (!!identifierMappings && !!identifierMappings.sbo && identifierMappings.sbo.length > 0) {
                 pvjsonPath.interactionType = identifierMappings.sbo;
               }
+            } else {
+              console.warn('Unconnected Interaction(s) present in this pathway.');
             }
+            pvjsonPath.type = biopaxType;
 
             pvjsonElements = [pvjsonPath].concat(pvjsonAnchor);
             callback(pvjsonElements);
