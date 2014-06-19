@@ -106,9 +106,9 @@ module.exports = {
       biopaxRefsSelection.each(function() {
         var biopaxRefSelection = $( this );
         var biopaxRefIdUsed = biopaxRefSelection.text();
-        var biopaxRef = pvjson.elements.filter(function(entity) {
-          var entityId = entity.deprecatedId || entity.id;
-          return entityId === biopaxRefIdUsed;
+        var biopaxRef = pvjson.elements.filter(function(element) {
+          var elementId = element.deprecatedId || element.id;
+          return elementId === biopaxRefIdUsed;
         })[0];
         if (!!biopaxRef && typeof(biopaxRef.id) !== 'undefined') {
           pvjsonElement.xrefs.push(biopaxRef.id);
