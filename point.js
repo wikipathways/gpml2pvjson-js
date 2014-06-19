@@ -16,11 +16,13 @@ module.exports = (function(){
     var result = {}, position, referencedElementDimension;
 
     var relativeToUpperLeftCorner = (relValue + 1) / 2;
+    console.log('args');
+    console.log(args);
     if (relativeToUpperLeftCorner < 0 || relativeToUpperLeftCorner > 1) {
       if (identifier === 'RelX') {
-        referencedElementDimension = referencedElement.attr('Width');
+        referencedElementDimension = $(referencedElement).find('Graphics').attr('Width');
       } else {
-        referencedElementDimension = referencedElement.attr('Height');
+        referencedElementDimension = $(referencedElement).find('Graphics').attr('Height');
       }
       if (relativeToUpperLeftCorner < 0) {
         position = 0;
