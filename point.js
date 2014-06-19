@@ -108,12 +108,12 @@ module.exports = (function(){
             explicitPoint.anchor = explicitPoint.anchor || [];
             if (!!pvjsonPositionAndOrientationX && _.isNumber(pvjsonPositionAndOrientationX.position)) {
               explicitPoint.anchor[0] = pvjsonPositionAndOrientationX.position;
-              if (pvjsonPositionAndOrientationX.hasOwnProperty('orientation')) {
+              if (pvjsonPositionAndOrientationX.hasOwnProperty('orientation') && _.isNumber(pvjsonPositionAndOrientationX.orientation)) {
                 explicitPoint.anchor[2] = pvjsonPositionAndOrientationX.orientation;
               } else {
               }
               if (pvjsonPositionAndOrientationX.hasOwnProperty('offset')) {
-                explicitPoint.anchor[4] = pvjsonPositionAndOrientationX.offset;
+                explicitPoint.anchor[4] = pvjsonPositionAndOrientationX.offset || 20;
               }
             }
             return gpmlRelXValueInteger;
@@ -135,12 +135,14 @@ module.exports = (function(){
             explicitPoint.anchor = explicitPoint.anchor || [];
             if (!!pvjsonPositionAndOrientationY && _.isNumber(pvjsonPositionAndOrientationY.position)) {
               explicitPoint.anchor[1] = pvjsonPositionAndOrientationY.position;
-              if (pvjsonPositionAndOrientationY.hasOwnProperty('orientation')) {
+              if (pvjsonPositionAndOrientationY.hasOwnProperty('orientation') && _.isNumber(pvjsonPositionAndOrientationY.orientation)) {
                 explicitPoint.anchor[3] = pvjsonPositionAndOrientationY.orientation;
               } else {
               }
               if (pvjsonPositionAndOrientationY.hasOwnProperty('offset')) {
-                explicitPoint.anchor[5] = pvjsonPositionAndOrientationY.offset;
+                // need to set the X offset to zero if it doesn't exist so that we don't have null values in the array.
+                explicitPoint.anchor[4] = explicitPoint.anchor[4] || 0;
+                explicitPoint.anchor[5] = pvjsonPositionAndOrientationY.offset || 15;
               }
             }
             return gpmlRelYValueInteger;
@@ -250,11 +252,11 @@ module.exports = (function(){
     // if first and last points are attached to shapes
     if (firstPoint.hasOwnProperty('anchor') && _.isNumber(firstPoint.anchor[2]) && _.isNumber(firstPoint.anchor[3]) && lastPoint.hasOwnProperty('anchor') && _.isNumber(lastPoint.anchor[2]) && _.isNumber(lastPoint.anchor[3])) {
       expectedPointCount = getExpectedPointCount(firstPoint, lastPoint);
-    // if first point is attached to a shape and last point is attached to an anchor
+    // if first point is attached to a shape and last point is attached to an anchor (not a group)
     } else if (firstPoint.hasOwnProperty('anchor') && _.isNumber(firstPoint.anchor[2]) && _.isNumber(firstPoint.anchor[3]) && lastPoint.hasOwnProperty('anchor')) {
       lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], gpmlSelection);
       expectedPointCount = getExpectedPointCount(firstPoint, lastPoint);
-    // if last point is attached to a shape and first point is attached to an anchor
+    // if last point is attached to a shape and first point is attached to an anchor (not a group)
     } else if (lastPoint.hasOwnProperty('anchor') && _.isNumber(lastPoint.anchor[2]) && _.isNumber(lastPoint.anchor[3]) && firstPoint.hasOwnProperty('anchor')) {
       firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], gpmlSelection);
       expectedPointCount = getExpectedPointCount(firstPoint, lastPoint);
