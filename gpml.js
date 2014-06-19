@@ -89,6 +89,8 @@ module.exports = {
                   callbackWaterfall(null, null);
                 }
               });
+            } else {
+              callbackWaterfall(null, null);
             }
           },
           function(jsonBiopax, callbackWaterfall) {
