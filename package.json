@@ -2,7 +2,7 @@
   "name": "gpml2json",
   "version": "0.0.0",
   "description": "convert GPML (XML) to pvjson (json)",
-  "main": "gpml.js",
+  "main": "src/gpml.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -29,7 +29,9 @@
   "devDependencies": {
     "pretty-data": "~0.40.0",
     "colors": "~0.6.2",
-    "figlet": "~1.0.8"
+    "figlet": "~1.0.8",
+    "gulp-browserify": "~0.5.0",
+    "gulp": "~3.8.1"
   },
   "repository": {
     "type": "git",
