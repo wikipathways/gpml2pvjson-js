@@ -491,12 +491,14 @@ module.exports = {
       var groupsSelection = gpmlSelection('Group');
       groupsSelection.each(function(){
         var groupSelection = $( this );
-        var groupGraphicsSelection = groupSelection.append('<Graphics></Graphics>');
+        var groupGraphicsSelection = groupSelection.append('<Graphics Align="Center" Valign="Middle" FontWeight="Bold" LineThickness="1" FillOpacity="0.1"></Graphics>');
+        /*
         groupGraphicsSelection.attr('Align', 'Center')
         .attr('Valign', 'Middle')
         .attr('FontWeight', 'Bold')
         .attr('LineThickness', 1)
         .attr('FillOpacity', 0.1);
+        //*/
       });
       var groupGroupsSelection = gpmlSelection('Group[Style=Group]').each(function(){
         var groupGroupSelection = $( this );

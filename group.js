@@ -59,28 +59,27 @@ var Group = {
 
     groupType = groupSelection.attr('Style') || 'None';
     pvjsonPath.groupType = groupType;
-    pvjsonPath.type = pvjsonPath.type || [];
-    pvjsonPath.type = pvjsonPath.type.concat(groupType);
+    pvjsonPath.type = groupType;
 
     GpmlElement.toPvjson(pvjson, gpmlSelection, groupSelection, pvjsonPath, function(pvjsonPath) {
       Graphics.toPvjson(pvjson, gpmlSelection, groupSelection, pvjsonPath, function(pvjsonPath) {
-          var contents = elementsPossiblyInGroup.filter(function(element){
-            return element.isContainedBy === pvjsonPath.id;
+        var contents = elementsPossiblyInGroup.filter(function(element){
+          return element.isPartOf === pvjsonPath.id;
+        });
+        if (contents.length > 0) {
+          pvjsonPath.contains = contents;
+          Group.getGroupDimensions(pvjsonPath, function(dimensions){
+            pvjsonPath.x = dimensions.x || 0;
+            pvjsonPath.y = dimensions.y || 0;
+            if (pvjsonPath.x === 0 || pvjsonPath.y === 0) {
+              console.warn('Error in groups. cannot get x or y value.');
+            }
+            pvjsonPath.width = dimensions.width;
+            pvjsonPath.height = dimensions.height;
+            pvjsonPath.zIndex = dimensions.zIndex;
           });
-          if (contents.length > 0) {
-            pvjsonPath.contains = contents;
-            Group.getGroupDimensions(pvjsonPath, function(dimensions){
-              pvjsonPath.x = dimensions.x || 0;
-              pvjsonPath.y = dimensions.y || 0;
-              if (pvjsonPath.x === 0 || pvjsonPath.y === 0) {
-                console.warn('Error in groups. cannot get x or y value.');
-              }
-              pvjsonPath.width = dimensions.width;
-              pvjsonPath.height = dimensions.height;
-              pvjsonPath.zIndex = dimensions.zIndex;
-            });
-            pvjsonElements.push(pvjsonPath);
-          }
+          pvjsonElements.push(pvjsonPath);
+        }
         callback(pvjsonElements);
       });
     });
