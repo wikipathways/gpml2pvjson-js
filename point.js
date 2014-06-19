@@ -113,6 +113,7 @@ module.exports = (function(){
               } else {
               }
               if (pvjsonPositionAndOrientationX.hasOwnProperty('offset')) {
+                // TODO in the case of a group as the referenced element, we don't have the group width and height yet to properly calculate this
                 explicitPoint.anchor[4] = pvjsonPositionAndOrientationX.offset || 20;
               }
             }
@@ -142,6 +143,7 @@ module.exports = (function(){
               if (pvjsonPositionAndOrientationY.hasOwnProperty('offset')) {
                 // need to set the X offset to zero if it doesn't exist so that we don't have null values in the array.
                 explicitPoint.anchor[4] = explicitPoint.anchor[4] || 0;
+                // TODO in the case of a group as the referenced element, we don't have the group width and height yet to properly calculate this
                 explicitPoint.anchor[5] = pvjsonPositionAndOrientationY.offset || 15;
               }
             }
