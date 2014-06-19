@@ -157,7 +157,7 @@ module.exports = (function(){
           // unlike GPML which refers to an element located at a position along the edge.
           // 
           // here we are referring to GPML Anchor, not jsplumb anchor.
-          if (referencedNodeTag !== 'anchor') {
+          if (referencedNodeTag.toLowerCase() !== 'anchor') {
             referencedElement = referencedNode;
             referencedElementTag = referencedNodeTag;
             // the id of the element this point is attached to (references)
@@ -168,7 +168,6 @@ module.exports = (function(){
             // unlike nodes, which can have two dimensions (along x dimension of node, along y dimension of node).
             // So for edges, anchor[0] refers to position along the edge and anchor[1] is a dummy value that is always 0.
             explicitPoint.anchor = explicitPoint.anchor || [];
-            console.log(referencedNode);
             explicitPoint.anchor[0] = $(referencedNode).find('Graphics').attr('Position');
             explicitPoint.anchor[1] = 0;  
 
@@ -395,33 +394,30 @@ module.exports = (function(){
     return u[0] * v[1] - v[0] * u[1];
   }
 
-  function sign (u) {
+  function sign(u) {
     return u>=0;
   }
 
+  /**
+   * sameSide
+   *
+   * @param {Object} p1 - first point of the referenced edge
+   * @param {Object} p2 - last point of the referenced edge
+   * @param {Object} a - last point of the first segment of the current edge (the point following the start point)
+   * @param {Object} b - point where the current edge ends
+   * @return {Boolean) - whether the last point of the first segment of the current edge is on the same side as the last point of the current edge
+   */
   function sameSide(p1, p2, a, b) {
-    console.log('p1');
-    console.log(p1);
-    console.log('p2');
-    console.log(p2);
-    console.log('a');
-    console.log(a);
-    console.log('b');
-    console.log(b);
     var bMinusA = [b.x-a.x, b.y-a.y];
     var p1MinusA = [p1.x-a.x, p1.y-a.y];
     var p2MinusA = [p2.x-a.x, p2.y-a.y];
     var crossProduct1 = crossProduct(bMinusA, p1MinusA);
     var crossProduct2 = crossProduct(bMinusA, p2MinusA);
     var result = (sign(crossProduct1) === sign(crossProduct2));
-    console.log('result');
-    console.log(result);
     return result;
   }
 
   var getSideEquivalentForLine = function (pointOnShape, pointOnEdge, referencedEdgeSelection, gpmlSelection) {
-    console.log('referencedEdgeSelection');
-    console.log(referencedEdgeSelection);
     var riseFromPointOnEdgeToPointOnShape = pointOnShape.y - pointOnEdge.y;
     var runFromPointOnEdgeToPointOnShape = pointOnShape.x - pointOnEdge.x;
     var angleFromPointOnEdgeToPointOnShape = Math.atan2(riseFromPointOnEdgeToPointOnShape, runFromPointOnEdgeToPointOnShape);
@@ -433,22 +429,16 @@ module.exports = (function(){
       // currently, the code below assumes the referenced edge is always straight, never elbowed or curved.
       // This would require being able to calculate a point at a distance along an elbow or curve.
       referencedEdgePoints = $(referencedEdgeSelection).find('Point');
-      console.log('referencedEdgePoints');
-      console.log(referencedEdgePoints);
 
       var firstPointOfReferencedEdgeSelection = $(referencedEdgePoints[0]);
       firstPointOfReferencedEdge = {};
       firstPointOfReferencedEdge.x = parseFloat(firstPointOfReferencedEdgeSelection.attr('X'));
       firstPointOfReferencedEdge.y = parseFloat(firstPointOfReferencedEdgeSelection.attr('Y'));
-      console.log('firstPointOfReferencedEdge');
-      console.log(firstPointOfReferencedEdge);
 
       var lastPointOfReferencedEdgeSelection = $(referencedEdgePoints[referencedEdgePoints.length - 1]);
       lastPointOfReferencedEdge = {};
       lastPointOfReferencedEdge.x = parseFloat(lastPointOfReferencedEdgeSelection.attr('X'));
       lastPointOfReferencedEdge.y = parseFloat(lastPointOfReferencedEdgeSelection.attr('Y'));
-      console.log('lastPointOfReferencedEdge');
-      console.log(lastPointOfReferencedEdge);
 
       var riseOfReferencedEdge = lastPointOfReferencedEdge.y - firstPointOfReferencedEdge.y;
       var runOfReferencedEdge = lastPointOfReferencedEdge.x - firstPointOfReferencedEdge.x;
@@ -478,6 +468,24 @@ module.exports = (function(){
     firstSegmentOptions.forEach(function(firstSegmentOption) {
       var angleOption = Math.atan2(firstSegmentOption.orientationY, firstSegmentOption.orientationX);
       var angleBetweenFirstSegmentOptionAndAnchoredEdge;
+
+      /*
+       *   referenced edge 
+       *         /
+       *        /
+       *       /.
+       *      /  angle (rad)
+       *     /    .
+       *    /--------------
+       *   /       ^      |           --------------
+       *  /        |      |           |            |
+       *           |      ------------|            |
+       *           |                  |            |
+       *      firstSegment            --------------
+       *   (of current edge)
+       *
+       */
+
       var firstSegmentEndPoint = {};
       firstSegmentEndPoint.x = pointOnEdge.x + defaultStubLength * firstSegmentOption.orientationX;
       firstSegmentEndPoint.y = pointOnEdge.y + defaultStubLength * firstSegmentOption.orientationY;
@@ -500,22 +508,25 @@ module.exports = (function(){
         angleBetweenFirstSegmentOptionAndAnchoredEdge = null;
       }
     });
-    console.log('firstSegmentCalculations');
-    console.log(firstSegmentCalculations);
 
-    if (!!referencedEdgeSelection) {
-      // note we don't currently have logic to correctly determine the angle of the referenced edge if it's not straight.
-      // sort so that first segment option closest to perpendicular to referenced edge is first
-      firstSegmentCalculations.sort(function(a, b) {
-        return Math.abs(a.angleBetweenFirstSegmentOptionAndReferencedEdge - Math.PI/2) - Math.abs(b.angleBetweenFirstSegmentOptionAndReferencedEdge - Math.PI/2);
-      });
+    if (!!firstSegmentCalculations && firstSegmentCalculations.length > 0) {
+      if (!!referencedEdgeSelection) {
+        // note we don't currently have logic to correctly determine the angle of the referenced edge if it's not straight.
+        // sort so that first segment option closest to perpendicular to referenced edge is first
+        firstSegmentCalculations.sort(function(a, b) {
+          return Math.abs(a.angleBetweenFirstSegmentOptionAndReferencedEdge - Math.PI/2) - Math.abs(b.angleBetweenFirstSegmentOptionAndReferencedEdge - Math.PI/2);
+        });
+      } else {
+        // sort so that first segment option closest to anchored edge is first
+        firstSegmentCalculations.sort(function(a, b) {
+          return a.angleBetweenFirstSegmentOptionAndAnchoredEdge - b.angleBetweenFirstSegmentOptionAndAnchoredEdge;
+        });
+      }
+      selectedFirstSegmentCalculation = firstSegmentCalculations[0];
     } else {
-      // sort so that first segment option closest to anchored edge is first
-      firstSegmentCalculations.sort(function(a, b) {
-        return a.angleBetweenFirstSegmentOptionAndAnchoredEdge - b.angleBetweenFirstSegmentOptionAndAnchoredEdge;
-      });
+      console.warn('The pathway author appears to have specified that the edges should cross but did not specify how to do it, so we arbitrarily choose to emanate from the "top"');
+      selectedFirstSegmentCalculation = firstSegmentOptions[0];
     }
-    selectedFirstSegmentCalculation = firstSegmentCalculations[0];
     
     //pointOnEdge.anchor.push(0.5);
     //pointOnEdge.anchor.push(0.5);

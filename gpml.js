@@ -826,18 +826,18 @@ module.exports = {
         });
 
         var anchorsSelection = gpmlSelection('Anchor');
-        anchorsSelection.each(function(){
-          var anchorSelection = $(this);
-          var parentGraphicsSelection = anchorSelection.parent();
-          var shapeTypeValue = anchorSelection.attr('Shape') || 'None';
-          var positionValue = anchorSelection.attr('Position');
-
-          var graphics = anchorSelection.append('<Graphics Position="' + positionValue + '" ShapeType="' + shapeTypeValue + '" LineThickness="' + 0 + '" FillColor="' + parentGraphicsSelection.attr('Color') + '"></Graphics>');
-          anchorSelection.attr('Position', null);
-          anchorSelection.attr('Shape', null);
-          // In a future version of GPML, we could improve rendering speed if we included the cached X and Y values for Anchors, just like we currently do for Points.
-        });
         if (anchorsSelection.length > 0) {
+          anchorsSelection.each(function(){
+            var anchorSelection = $(this);
+            var parentGraphicsSelection = anchorSelection.parent();
+            var shapeTypeValue = anchorSelection.attr('Shape') || 'None';
+            var positionValue = anchorSelection.attr('Position');
+
+            var graphics = anchorSelection.append('<Graphics Position="' + positionValue + '" ShapeType="' + shapeTypeValue + '" LineThickness="' + 0 + '" FillColor="' + parentGraphicsSelection.attr('Color') + '"></Graphics>');
+            anchorSelection.attr('Position', null);
+            anchorSelection.attr('Shape', null);
+            // In a future version of GPML, we could improve rendering speed if we included the cached X and Y values for Anchors, just like we currently do for Points.
+          });
           anchorsSelection.filter(function(){
             var graphicsSelection = $(this).find('Graphics');
             var result = false;
@@ -846,9 +846,10 @@ module.exports = {
             }
             return result;
           }).each(function(d, i){
-            $(this).find('Graphics').attr('ShapeType', 'Ellipse');
-            $(this).find('Graphics').attr('Width', 8);
-            $(this).find('Graphics').attr('Height', 8);
+            var graphicsSelection = $(this).find('Graphics');
+            graphicsSelection.attr('ShapeType', 'Ellipse');
+            graphicsSelection.attr('Width', 8);
+            graphicsSelection.attr('Height', 8);
           });
           anchorsSelection.filter(function(){
             var graphicsSelection = $(this).find('Graphics');
@@ -858,8 +859,9 @@ module.exports = {
             }
             return result;
           }).each(function(d, i){
-            $(this).find('Graphics').attr('Width', 4);
-            $(this).find('Graphics').attr('Height', 4);
+            var graphicsSelection = $(this).find('Graphics');
+            graphicsSelection.attr('Width', 4);
+            graphicsSelection.attr('Height', 4);
           });
         }
       }
