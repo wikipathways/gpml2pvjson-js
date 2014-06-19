@@ -98,7 +98,7 @@ module.exports = {
               BiopaxRef: function(callback){
                 var biopaxRefsSelection = updatedGpmlSelection('Pathway > BiopaxRef');
                 // TODO don't repeat this code with the same code in element.js
-                if (biopaxRefsSelection.length > 0) {
+                if (biopaxRefsSelection.length > 0 && !!jsonBiopax && !!jsonBiopax.entities) {
                   pvjson.xrefs = pvjson.xrefs || [];
                   biopaxRefsSelection.each(function() {
                     var biopaxRefSelection = $( this );
