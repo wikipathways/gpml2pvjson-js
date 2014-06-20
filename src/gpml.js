@@ -225,20 +225,33 @@ module.exports = {
               dataNode: function(callback){
                 var dataNodeSelection, dataNodesSelection = gpmlPathwaySelection.find('DataNode');
                 if (dataNodesSelection.length > 0) {
+
+
+                  dataNodesSelection.each(function() {
+                    var dataNodeSelection = $( this );
+                    DataNode.toPvjson(pvjson, gpmlPathwaySelection, dataNodeSelection, function(pvjsonElements) {
+                      pvjson.elements = pvjson.elements.concat(pvjsonElements);
+                      //callbackEach(null);
+                    });
+                  });
+                  callback(null, 'DataNodes are all converted.');
+
+
+                        /*
                   Async.each(dataNodesSelection, 
-                    function(d, callbackEach) {
-                      dataNodeSelection = $( d );
+                    function(dataNodeSelection, callbackEach) {
+                    //function(d, callbackEach) {
+                      //dataNodeSelection = $( d );
                         //callbackEach(null);
-                        //*
                       DataNode.toPvjson(pvjson, gpmlPathwaySelection, dataNodeSelection, function(pvjsonElements) {
                         pvjson.elements = pvjson.elements.concat(pvjsonElements);
                         callbackEach(null);
                       });
-                      //*/
                     },
                     function(err) {
                       callback(null, 'DataNodes are all converted.');
                   });
+                      //*/
                 }
                 else {
                   callback(null, 'No dataNodes to convert.');
