@@ -18,7 +18,7 @@ module.exports = {
       var parentElement,
       attribute,
       i,
-      graphics = elementSelection.find('Graphics'),
+      graphics = elementSelection.find('Graphics').eq(0),
       gpmlDoubleLineProperty = '',
       pvjsonHeight,
       pvjsonWidth,

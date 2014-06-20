@@ -26,7 +26,7 @@ module.exports = {
       , type
       ;
 
-    var tagName = elementSelection[0].name;
+    var tagName = elementSelection[0].tagName;
     /*
     var tagNameToBiopaxMappings = {
       'Interaction':'Interaction'

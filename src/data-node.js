@@ -83,7 +83,7 @@ module.exports = {
           , dataSourceName
           , dbId
           , userSpecifiedXref
-          , xrefSelection = dataNodeSelection.find('Xref')
+          , xrefSelection = dataNodeSelection.find('Xref').eq(0)
           ;
         if (xrefSelection.length > 0 && entityType !== 'Pathway') {
           dataSourceName = xrefSelection.attr('Database');
