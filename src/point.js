@@ -1,6 +1,5 @@
 var Strcase = require('tower-strcase')
   , _ = require('lodash')
-  , Cheerio = require('cheerio')
   ;
 
 module.exports = (function(){

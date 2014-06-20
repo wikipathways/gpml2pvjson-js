@@ -1,7 +1,6 @@
 'use strict';
 
 var Strcase = require('tower-strcase')
-  , cheerio = require('cheerio')
   , _ = require('lodash')
   , RGBColor = require('rgbcolor')
   ;

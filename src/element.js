@@ -3,7 +3,6 @@
 var BiopaxRef = require('./biopax-ref.js')
   , He = require('he')
   , _ = require('lodash')
-  , cheerio = require('cheerio')
   , Strcase = require('tower-strcase')
   ;
 

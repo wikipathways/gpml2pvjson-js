@@ -1,7 +1,7 @@
 'use strict';
 
 var RGBColor = require('rgbcolor')
-  , cheerio = require('cheerio');
+  ;
 
 module.exports = {
   supportedNamespaces: [

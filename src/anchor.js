@@ -1,5 +1,4 @@
 var GpmlElement = require('./element.js')
-  , cheerio = require('cheerio')
   , Graphics = require('./graphics.js')
   ;
 

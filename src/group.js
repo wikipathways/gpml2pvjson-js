@@ -1,7 +1,6 @@
 'use strict';
 
-var cheerio = require('cheerio')
-  , _ = require('lodash')
+var _ = require('lodash')
   , GpmlElement = require('./element.js')
   , Graphics = require('./graphics.js')
   , Async = require('async')
