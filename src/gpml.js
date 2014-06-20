@@ -72,12 +72,12 @@ module.exports = {
         Async.waterfall([
           function(callbackWaterfall) {
             var jsonBiopax;
-            var xmlBiopaxSelection = gpmlPathwaySelection.find('Biopax');
+            var xmlBiopaxSelection = gpmlPathwaySelection.find('Biopax').eq(0);
             if (!!xmlBiopaxSelection && xmlBiopaxSelection.length > 0) {
               // TODO check whether this will always be completed by the time it is needed
               // look at http://www.biopax.org/owldoc/Level3/ for correct terms
               // TODO look at whether ontology terms or other items need to be updated
-              var biopaxString = xmlBiopaxSelection.toString().replace(/bp:ID/g, 'bp:id').replace(/bp:DB/g, 'bp:db').replace(/bp:TITLE/g, 'bp:title').replace(/bp:SOURCE/g, 'bp:source').replace(/bp:YEAR/g, 'bp:year').replace(/bp:AUTHORS/g, 'bp:author');
+              var biopaxString = xmlBiopaxSelection.html().replace(/bp:ID/g, 'bp:id').replace(/bp:DB/g, 'bp:db').replace(/bp:TITLE/g, 'bp:title').replace(/bp:SOURCE/g, 'bp:source').replace(/bp:YEAR/g, 'bp:year').replace(/bp:AUTHORS/g, 'bp:author');
               Biopax.toJson(biopaxString, pathwayMetadata, function(err, thisJsonBiopax) {
                 jsonBiopax = thisJsonBiopax;
                 if (!!jsonBiopax && !!jsonBiopax.entities && jsonBiopax.entities.length > 0) {
