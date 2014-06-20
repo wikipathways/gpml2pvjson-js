@@ -20,12 +20,10 @@ var GpmlUtilities = require('./gpml-utilities.js')
   ;
 
 module.exports = {
-  toPvjson: function(gpmlSelection, pathwayMetadata, callbackOutside){
+  toPvjson: function(gpmlPathwaySelection, pathwayMetadata, callbackOutside){
 
-    var gpmlPathwaySelection = $('Pathway')
-        , xmlns = gpmlPathwaySelection.attr('xmlns')
-        ;
-    var updatedGpmlSelection = this.fixBiopax(this.addIsPartOfAttribute(this.makeExplicit(gpmlSelection)));
+    var xmlns = gpmlPathwaySelection.attr('xmlns');
+    gpmlPathwaySelection = this.fixBiopax(this.addIsPartOfAttribute(this.makeExplicit(gpmlPathwaySelection)));
     var pvjson = {};
 
     var pathwayIri = 'http://identifiers.org/wikipathways/' + pathwayMetadata.dbId;
@@ -52,11 +50,11 @@ module.exports = {
 
     /* Dev only
     var pd = require('pretty-data').pd;
-    var rawGpmlAsString = gpmlSelection('*').html();
+    var rawGpmlAsString = gpmlPathwaySelection.find('*').html();
     var rawGpmlAsPrettyString = pd.xml(rawGpmlAsString);
     //console.log('rawGpmlAsPrettyString');
     //console.log(rawGpmlAsPrettyString);
-    var updatedGpmlAsString = updatedGpmlSelection('*').html();
+    var updatedGpmlAsString = gpmlPathwaySelection.find('*').html();
     var processedGpmlAsPrettyString = pd.xml(updatedGpmlAsString);
     console.log('processedGpmlAsPrettyString');
     console.log(processedGpmlAsPrettyString);
@@ -74,7 +72,7 @@ module.exports = {
         Async.waterfall([
           function(callbackWaterfall) {
             var jsonBiopax;
-            var xmlBiopaxSelection = updatedGpmlSelection('Biopax');
+            var xmlBiopaxSelection = gpmlPathwaySelection.find('Biopax');
             if (!!xmlBiopaxSelection && xmlBiopaxSelection.length > 0) {
               // TODO check whether this will always be completed by the time it is needed
               // look at http://www.biopax.org/owldoc/Level3/ for correct terms
@@ -96,7 +94,7 @@ module.exports = {
           function(jsonBiopax, callbackWaterfall) {
             Async.parallel({
               BiopaxRef: function(callback){
-                var biopaxRefsSelection = updatedGpmlSelection('Pathway > BiopaxRef');
+                var biopaxRefsSelection = gpmlPathwaySelection.find('Pathway > BiopaxRef');
                 // TODO don't repeat this code with the same code in element.js
                 if (biopaxRefsSelection.length > 0 && !!jsonBiopax && !!jsonBiopax.entities) {
                   pvjson.xrefs = pvjson.xrefs || [];
@@ -219,20 +217,20 @@ module.exports = {
                   '@context': {
                     '@vocab': 'http://schema.org/'
                   },
-                  'width':parseFloat(updatedGpmlSelection('Pathway Graphics').attr('BoardWidth')),
-                  'height':parseFloat(updatedGpmlSelection('Pathway Graphics').attr('BoardHeight'))
+                  'width':parseFloat(gpmlPathwaySelection.find('Pathway Graphics').attr('BoardWidth')),
+                  'height':parseFloat(gpmlPathwaySelection.find('Pathway Graphics').attr('BoardHeight'))
                 };
                 callback(null, pvjson.image);
               },
               dataNode: function(callback){
-                var dataNodeSelection, dataNodesSelection = updatedGpmlSelection('DataNode');
+                var dataNodeSelection, dataNodesSelection = gpmlPathwaySelection.find('DataNode');
                 if (dataNodesSelection.length > 0) {
                   Async.each(dataNodesSelection, 
                     function(d, callbackEach) {
                       dataNodeSelection = $( d );
                         //callbackEach(null);
                         //*
-                      DataNode.toPvjson(pvjson, updatedGpmlSelection, dataNodeSelection, function(pvjsonElements) {
+                      DataNode.toPvjson(pvjson, gpmlPathwaySelection, dataNodeSelection, function(pvjsonElements) {
                         pvjson.elements = pvjson.elements.concat(pvjsonElements);
                         callbackEach(null);
                       });
@@ -247,11 +245,11 @@ module.exports = {
                 }
               },
               label: function(callback){
-                var labelSelection, labelsSelection = updatedGpmlSelection('Label');
+                var labelSelection, labelsSelection = gpmlPathwaySelection.find('Label');
                 if (labelsSelection.length > 0) {
-                  updatedGpmlSelection('Label').each(function() {
+                  gpmlPathwaySelection.find('Label').each(function() {
                     labelSelection = $( this );
-                    Label.toPvjson(pvjson, updatedGpmlSelection, labelSelection, function(pvjsonElements) {
+                    Label.toPvjson(pvjson, gpmlPathwaySelection, labelSelection, function(pvjsonElements) {
                       pvjson.elements = pvjson.elements.concat(pvjsonElements);
                     });
                   });
@@ -262,11 +260,11 @@ module.exports = {
                 }
               },
               shape: function(callback){
-                var shapeSelection, shapesSelection = updatedGpmlSelection('Shape');
+                var shapeSelection, shapesSelection = gpmlPathwaySelection.find('Shape');
                 if (shapesSelection.length > 0) {
-                  updatedGpmlSelection('Shape').each(function() {
+                  gpmlPathwaySelection.find('Shape').each(function() {
                     shapeSelection = $( this );
-                    Shape.toPvjson(pvjson, updatedGpmlSelection, shapeSelection, function(pvjsonElements) {
+                    Shape.toPvjson(pvjson, gpmlPathwaySelection, shapeSelection, function(pvjsonElements) {
                       pvjson.elements = pvjson.elements.concat(pvjsonElements);
                     });
                   });
@@ -278,12 +276,12 @@ module.exports = {
               },
               /*
               Anchor: function(callback){
-                var anchorSelection, anchorsSelection = updatedGpmlSelection.selectAll('Anchor');
+                var anchorSelection, anchorsSelection = gpmlPathwaySelection.selectAll('Anchor');
                 if (anchorsSelection[0].length > 0) {
                   pvjson.anchors = [];
                   anchorsSelection.each(function() {
                     anchorSelection = d3.select(this);
-                    pathvisiojs.formatConverter.gpml.anchor.toPvjson(updatedGpmlSelection, anchorSelection, function(pvjsonElements) {
+                    pathvisiojs.formatConverter.gpml.anchor.toPvjson(gpmlPathwaySelection, anchorSelection, function(pvjsonElements) {
                       pvjson.anchors = pvjsonElements;
                       pvjson.selectedPathway = pvjson.selectedPathway.concat(pvjsonElements);
                     });
@@ -296,11 +294,11 @@ module.exports = {
               },
               //*/
               state: function(callback){
-                var stateSelection, statesSelection = updatedGpmlSelection('State');
+                var stateSelection, statesSelection = gpmlPathwaySelection.find('State');
                 if (statesSelection.length > 0) {
                   statesSelection.each(function() {
                     stateSelection = $( this );
-                    State.toPvjson(pvjson, updatedGpmlSelection, stateSelection, function(pvjsonElements) {
+                    State.toPvjson(pvjson, gpmlPathwaySelection, stateSelection, function(pvjsonElements) {
                       pvjson.elements = pvjson.elements.concat(pvjsonElements);
                     });
                   });
@@ -311,11 +309,11 @@ module.exports = {
                 }
               },
               graphicalLine: function(callback){
-                var graphicalLineSelection, graphicalLinesSelection = updatedGpmlSelection('GraphicalLine');
+                var graphicalLineSelection, graphicalLinesSelection = gpmlPathwaySelection.find('GraphicalLine');
                 if (graphicalLinesSelection.length > 0) {
-                  updatedGpmlSelection('GraphicalLine').each(function() {
+                  gpmlPathwaySelection.find('GraphicalLine').each(function() {
                     graphicalLineSelection = $( this );
-                    GraphicalLine.toPvjson(pvjson, updatedGpmlSelection, graphicalLineSelection, function(pvjsonElements) {
+                    GraphicalLine.toPvjson(pvjson, gpmlPathwaySelection, graphicalLineSelection, function(pvjsonElements) {
                       pvjson.elements = pvjson.elements.concat(pvjsonElements);
                     });
                   });
@@ -326,11 +324,11 @@ module.exports = {
                 }
               },
               interaction: function(callback){
-                var interactionSelection, interactionsSelection = updatedGpmlSelection('Interaction');
+                var interactionSelection, interactionsSelection = gpmlPathwaySelection.find('Interaction');
                 if (interactionsSelection.length > 0) {
-                  updatedGpmlSelection('Interaction').each(function() {
+                  gpmlPathwaySelection.find('Interaction').each(function() {
                     interactionSelection = $( this );
-                    Interaction.toPvjson(pvjson, updatedGpmlSelection, interactionSelection, function(pvjsonElements) {
+                    Interaction.toPvjson(pvjson, gpmlPathwaySelection, interactionSelection, function(pvjsonElements) {
                       pvjson.elements = pvjson.elements.concat(pvjsonElements);
                     });
                   });
@@ -352,12 +350,12 @@ module.exports = {
               // Note: this calculates all the data for each group-node, except for its dimensions.
               // The dimenensions can only be calculated once all the rest of the elements have been
               // converted from GPML to JSON.
-              var groupSelection, groupsSelection = updatedGpmlSelection('Group');
+              var groupSelection, groupsSelection = gpmlPathwaySelection.find('Group');
               if (groupsSelection.length > 0) {
                 var groups = [];
-                updatedGpmlSelection('Group').each(function() {
+                gpmlPathwaySelection.find('Group').each(function() {
                   var groupSelection = $( this );
-                  Group.toPvjson(pvjson, pvjson.elements, updatedGpmlSelection, groupSelection, function(pvjsonElements) {
+                  Group.toPvjson(pvjson, pvjson.elements, gpmlPathwaySelection, groupSelection, function(pvjsonElements) {
                     pvjson.elements = pvjson.elements.concat(pvjsonElements);
                   });
                 });
@@ -391,8 +389,8 @@ module.exports = {
   },
 
   // Corrects some errors in current Biopax embedded in GPML
-  fixBiopax: function(gpmlSelection) {
-    var xmlBiopaxSelection = gpmlSelection('Biopax');
+  fixBiopax: function(gpmlPathwaySelection) {
+    var xmlBiopaxSelection = gpmlPathwaySelection.find('Biopax');
     xmlBiopaxSelection.find('bp\\:PublicationXref').each(function() {
       var xmlPublicationXrefSelection = $( this );
       var publicationXrefId = xmlPublicationXrefSelection.attr('rdf:id');
@@ -401,32 +399,32 @@ module.exports = {
       // still need to lowercaes Biopax element names, e.g., bp:ID and bp:DB to bp:id and bp:db
       // will do it with a simple string regex before passing it into the Biopax library
     });
-    return gpmlSelection;
+    return gpmlPathwaySelection;
   },
 
   // Removes confusion of GroupId vs. GraphId by just using GraphId to identify containing elements
-  addIsPartOfAttribute: function(gpmlSelection) {
-    gpmlSelection('Group').each(function() {
+  addIsPartOfAttribute: function(gpmlPathwaySelection) {
+    gpmlPathwaySelection.find('Group').each(function() {
       var groupSelection = $(this);
       var groupId = groupSelection.attr('GroupId');
       groupSelection.attr('GroupId', null);
       var graphId = groupSelection.attr('GraphId');
-      var groupedElementsSelection = gpmlSelection('[GroupRef=' + groupId + ']').each(function(groupedElementSelection){
+      var groupedElementsSelection = gpmlPathwaySelection.find('[GroupRef=' + groupId + ']').each(function(groupedElementSelection){
         groupedElementSelection = $( this );
         groupedElementSelection.attr('IsPartOf', graphId);
         groupedElementSelection.attr('GroupRef', null);
       });
     });
-    return gpmlSelection;
+    return gpmlPathwaySelection;
   },
 
   selectByMultipleTagNames: function(args){
-    var gpmlSelection = args.gpmlSelection;
+    var gpmlPathwaySelection = args.gpmlPathwaySelection;
     var elementTags = args.elementTags;
     var elementsSelection;
     var newElementsSelection;
     elementTags.forEach(function(elementTag){
-      newElementsSelection = gpmlSelection(elementTag);
+      newElementsSelection = gpmlPathwaySelection.find(elementTag);
       if (!!newElementsSelection[0][0]) {
         if (!!elementsSelection) {
           elementsSelection[0] = elementsSelection[0].concat(newElementsSelection[0]);
@@ -440,13 +438,13 @@ module.exports = {
   },
 
   // Fills in implicit values
-  makeExplicit: function(gpmlSelection) {
+  makeExplicit: function(gpmlPathwaySelection) {
     var groupGroupSelection, groupNoneSelection, groupPathwaySelection, groupComplexSelection, cellularComponentValue,
       groupGraphicsSelection, groupGroupGraphicsSelection, groupNoneGraphicsSelection, groupPathwayGraphicsSelection, groupComplexGraphicsSelection,
       graphId, graphIdStub, graphIdStubs = [];
 
     var selectAllGraphicalElementsArgs = {};
-    selectAllGraphicalElementsArgs.gpmlSelection = gpmlSelection;
+    selectAllGraphicalElementsArgs.gpmlPathwaySelection = gpmlPathwaySelection;
     selectAllGraphicalElementsArgs.elementTags = [
       'DataNode',
       'Label',
@@ -458,7 +456,7 @@ module.exports = {
       'Group'
     ];
     var selector = selectAllGraphicalElementsArgs.elementTags.join(', ');
-    var graphicalElementsSelection = gpmlSelection(selector);
+    var graphicalElementsSelection = gpmlPathwaySelection.find(selector);
     // graphIdStub is whatever follows 'id' at the beginning of the GraphId string
     if (graphicalElementsSelection.length > 0) {
       graphicalElementsSelection.filter(function(){
@@ -488,7 +486,7 @@ module.exports = {
         filteredResult.attr('GraphId', 'id' + largestGraphIdStub);
       });
 
-      var groupsSelection = gpmlSelection('Group');
+      var groupsSelection = gpmlPathwaySelection.find('Group');
       groupsSelection.each(function(){
         var groupSelection = $( this );
         var groupGraphicsSelection = groupSelection.append('<Graphics Align="Center" Valign="Middle" FontWeight="Bold" LineThickness="1" FillOpacity="0.1"></Graphics>');
@@ -500,7 +498,7 @@ module.exports = {
         .attr('FillOpacity', 0.1);
         //*/
       });
-      var groupGroupsSelection = gpmlSelection('Group[Style=Group]').each(function(){
+      var groupGroupsSelection = gpmlPathwaySelection.find('Group[Style=Group]').each(function(){
         var groupGroupSelection = $( this );
         var groupGroupGraphicsSelection = groupGroupSelection.find('Graphics')
         .attr('FontSize', '1')
@@ -510,7 +508,7 @@ module.exports = {
         .attr('Color', '808080')
         .attr('FillColor', 'Transparent');
       });
-      var groupNonesSelection = gpmlSelection('Group[Style=None]').each(function(){
+      var groupNonesSelection = gpmlPathwaySelection.find('Group[Style=None]').each(function(){
         var groupNoneSelection = $( this );
         var groupNoneGraphicsSelection = groupNoneSelection.find('Graphics')
         .attr('FontSize', '1')
@@ -540,7 +538,7 @@ module.exports = {
         });
       }
 
-      var groupComplexesSelection = gpmlSelection('Group[Style=Complex]').each(function(){
+      var groupComplexesSelection = gpmlPathwaySelection.find('Group[Style=Complex]').each(function(){
         groupComplexSelection = $(this);
         groupComplexGraphicsSelection = groupComplexSelection.find('Graphics')
         .attr('FontSize', '1')
@@ -550,7 +548,7 @@ module.exports = {
         .attr('FillColor', 'B4B464')
         .attr('LineStyle', 'Solid');
       });
-      var groupPathwaysSelection = gpmlSelection('Group[Style=Pathway]').each(function(){
+      var groupPathwaysSelection = gpmlPathwaySelection.find('Group[Style=Pathway]').each(function(){
         groupPathwaySelection = $(this);
         groupPathwayGraphicsSelection = groupPathwaySelection.find('Graphics')
         .attr('FontSize', '1')
@@ -564,7 +562,7 @@ module.exports = {
 
       // nodesSelection does not include Groups
       var selectAllNodesArgs = {};
-      selectAllNodesArgs.gpmlSelection = gpmlSelection;
+      selectAllNodesArgs.gpmlPathwaySelection = gpmlPathwaySelection;
       selectAllNodesArgs.elementTags = [
         'DataNode',
         'Label',
@@ -572,9 +570,9 @@ module.exports = {
         'State'
       ];
       var nodesSelector = selectAllNodesArgs.elementTags.join(', ');
-      var nodesSelection = gpmlSelection(nodesSelector);
+      var nodesSelection = gpmlPathwaySelection.find(nodesSelector);
       if (nodesSelection.length > 0) {
-        var labelsSelection = gpmlSelection('Label');
+        var labelsSelection = gpmlPathwaySelection.find('Label');
         if (labelsSelection.length > 0) {
           labelsSelection.filter(function(){
             var labelSelection = $( this );
@@ -593,7 +591,7 @@ module.exports = {
           });
         }
 
-        var statesSelection = gpmlSelection('State');
+        var statesSelection = gpmlPathwaySelection.find('State');
         if (statesSelection.length > 0) {
           statesSelection.filter(function(){
             var graphicsSelection = $( this ).find('Graphics');
@@ -620,7 +618,7 @@ module.exports = {
           });
         }
 
-        var shapesSelection = gpmlSelection('Shape');
+        var shapesSelection = gpmlPathwaySelection.find('Shape');
         if (shapesSelection.length > 0) {
           shapesSelection.filter(function(){
             var graphicsSelection = $( this ).find('Graphics');
@@ -799,7 +797,7 @@ module.exports = {
         });
 
         var dataNodeSelection, dataNodeType;
-        var dataNodesSelection = gpmlSelection('DataNode');
+        var dataNodesSelection = gpmlPathwaySelection.find('DataNode');
         if (dataNodesSelection.length > 0) {
           /*
           dataNodesSelection.each(function(){
@@ -820,18 +818,18 @@ module.exports = {
       }
 
       // This applies to both nodes and edges
-      var doubleLinesSelection = gpmlSelection('[Key="org.pathvisio.DoubleLineProperty"]').each(function(){
+      var doubleLinesSelection = gpmlPathwaySelection.find('[Key="org.pathvisio.DoubleLineProperty"]').each(function(){
         $( this ).parent().find('Graphics').attr('LineStyle', 'Double');
       });
 
       var selectAllEdgesArgs = {};
-      selectAllEdgesArgs.gpmlSelection = gpmlSelection;
+      selectAllEdgesArgs.gpmlPathwaySelection = gpmlPathwaySelection;
       selectAllEdgesArgs.elementTags = [
         'Interaction',
         'GraphicalLine'
       ];
       var edgesSelector = selectAllEdgesArgs.elementTags.join(', ');
-      var edgesSelection = gpmlSelection(edgesSelector);
+      var edgesSelection = gpmlPathwaySelection.find(edgesSelector);
 
       if (edgesSelection.length > 0) {
         edgesSelection.each(function(){
@@ -849,7 +847,7 @@ module.exports = {
           $(this).find('Graphics').attr('Color', '000000');
         });
 
-        var anchorsSelection = gpmlSelection('Anchor');
+        var anchorsSelection = gpmlPathwaySelection.find('Anchor');
         if (anchorsSelection.length > 0) {
           anchorsSelection.each(function(){
             var anchorSelection = $(this);
@@ -891,12 +889,12 @@ module.exports = {
       }
     }
 
-    return gpmlSelection;
+    return gpmlPathwaySelection;
   },
 
 
-  toBiopaxjson: function(gpmlSelection, pathwayMetadata, callback){
-    this.toPvjson(gpmlSelection, pathwayMetadata, function(err, pvjson) {
+  toBiopaxjson: function(gpmlPathwaySelection, pathwayMetadata, callback){
+    this.toPvjson(gpmlPathwaySelection, pathwayMetadata, function(err, pvjson) {
       var biopaxjson = {};
       biopaxjson['@context'] = pvjson['@context'];
       biopaxjson['@graph'] = [];
