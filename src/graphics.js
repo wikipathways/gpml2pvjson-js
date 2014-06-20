@@ -3,6 +3,7 @@
 var Strcase = require('tower-strcase')
   , _ = require('lodash')
   , RGBColor = require('rgbcolor')
+  , GpmlUtilities = require('./gpml-utilities.js')
   ;
 
 module.exports = {
@@ -18,7 +19,7 @@ module.exports = {
       var parentElement,
       attribute,
       i,
-      graphics = elementSelection.find('Graphics').eq(0),
+      graphicsSelection = elementSelection.find('Graphics').eq(0),
       gpmlDoubleLineProperty = '',
       pvjsonHeight,
       pvjsonWidth,
@@ -75,7 +76,7 @@ module.exports = {
         return pvjsonShape;
       },
       FillColor: function(gpmlFillColorValue){
-        var cssColor = gpmlColorToCssColor(gpmlFillColorValue);
+        var cssColor = this.gpmlColorToCssColor(gpmlFillColorValue);
         if (gpmlShapeType.toLowerCase() !== 'none') {
           pvjsonElement.backgroundColor = cssColor;
         }
@@ -88,7 +89,7 @@ module.exports = {
         pvjsonElement.fillOpacity = cssFillOpacity;
       },
       Color: function(gpmlColorValue){
-        var cssColor = gpmlColorToCssColor(gpmlColorValue);
+        var cssColor = this.gpmlColorToCssColor(gpmlColorValue);
         pvjsonElement.color = cssColor;
       },
       Padding: function(gpmlPaddingValue){
@@ -209,48 +210,30 @@ module.exports = {
         pvjsonZIndex = parseFloat(gpmlZOrderValue);
         pvjsonElement.zIndex = pvjsonZIndex;
         return pvjsonZIndex;
+      },
+      gpmlColorToCssColor: function(gpmlColor) {
+        var color;
+        if (gpmlColor.toLowerCase() === 'transparent') {
+          return 'transparent';
+        }
+        else {
+          color = new RGBColor(gpmlColor);
+          if (color.ok) {
+            return color.toHex();
+          }
+          else {
+            console.warn('Could not convert GPML Color value of "' + gpmlColor + '" to a valid CSS color. Using "#c0c0c0" as a fallback.');
+            return '#c0c0c0';
+          }
+        }
       }
     };
 
-    if (!!graphics) {
-      // TODO move this code into its own function and re-use it for element.js, etc.
-      var gpmlToPvjsonConverterKeys = _.keys(gpmlToPvjsonConverter);
-      var attributeKeys = _.keys(graphics.attr());
-      var attributeKeysWithHandler = _.intersection(gpmlToPvjsonConverterKeys, attributeKeys);
-      //TODO warn for the keys without a handler
-      
-      var attributeList = _.map(attributeKeysWithHandler, function(attributeKey) {
-        return {
-          name: attributeKey,
-          value: graphics.attr()[attributeKey],
-          dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
-        };
-      });
-      attributeList.sort(function(a, b) {
-        return a.dependencyOrder - b.dependencyOrder;
-      });
-      var attributeListItemName;
-      _(attributeList).forEach(function(attributeListItem) {
-        gpmlToPvjsonConverter[attributeListItem.name](attributeListItem.value);
-      });
+    if (!!graphicsSelection) {
+      pvjsonElement = GpmlUtilities.convertAttributesToJson(graphicsSelection, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
     }
 
-    function gpmlColorToCssColor(gpmlColor) {
-      var color;
-      if (gpmlColor.toLowerCase() === 'transparent') {
-        return 'transparent';
-      }
-      else {
-        color = new RGBColor(gpmlColor);
-        if (color.ok) {
-          return color.toHex();
-        }
-        else {
-          console.warn('Could not convert GPML Color value of "' + gpmlColor + '" to a valid CSS color. Using "#c0c0c0" as a fallback.');
-          return '#c0c0c0';
-        }
-      }
-    }
     callback(pvjsonElement);
-  }
+  },
+
 };

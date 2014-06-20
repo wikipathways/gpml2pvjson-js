@@ -2,8 +2,8 @@
 
 var BiopaxRef = require('./biopax-ref.js')
   , He = require('he')
-  , _ = require('lodash')
   , Strcase = require('tower-strcase')
+  , GpmlUtilities = require('./gpml-utilities.js')
   ;
 
 // ...element includes all GPML elements and is the parent of both ...node and ...edge.
@@ -26,7 +26,8 @@ module.exports = {
       , type
       ;
 
-    var tagName = elementSelection[0].tagName;
+    // jQuery in browser uses tagName, but Cheerio in Node.js uses name
+    var tagName = elementSelection[0].tagName || elementSelection[0].name;
     /*
     var tagNameToBiopaxMappings = {
       'Interaction':'Interaction'
@@ -93,12 +94,6 @@ module.exports = {
       },
     };
 
-    // TODO this code is duplicated in graphics.js. refactor to avoid duplication.
-    var gpmlToPvjsonConverterKeys = _.keys(gpmlToPvjsonConverter);
-    var attributeKeys = _.keys(elementSelection[0].attribs);
-    var attributeKeysWithHandler = _.intersection(gpmlToPvjsonConverterKeys, attributeKeys);
-    //TODO warn for the keys without a handler
-
     var biopaxRefsSelection = elementSelection.find('BiopaxRef');
     // TODO don't repeat this code with the same code in gpml.js
     if (biopaxRefsSelection.length > 0) {
@@ -116,44 +111,8 @@ module.exports = {
       });
     }
 
-    var attributeList = _.map(attributeKeysWithHandler, function(attributeKey) {
-      return {
-        name: attributeKey,
-        value: elementSelection[0].attribs[attributeKey],
-        dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
-      };
-    });
-    attributeList.sort(function(a, b) {
-      return a.dependencyOrder - b.dependencyOrder;
-    });
-    var attributeListItemName;
-    _(attributeList).forEach(function(attributeListItem) {
-      gpmlToPvjsonConverter[attributeListItem.name](attributeListItem.value);
-    });
+    pvjsonElement = GpmlUtilities.convertAttributesToJson(elementSelection, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
 
     callback(pvjsonElement);
-
-    /*
-    BiopaxRef.getAllAsPvjson(elementSelection, function(publicationXrefs) {
-      if (!!publicationXrefs) {
-        pvjsonElement.publicationXrefs = publicationXrefs;
-      }
-      var attributeList = _.map(attributeKeysWithHandler, function(attributeKey) {
-        return {
-          name: attributeKey,
-          value: elementSelection[0].attribs[attributeKey],
-          dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
-        };
-      });
-      attributeList.sort(function(a, b) {
-        return a.dependencyOrder - b.dependencyOrder;
-      });
-      var attributeListItemName;
-      _(attributeList).forEach(function(attributeListItem) {
-        gpmlToPvjsonConverter[attributeListItem.name](attributeListItem.value);
-      });
-      callback(pvjsonElement);
-    });
-    //*/
   }
 };
