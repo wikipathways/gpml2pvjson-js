@@ -93,6 +93,7 @@ module.exports = {
       },
     };
 
+    // TODO this code is duplicated in graphics.js. refactor to avoid duplication.
     var gpmlToPvjsonConverterKeys = _.keys(gpmlToPvjsonConverter);
     var attributeKeys = _.keys(elementSelection[0].attribs);
     var attributeKeysWithHandler = _.intersection(gpmlToPvjsonConverterKeys, attributeKeys);

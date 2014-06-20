@@ -18,7 +18,7 @@ module.exports = {
       var parentElement,
       attribute,
       i,
-      graphics = elementSelection.find('Graphics')[0],
+      graphics = elementSelection.find('Graphics'),
       gpmlDoubleLineProperty = '',
       pvjsonHeight,
       pvjsonWidth,
@@ -129,7 +129,6 @@ module.exports = {
         // From discussion with AP and KH, we've decided to ignore this value, because we don't actually want States to be rotated.
         gpmlRotationValue = parseFloat(gpmlRotationValue);
         var pvjsonRotation = gpmlRotationValue * 180/Math.PI; //converting from radians to degrees
-        // TODO how do we want to store this value?
         pvjsonElement.rotation = pvjsonRotation;
         return pvjsonRotation;
       },
@@ -170,19 +169,8 @@ module.exports = {
       RelX: function(gpmlRelXValue) {
         var pvjsonRelX = parseFloat(gpmlRelXValue);
         pvjsonElement.relX = pvjsonRelX;
-        // TODO find out why this is not working for pathway WP2313 and states
-        /*
-        console.log('elementSelection');
-        console.log('gpmlSelection[0]');
-        console.log(gpmlSelection('datanode')[13]);
-        console.log(gpmlSelection('pathway').find('[GraphId=fc419]'));
-        console.log(elementSelection.attr('GraphId'));
-        console.log(elementSelection.attr('GraphRef'));
-        //*/
         parentElement = gpmlSelection('[GraphId=' + elementSelection.attr('GraphRef') + ']');
         //if (parentElement.length < 1) throw new Error('cannot find parent');
-        //console.log('parentElement');
-        //console.log(parentElement);
         var parentCenterX = parseFloat(parentElement.find('Graphics').attr('CenterX'));
         var parentWidth = parseFloat(parentElement.find('Graphics').attr('Width'));
         var parentZIndex = parseFloat(parentElement.find('Graphics').attr('ZOrder'));
@@ -225,15 +213,16 @@ module.exports = {
     };
 
     if (!!graphics) {
+      // TODO move this code into its own function and re-use it for element.js, etc.
       var gpmlToPvjsonConverterKeys = _.keys(gpmlToPvjsonConverter);
-      var attributeKeys = _.keys(graphics.attribs);
+      var attributeKeys = _.keys(graphics.attr());
       var attributeKeysWithHandler = _.intersection(gpmlToPvjsonConverterKeys, attributeKeys);
       //TODO warn for the keys without a handler
       
       var attributeList = _.map(attributeKeysWithHandler, function(attributeKey) {
         return {
           name: attributeKey,
-          value: graphics.attribs[attributeKey],
+          value: graphics.attr()[attributeKey],
           dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
         };
       });
