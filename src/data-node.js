@@ -60,6 +60,8 @@ module.exports = {
     }
   },
   toPvjson: function(pathway, gpmlSelection, dataNodeSelection, callbackInside) {
+    console.log('dataNodeSelection');
+    console.log(dataNodeSelection);
     var generateEntityReference = this.generateEntityReference
       , organism = pathway.organism
       , pvjsonElements
