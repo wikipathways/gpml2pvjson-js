@@ -61,7 +61,7 @@ module.exports = (function(){
       , referencedElementTags = []
       ;
 
-      gpmlEdgeSelection.find('Point').each(function(index) {
+    gpmlEdgeSelection.find('Point').each(function(index) {
       point = this;
       gpmlPointSelection = $( this );
       explicitPoint = {};
@@ -151,8 +151,9 @@ module.exports = (function(){
         },
         GraphRef: function(gpmlGraphRefValue){
           // this is the actual XML of the element
-          var referencedNode = gpmlPathwaySelection.find('*[GraphId=' + gpmlGraphRefValue + ']')[0];
-          var referencedNodeTag = referencedNode.name;
+          var referencedNodeSelection = gpmlPathwaySelection.find('*[GraphId=' + gpmlGraphRefValue + ']').eq(0);
+          var referencedNode = referencedNodeSelection[0];
+          var referencedNodeTag = referencedNode.tagName || referencedNode.name;
           // GPML and jsplumb/pvjson use different meaning and architecture for the term "anchor."
           // GPML uses anchor to refer to an actual element that specifies a position along an edge.
           // pvjson copies jsplumb in using anchor to refer to the location of the point in terms of another element.
@@ -171,14 +172,15 @@ module.exports = (function(){
             // unlike nodes, which can have two dimensions (along x dimension of node, along y dimension of node).
             // So for edges, anchor[0] refers to position along the edge and anchor[1] is a dummy value that is always 0.
             explicitPoint.anchor = explicitPoint.anchor || [];
-            explicitPoint.anchor[0] = $(referencedNode).find('Graphics').attr('Position');
+            explicitPoint.anchor[0] = referencedNodeSelection.find('Graphics').attr('Position');
             explicitPoint.anchor[1] = 0;  
 
-            var referencedEdge = referencedNode.parent.parent;
+            //var referencedEdge = referencedNode.parent.parent;
+            var referencedEdgeSelection = referencedNodeSelection.parent().parent();
+            var referencedEdge = referencedEdgeSelection[0];
             referencedElement = referencedEdge;
-            var referencedEdgeTag = referencedEdge.name;
+            var referencedEdgeTag = referencedEdge.tagName || referencedEdge.name;
             referencedElementTag = referencedEdgeTag;
-            var referencedEdgeSelection = $(referencedEdge);
             var referencedEdgeId = referencedEdgeSelection.attr('GraphId');
             // the id of the edge (IMPORTANT NOTE: NOT the GPML Anchor!) that this pvjson point is attached to (references)
             explicitPoint.isAttachedTo = referencedEdgeId;
@@ -198,26 +200,36 @@ module.exports = (function(){
         }
       };
 
-      var gpmlToPvjsonConverterKeys = _.keys(gpmlToPvjsonConverter);
-      var attributeKeys = _.keys(point.attribs);
-      var attributeKeysWithHandler = _.intersection(gpmlToPvjsonConverterKeys, attributeKeys);
-      //TODO warn for the keys without a handler
+      // TODO Use the code from GpmlUtilities and remove this section below.
+      function convertAttributesToJson(elementSelection, pvjsonElement, converter, attributeDependencyOrder) {
+        var attributes = elementSelection[0].attributes || elementSelection[0].attribs;
+        var converterKeys = _.keys(converter);
 
-      var attributeList = _.map(attributeKeysWithHandler, function(attributeKey) {
-        return {
-          name: attributeKey,
-          value: point.attribs[attributeKey],
-          dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
-        };
-      });
-      attributeList.sort(function(a, b) {
-        return a.dependencyOrder - b.dependencyOrder;
-      });
-      var attributeListItemName;
-      _(attributeList).forEach(function(attributeListItem) {
-        gpmlToPvjsonConverter[attributeListItem.name](attributeListItem.value);
-      });
+        var attributeList = [];
+        _.forEach(attributes, function(attribute) {
+          var attributeKey = attribute.name;
+          if (converterKeys.indexOf(attributeKey) > -1) {
+            attributeList.push({
+              name: attributeKey,
+              value: attribute.value,
+              dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
+            });
+          } else {
+            console.warn('No handler for attribute "' + attributeKey + '" for element "' + elementSelection.html() + '"');
+          }
+        });
+        if (attributeList.length > 1) {
+          attributeList.sort(function(a, b) {
+            return a.dependencyOrder - b.dependencyOrder;
+          });
+        }
+        _(attributeList).forEach(function(attributeListItem) {
+          converter[attributeListItem.name](attributeListItem.value);
+        });
+        return pvjsonElement;
+      }
 
+      explicitPoint = convertAttributesToJson(gpmlPointSelection, explicitPoint, gpmlToPvjsonConverter, attributeDependencyOrder);
       explicitPoints.push(explicitPoint);
     });
 

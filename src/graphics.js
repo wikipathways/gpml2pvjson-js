@@ -14,8 +14,7 @@ module.exports = {
     }
   },
 
-  toPvjson: function(pvjson, gpmlSelection, elementSelection, pvjsonElement, callback) {
-
+  toPvjson: function(pvjson, gpmlPathwaySelection, elementSelection, pvjsonElement, callback) {
       var parentElement,
       attribute,
       i,
@@ -170,7 +169,7 @@ module.exports = {
       RelX: function(gpmlRelXValue) {
         var pvjsonRelX = parseFloat(gpmlRelXValue);
         pvjsonElement.relX = pvjsonRelX;
-        parentElement = gpmlSelection('[GraphId=' + elementSelection.attr('GraphRef') + ']');
+        parentElement = gpmlPathwaySelection.find('[GraphId=' + elementSelection.attr('GraphRef') + ']');
         //if (parentElement.length < 1) throw new Error('cannot find parent');
         var parentCenterX = parseFloat(parentElement.find('Graphics').attr('CenterX'));
         var parentWidth = parseFloat(parentElement.find('Graphics').attr('Width'));

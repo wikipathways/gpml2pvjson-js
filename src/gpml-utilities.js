@@ -12,34 +12,44 @@ module.exports = {
   ],
 
   convertAttributesToJson: function(elementSelection, pvjsonElement, converter, attributeDependencyOrder) {
-    var attributes = elementSelection[0].attributes || elementSelection[0].attribs;
     var converterKeys = _.keys(converter);
-    /*
-    var attributeKeys = _.map(attributes, 'name');
-    var attributeKeysWithHandler = _.intersection(converterKeys, attributeKeys);
-    //TODO warn for the keys without a handler
-
-    var attributeList = _.map(attributeKeysWithHandler, function(attributeKey) {
-      return {
-        name: attributeKey,
-        value: attributes[attributeKey],
-        //value: attributes[attributeKey],
-        dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
-      };
-    });
-    //*/
-
-    var attributeList = [];
-    _.forEach(attributes, function(attribute) {
-      var attributeKey = attribute.name;
-      if (converterKeys.indexOf(attributeKey) > -1) {
-        attributeList.push({
-          name: attributeKey,
-          value: attribute.value,
-          dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
-        });
+    var attributeList, attributes;
+    // this is an ugly hack, but it's what I'm doing to get the attributes of an element in Node.js vs. in the browser
+    // Cheerio uses "attribs", and browser uses "attributes" :-(
+    if (typeof window === 'undefined') { // if Node.js
+      attributes = elementSelection[0].attribs;
+      var attributeKeys = _.keys(attributes);
+      var handledAttributeKeys = _.intersection(converterKeys, attributeKeys);
+      if (handledAttributeKeys.length < attributes.length) {
+        var unhandledAttributeKeys = _.difference(converterKeys, attributeKeys);
+        console.warn('No handler for attribute(s) "' + unhandledAttributeKeys.join(', ') + '" for element "' + elementSelection.html() + '"');
       }
-    });
+
+      attributeList = _.map(handledAttributeKeys, function(attributeKey) {
+        return {
+          name: attributeKey,
+          value: attributes[attributeKey],
+          dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
+        };
+      });
+    } else { // if browser
+      attributes = elementSelection[0].attributes || [];
+      //var attributes = elementSelection[0].attributes || elementSelection[0].attribs;
+
+      attributeList = [];
+      _.forEach(attributes, function(attribute) {
+        var attributeKey = attribute.name;
+        if (converterKeys.indexOf(attributeKey) > -1) {
+          attributeList.push({
+            name: attributeKey,
+            value: attribute.value,
+            dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
+          });
+        } else {
+          console.warn('No handler for attribute "' + attributeKey + '" for element "' + elementSelection.html() + '"');
+        }
+      });
+    }
     if (attributeList.length > 1) {
       attributeList.sort(function(a, b) {
         return a.dependencyOrder - b.dependencyOrder;
@@ -50,7 +60,6 @@ module.exports = {
     });
     return pvjsonElement;
   },
-
 
   // TODO get rid of some of this border style code. some of it is not being used.
   getBorderStyleNew: function(gpmlLineStyle) {

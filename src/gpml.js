@@ -20,7 +20,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
   ;
 
 //module.exports = {
-window.Gpml2Json = {
+var Gpml2Json = {
   toPvjson: function(gpmlPathwaySelection, pathwayMetadata, callbackOutside){
 
     var xmlns = gpmlPathwaySelection.attr('xmlns');
@@ -94,7 +94,6 @@ window.Gpml2Json = {
           },
           function(jsonBiopax, callbackWaterfall) {
             Async.parallel({
-              /*
               BiopaxRef: function(callback){
                 var biopaxRefsSelection = gpmlPathwaySelection.find('Pathway > BiopaxRef');
                 // TODO don't repeat this code with the same code in element.js
@@ -224,7 +223,6 @@ window.Gpml2Json = {
                 };
                 callback(null, pvjson.image);
               },
-              //*/
               dataNode: function(callback){
                 gpmlPathwaySelection.find('DataNode').each(function() {
                   var dataNodeSelection = $( this );
@@ -234,8 +232,7 @@ window.Gpml2Json = {
                   });
                 });
                 callback(null, 'DataNodes are all converted.');
-              }/*,
-              
+              },
               label: function(callback){
                 gpmlPathwaySelection.find('Label').each(function() {
                   var labelSelection = $( this );
@@ -261,7 +258,6 @@ window.Gpml2Json = {
                   callback(null, 'No shapes to convert.');
                 }
               },
-              //*/
               /*
               Anchor: function(callback){
                 var anchorSelection, anchorsSelection = gpmlPathwaySelection.selectAll('Anchor');
@@ -281,7 +277,6 @@ window.Gpml2Json = {
                 }
               },
               //*/
-              /*
               state: function(callback){
                 var stateSelection, statesSelection = gpmlPathwaySelection.find('State');
                 if (statesSelection.length > 0) {
@@ -327,7 +322,6 @@ window.Gpml2Json = {
                   callback(null, 'No interactions to convert.');
                 }
               }
-              //*/
             },
             function(err, results) {
               var contents,
@@ -789,15 +783,6 @@ window.Gpml2Json = {
         var dataNodeSelection, dataNodeType;
         var dataNodesSelection = gpmlPathwaySelection.find('DataNode');
         if (dataNodesSelection.length > 0) {
-          /*
-          dataNodesSelection.each(function(){
-            dataNodeSelection = d3.select(this);
-            dataNodeType = dataNodeSelection.attr('Type');
-            dataNodeSelection.attr('BiologicalType', dataNodeType)
-            .attr('Type', null);
-          });
-          //*/
-
           dataNodesSelection.filter(function(){
             return (!$(this).find('Graphics').attr('FillColor'));
           }).each(function(){
@@ -1002,3 +987,9 @@ window.Gpml2Json = {
     });
   }
 };
+
+if (typeof window === 'undefined') {
+  module.exports = Gpml2Json;
+} else {
+  window.Gpml2Json = Gpml2Json;
+}
