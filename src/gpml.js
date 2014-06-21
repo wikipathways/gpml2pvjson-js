@@ -988,8 +988,26 @@ var Gpml2Json = {
   }
 };
 
-if (typeof window === 'undefined') {
-  module.exports = Gpml2Json;
-} else {
-  window.Gpml2Json = Gpml2Json;
-}
+// from Underscore
+(function () {
+
+    // Establish the root object, `window` in the browser, or `global` on the server.
+    var root = this; 
+
+    // Create a refeence to this
+    //var Gpml2JsonInstance = JSON.parse(JSON.stringify(Gpml2Json));
+    //var Gpml2JsonInstance = _.cloneDeep(Gpml2Json);
+
+    var isNode = false;
+
+    // Export the Gpml2Json object for **CommonJS**.
+    // If we're not in CommonJS, add `Gpml2Json` to the
+    // global object.
+    if (typeof module !== 'undefined' && module.exports) {
+            module.exports = Gpml2Json;
+            root.Gpml2Json = Gpml2Json;
+            isNode = true;
+    } else {
+            root.Gpml2Json = Gpml2Json;
+    }
+})();
