@@ -12,28 +12,39 @@ module.exports = {
   ],
 
   convertAttributesToJson: function(elementSelection, pvjsonElement, converter, attributeDependencyOrder) {
-    console.log('****************************************************************************************************************');
-    console.log('****************************************************************************************************************');
-    console.log('elementSelection');
-    console.log(elementSelection);
-    var attributes = elementSelection[0].attribs;
-    // TODO this code is duplicated in graphics.js. refactor to avoid duplication.
-    var gpmlToPvjsonConverterKeys = _.keys(converter);
-    var attributeKeys = _.keys(attributes);
-    var attributeKeysWithHandler = _.intersection(gpmlToPvjsonConverterKeys, attributeKeys);
+    var attributes = elementSelection[0].attributes || elementSelection[0].attribs;
+    var converterKeys = _.keys(converter);
+    /*
+    var attributeKeys = _.map(attributes, 'name');
+    var attributeKeysWithHandler = _.intersection(converterKeys, attributeKeys);
     //TODO warn for the keys without a handler
 
     var attributeList = _.map(attributeKeysWithHandler, function(attributeKey) {
       return {
         name: attributeKey,
         value: attributes[attributeKey],
+        //value: attributes[attributeKey],
         dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
       };
     });
-    attributeList.sort(function(a, b) {
-      return a.dependencyOrder - b.dependencyOrder;
+    //*/
+
+    var attributeList = [];
+    _.forEach(attributes, function(attribute) {
+      var attributeKey = attribute.name;
+      if (converterKeys.indexOf(attributeKey) > -1) {
+        attributeList.push({
+          name: attributeKey,
+          value: attribute.value,
+          dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
+        });
+      }
     });
-    var attributeListItemName;
+    if (attributeList.length > 1) {
+      attributeList.sort(function(a, b) {
+        return a.dependencyOrder - b.dependencyOrder;
+      });
+    }
     _(attributeList).forEach(function(attributeListItem) {
       converter[attributeListItem.name](attributeListItem.value);
     });
@@ -41,6 +52,7 @@ module.exports = {
   },
 
 
+  // TODO get rid of some of this border style code. some of it is not being used.
   getBorderStyleNew: function(gpmlLineStyle) {
 
     // Double-lined EntityNodes will be handled by using a symbol with double lines.

@@ -19,7 +19,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
   // , Text = require('./text.js')
   ;
 
-module.exports = {
+//module.exports = {
+window.Gpml2Json = {
   toPvjson: function(gpmlPathwaySelection, pathwayMetadata, callbackOutside){
 
     var xmlns = gpmlPathwaySelection.attr('xmlns');
@@ -77,7 +78,7 @@ module.exports = {
               // TODO check whether this will always be completed by the time it is needed
               // look at http://www.biopax.org/owldoc/Level3/ for correct terms
               // TODO look at whether ontology terms or other items need to be updated
-              var biopaxString = xmlBiopaxSelection.html().replace(/bp:ID/g, 'bp:id').replace(/bp:DB/g, 'bp:db').replace(/bp:TITLE/g, 'bp:title').replace(/bp:SOURCE/g, 'bp:source').replace(/bp:YEAR/g, 'bp:year').replace(/bp:AUTHORS/g, 'bp:author');
+              var biopaxString = '<Biopax>' + xmlBiopaxSelection.html().replace(/bp:ID/g, 'bp:id').replace(/bp:DB/g, 'bp:db').replace(/bp:TITLE/g, 'bp:title').replace(/bp:SOURCE/g, 'bp:source').replace(/bp:YEAR/g, 'bp:year').replace(/bp:AUTHORS/g, 'bp:author').replace(/rdf:id/g, 'rdf:ID') + '</Biopax>';
               Biopax.toJson(biopaxString, pathwayMetadata, function(err, thisJsonBiopax) {
                 jsonBiopax = thisJsonBiopax;
                 if (!!jsonBiopax && !!jsonBiopax.entities && jsonBiopax.entities.length > 0) {
@@ -93,6 +94,7 @@ module.exports = {
           },
           function(jsonBiopax, callbackWaterfall) {
             Async.parallel({
+              /*
               BiopaxRef: function(callback){
                 var biopaxRefsSelection = gpmlPathwaySelection.find('Pathway > BiopaxRef');
                 // TODO don't repeat this code with the same code in element.js
@@ -222,6 +224,7 @@ module.exports = {
                 };
                 callback(null, pvjson.image);
               },
+              //*/
               dataNode: function(callback){
                 gpmlPathwaySelection.find('DataNode').each(function() {
                   var dataNodeSelection = $( this );
@@ -231,21 +234,17 @@ module.exports = {
                   });
                 });
                 callback(null, 'DataNodes are all converted.');
-              },
+              }/*,
+              
               label: function(callback){
-                var labelSelection, labelsSelection = gpmlPathwaySelection.find('Label');
-                if (labelsSelection.length > 0) {
-                  gpmlPathwaySelection.find('Label').each(function() {
-                    labelSelection = $( this );
-                    Label.toPvjson(pvjson, gpmlPathwaySelection, labelSelection, function(pvjsonElements) {
-                      pvjson.elements = pvjson.elements.concat(pvjsonElements);
-                    });
+                gpmlPathwaySelection.find('Label').each(function() {
+                  var labelSelection = $( this );
+                  //var dataNodeSelection = this;
+                  Label.toPvjson(pvjson, gpmlPathwaySelection, labelSelection, function(pvjsonElements) {
+                    pvjson.elements = pvjson.elements.concat(pvjsonElements);
                   });
-                  callback(null, 'Labels are all converted.');
-                }
-                else {
-                  callback(null, 'No labels to convert.');
-                }
+                });
+                callback(null, 'Labels are all converted.');
               },
               shape: function(callback){
                 var shapeSelection, shapesSelection = gpmlPathwaySelection.find('Shape');
@@ -262,6 +261,7 @@ module.exports = {
                   callback(null, 'No shapes to convert.');
                 }
               },
+              //*/
               /*
               Anchor: function(callback){
                 var anchorSelection, anchorsSelection = gpmlPathwaySelection.selectAll('Anchor');
@@ -281,6 +281,7 @@ module.exports = {
                 }
               },
               //*/
+              /*
               state: function(callback){
                 var stateSelection, statesSelection = gpmlPathwaySelection.find('State');
                 if (statesSelection.length > 0) {
@@ -326,6 +327,7 @@ module.exports = {
                   callback(null, 'No interactions to convert.');
                 }
               }
+              //*/
             },
             function(err, results) {
               var contents,
