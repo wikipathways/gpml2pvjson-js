@@ -192,9 +192,11 @@ module.exports = (function(){
         ArrowHead: function(gpmlArrowHeadValue) {
           pvjsonMarker = Strcase.paramCase(gpmlArrowHeadValue);
           if (index === 0) {
-            pvjsonEdge.markerStart = pvjsonMarker;
+            // TODO the marker names are currently camelCase and the other shape names are param-case, because I think that's how the xp-shapes library calls them.
+            // It would be less confusing if they were the same case.
+            pvjsonEdge.markerStart = Strcase.camelCase(pvjsonMarker);
           } else {
-            pvjsonEdge.markerEnd = pvjsonMarker;
+            pvjsonEdge.markerEnd = Strcase.camelCase(pvjsonMarker);
           }
           return pvjsonMarker;
         }
