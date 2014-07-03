@@ -290,22 +290,27 @@ module.exports = (function(){
       sideCombination = getSideCombination(firstPoint, lastPoint);
     // if first and last points are attached to anchors
     } else if (firstPoint.hasOwnProperty('anchor') && lastPoint.hasOwnProperty('anchor')) {
+      firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], gpmlPathwaySelection);
+      lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], gpmlPathwaySelection);
+      sideCombination = getSideCombination(firstPoint, lastPoint);
+      /*
       // TODO change this to actually calculate the number
       sideCombination = {};
       sideCombination.expectedPointCount = 2;
-    // if first point is attached to an anchor and last point is free
+      //*/
+    // Note: each of the following options indicate an unconnected edge on one or both ends
+    // We are not calculating the implicit points for these, because they are probably already in error.
+    //
+    // if first point is attached to an anchor and last point is unconnected
     } else if (firstPoint.hasOwnProperty('anchor')) {
-      // TODO change this to actually calculate the number
       sideCombination = {};
       sideCombination.expectedPointCount = 2;
-    // if last point is attached to an anchor and first point is free
+    // if last point is attached to an anchor and first point is unconnected
     } else if (lastPoint.hasOwnProperty('anchor')) {
-      // TODO change this to actually calculate the number
       sideCombination = {};
       sideCombination.expectedPointCount = 2;
-    // if both edges are free
+    // if both ends are unconnected
     } else {
-      // TODO change this to actually calculate the number
       sideCombination = {};
       sideCombination.expectedPointCount = 2;
     }
