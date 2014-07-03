@@ -5,6 +5,9 @@ var Strcase = require('tower-strcase')
 module.exports = (function(){
   'use strict';
 
+  // a stub is a short path segment that is used for the first and/or last segment(s) of a path
+  var defaultStubLength = 36;
+
   var getPvjsonPositionAndOrientationMapping = function(args) {
     var relValue = args.relValue
       , identifier = args.identifier
@@ -190,13 +193,13 @@ module.exports = (function(){
           return gpmlGraphRefValue;
         },
         ArrowHead: function(gpmlArrowHeadValue) {
-          pvjsonMarker = Strcase.paramCase(gpmlArrowHeadValue);
+          // TODO the marker names are currently camelCase and the other shape names are param-case, because I think that's how the xp-shapes library calls them.
+          // It would be less confusing if they were the same case.
+          pvjsonMarker = Strcase.camelCase(gpmlArrowHeadValue);
           if (index === 0) {
-            // TODO the marker names are currently camelCase and the other shape names are param-case, because I think that's how the xp-shapes library calls them.
-            // It would be less confusing if they were the same case.
-            pvjsonEdge.markerStart = Strcase.camelCase(pvjsonMarker);
+            pvjsonEdge.markerStart = pvjsonMarker;
           } else {
-            pvjsonEdge.markerEnd = Strcase.camelCase(pvjsonMarker);
+            pvjsonEdge.markerEnd = pvjsonMarker;
           }
           return pvjsonMarker;
         }
@@ -256,42 +259,58 @@ module.exports = (function(){
     callback(pvjsonEdge, referencedElementTags);
   }
 
+  /**
+   * calculatePvjsonPoints
+   *
+   * @param gpmlPathwaySelection {Object}
+   * @param explicitPoints {Array}
+   * @param referencedElements {Array}
+   * @param referencedElementTags {Array}
+   * @return {Array} Set of points required to render the edge. Additional points are added if required to unambiguously specify an edge (implicit points are made explicit).
+   */
   function calculatePvjsonPoints(gpmlPathwaySelection, explicitPoints, referencedElements, referencedElementTags) {
-    // [side comparison, reroutingRequired, expected total point count]
-
     var firstPoint = explicitPoints[0]
       , lastPoint = explicitPoints[explicitPoints.length - 1]
+      , sideCombination
       , expectedPointCount
+      // a rerouting stub is a stub used to make the edge emanate away from the source (or target) node, even though that means initially moving away from the target (or source) node 
+      , sidesRequiringReroutingStub
       ;
 
     // if first and last points are attached to shapes
     if (firstPoint.hasOwnProperty('anchor') && _.isNumber(firstPoint.anchor[2]) && _.isNumber(firstPoint.anchor[3]) && lastPoint.hasOwnProperty('anchor') && _.isNumber(lastPoint.anchor[2]) && _.isNumber(lastPoint.anchor[3])) {
-      expectedPointCount = getExpectedPointCount(firstPoint, lastPoint);
+      sideCombination = getSideCombination(firstPoint, lastPoint);
     // if first point is attached to a shape and last point is attached to an anchor (not a group)
     } else if (firstPoint.hasOwnProperty('anchor') && _.isNumber(firstPoint.anchor[2]) && _.isNumber(firstPoint.anchor[3]) && lastPoint.hasOwnProperty('anchor')) {
       lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], gpmlPathwaySelection);
-      expectedPointCount = getExpectedPointCount(firstPoint, lastPoint);
+      sideCombination = getSideCombination(firstPoint, lastPoint);
     // if last point is attached to a shape and first point is attached to an anchor (not a group)
     } else if (lastPoint.hasOwnProperty('anchor') && _.isNumber(lastPoint.anchor[2]) && _.isNumber(lastPoint.anchor[3]) && firstPoint.hasOwnProperty('anchor')) {
       firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], gpmlPathwaySelection);
-      expectedPointCount = getExpectedPointCount(firstPoint, lastPoint);
+      sideCombination = getSideCombination(firstPoint, lastPoint);
     // if first and last points are attached to anchors
     } else if (firstPoint.hasOwnProperty('anchor') && lastPoint.hasOwnProperty('anchor')) {
       // TODO change this to actually calculate the number
-      expectedPointCount = 2;
+      sideCombination = {};
+      sideCombination.expectedPointCount = 2;
     // if first point is attached to an anchor and last point is free
     } else if (firstPoint.hasOwnProperty('anchor')) {
       // TODO change this to actually calculate the number
-      expectedPointCount = 2;
+      sideCombination = {};
+      sideCombination.expectedPointCount = 2;
     // if last point is attached to an anchor and first point is free
     } else if (lastPoint.hasOwnProperty('anchor')) {
       // TODO change this to actually calculate the number
-      expectedPointCount = 2;
+      sideCombination = {};
+      sideCombination.expectedPointCount = 2;
     // if both edges are free
     } else {
       // TODO change this to actually calculate the number
-      expectedPointCount = 2;
+      sideCombination = {};
+      sideCombination.expectedPointCount = 2;
     }
+    expectedPointCount = sideCombination.expectedPointCount;
+    sidesRequiringReroutingStub = sideCombination.sidesRequiringReroutingStub;
 
     //check to see whether all implicit points are provided
     if (explicitPoints.length >= expectedPointCount) {
@@ -303,7 +322,6 @@ module.exports = (function(){
       pvjsonPoints[0] = firstPoint;
 
       var directionIsVertical = (Math.abs(explicitPoints[0].anchor[3]) === 1);
-      var defaultStubLength = 20;
 
       // calculate intermediate pvjson points, which are implicit
       // remember that this refers to the minimum number of points required to define the path,
@@ -314,9 +332,7 @@ module.exports = (function(){
       //  |                                     |
       //  *                                     *
       // 
-      //
-      //                   or
-      //
+      //                    or
       //                                        *
       //                                        |
       //                                        |
@@ -325,44 +341,96 @@ module.exports = (function(){
       //  |
       //  *
       //
+      //  other configurations possible
+
       if (expectedPointCount === 3) {
         if (directionIsVertical) {
           pvjsonPoints[1] = {};
           pvjsonPoints[1].x = (firstPoint.x + lastPoint.x) / 2;
-          pvjsonPoints[1].y = firstPoint.y + firstPoint.anchor[3] * defaultStubLength;
+          if (sidesRequiringReroutingStub.length === 0) {
+            pvjsonPoints[1].y = firstPoint.y + firstPoint.anchor[3] * defaultStubLength;
+          } else {
+            if (firstPoint.anchor[3] > 0) {
+              pvjsonPoints[1].y = Math.max(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
+            } else {
+              pvjsonPoints[1].y = Math.min(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
+            }
+          }
         } else {
           pvjsonPoints[1] = {};
-          pvjsonPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
+          if (sidesRequiringReroutingStub.length === 0) {
+            pvjsonPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
+          } else {
+            if (firstPoint.anchor[2] > 0) {
+              pvjsonPoints[1].x = Math.max(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
+            } else {
+              pvjsonPoints[1].x = Math.min(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
+            }
+          }
           pvjsonPoints[1].y = (firstPoint.y + lastPoint.y) / 2;
         }
       } else if (expectedPointCount === 4){
-      //
+
       //  ------------------*--------------------
       //  |                                     | 
       //  |                                     | 
-      //  *                                     | 
-      //                                        *
+      //  *                                     *
       //                                        |
       //                                        |
       //                                        ---*
       //
+      //  many other configurations possible
+
         if (directionIsVertical) {
           pvjsonPoints[1] = {};
           pvjsonPoints[1].x = (firstPoint.x + lastPoint.x + lastPoint.anchor[2] * defaultStubLength) / 2;
-          pvjsonPoints[1].y = firstPoint.y + firstPoint.anchor[3] * defaultStubLength;
+          if (sidesRequiringReroutingStub.indexOf('first') === -1) {
+            pvjsonPoints[1].y = firstPoint.y + firstPoint.anchor[3] * defaultStubLength;
+          } else {
+            if (firstPoint.anchor[3] > 0) {
+              pvjsonPoints[1].y = Math.max(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
+            } else {
+              pvjsonPoints[1].y = Math.min(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
+            }
+          }
           pvjsonPoints[2] = {};
-          pvjsonPoints[2].x = lastPoint.x + lastPoint.anchor[2] * defaultStubLength;
+          if (sidesRequiringReroutingStub.indexOf('last') === -1) {
+            pvjsonPoints[2].x = lastPoint.x + lastPoint.anchor[2] * defaultStubLength;
+          } else {
+            if (lastPoint.anchor[2] > 0) {
+              pvjsonPoints[2].x = Math.max(firstPoint.x, lastPoint.x) + lastPoint.anchor[2] * defaultStubLength;
+            } else {
+              pvjsonPoints[2].x = Math.min(firstPoint.x, lastPoint.x) + lastPoint.anchor[2] * defaultStubLength;
+            }
+          }
           pvjsonPoints[2].y = (pvjsonPoints[1].y + lastPoint.y) / 2;
         } else {
           pvjsonPoints[1] = {};
           pvjsonPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
+          if (sidesRequiringReroutingStub.indexOf('first') === -1) {
+            pvjsonPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
+          } else {
+            if (firstPoint.anchor[2] > 0) {
+              pvjsonPoints[1].x = Math.max(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
+            } else {
+              pvjsonPoints[1].x = Math.min(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
+            }
+          }
           pvjsonPoints[1].y = (firstPoint.y + lastPoint.y + lastPoint.anchor[3] * defaultStubLength) / 2;
           pvjsonPoints[2] = {};
           pvjsonPoints[2].x = (pvjsonPoints[1].x + lastPoint.x) / 2;
-          pvjsonPoints[2].y = lastPoint.y + lastPoint.anchor[3] * defaultStubLength;
+          if (sidesRequiringReroutingStub.indexOf('last') === -1) {
+            pvjsonPoints[2].y = lastPoint.y + lastPoint.anchor[3] * defaultStubLength;
+          } else {
+            if (lastPoint.anchor[3] > 0) {
+              pvjsonPoints[2].y = Math.max(firstPoint.y, lastPoint.y) + lastPoint.anchor[3] * defaultStubLength;
+            } else {
+              pvjsonPoints[2].y = Math.min(firstPoint.y, lastPoint.y) + lastPoint.anchor[3] * defaultStubLength;
+            }
+          }
         }
       } else if (expectedPointCount === 5){
-      //
+
       //                                     *---
       //                                        |
       //                                        * 
@@ -373,6 +441,8 @@ module.exports = (function(){
       //  |
       //  ---*
       //
+      //  many other configurations possible
+
         if (directionIsVertical) {
           pvjsonPoints[1] = {};
           pvjsonPoints[1].x = ((lastPoint.x - firstPoint.x) / 4) + firstPoint.x;
@@ -478,7 +548,6 @@ module.exports = (function(){
       , orientationY
       , selectedFirstSegmentCalculation
       , minimumAngleBetweenFirstSegmentOptionsAndAnchoredEdge
-      , defaultStubLength = 20
       , firstSegmentCalculations = []
       ;
 
@@ -555,7 +624,7 @@ module.exports = (function(){
     return pointOnEdge;
   };
 
-  function getExpectedPointCount(firstPoint, lastPoint) {
+  function getSideCombination(firstPoint, lastPoint) {
     var combinations = [
       { 'sideComparison': 'same', 'reroutingRequired': true, 'expectedPointCount': 3 },
       { 'sideComparison': 'perpendicular', 'reroutingRequired': true, 'expectedPointCount': 4 },
@@ -564,30 +633,50 @@ module.exports = (function(){
       { 'sideComparison': 'opposing', 'reroutingRequired': false, 'expectedPointCount': 3 }
     ];
     var sides = getAndCompareSides(firstPoint, lastPoint);
-    var reroutingRequired = determineWhetherReroutingRequired(firstPoint, lastPoint, sides);
-    var expectedPointCount = combinations.filter(function(combination) {
+    var sidesRequiringReroutingStub = getSidesRequiringReroutingStub(firstPoint, lastPoint, sides);
+    var reroutingRequired = (sidesRequiringReroutingStub.length > 0);
+    var sideCombination = combinations.filter(function(combination) {
       return combination.sideComparison === sides.comparison && combination.reroutingRequired === reroutingRequired;
-    })[0].expectedPointCount;
-    return expectedPointCount;
+    })[0];
+    sideCombination.sidesRequiringReroutingStub = sidesRequiringReroutingStub;
+    return sideCombination;
   }
 
-  function determineWhetherReroutingRequired(firstPoint, lastPoint, sides){
+  function getSidesRequiringReroutingStub(firstPoint, lastPoint, sides){
+    var firstSideRequiresReroutingStub;
+    var lastSideRequiresReroutingStub;
+    var sidesRequiringReroutingStub = [];
     if (sides.comparison === 'same') {
-      return true;
+      if (sides.first === 'top' || sides.first === 'bottom') {
+        firstSideRequiresReroutingStub = (firstPoint.anchor[3] !== (lastPoint.y - firstPoint.y) / Math.abs(lastPoint.y - firstPoint.y));
+        firstSideRequiresReroutingStub = !lastSideRequiresReroutingStub;
+      } else {
+        firstSideRequiresReroutingStub = (firstPoint.anchor[2] !== (lastPoint.x - firstPoint.x) / Math.abs(lastPoint.x - firstPoint.x));
+        firstSideRequiresReroutingStub = !lastSideRequiresReroutingStub;
+      }
     } else if (sides.comparison === 'opposing') {
       if (sides.first === 'top' || sides.first === 'bottom') {
-        return (firstPoint.anchor[3] === (firstPoint.y - lastPoint.y) / Math.abs(firstPoint.y - lastPoint.y));
+        firstSideRequiresReroutingStub = lastSideRequiresReroutingStub = (firstPoint.anchor[3] !== (lastPoint.y - firstPoint.y) / Math.abs(lastPoint.y - firstPoint.y));
       } else {
-        return (firstPoint.anchor[2] === (firstPoint.x - lastPoint.x) / Math.abs(firstPoint.x - lastPoint.x));
+        firstSideRequiresReroutingStub = lastSideRequiresReroutingStub = (firstPoint.anchor[2] !== (lastPoint.x - firstPoint.x) / Math.abs(lastPoint.x - firstPoint.x));
       }
     // if side comparison is not same or opposing, it must be perpendicular
     } else { 
       if (sides.first === 'top' || sides.first === 'bottom') {
-        return (firstPoint.anchor[3] === (firstPoint.y - lastPoint.y) / Math.abs(firstPoint.y - lastPoint.y) && (lastPoint.anchor[2] === (firstPoint.x - lastPoint.x) / Math.abs(firstPoint.x - lastPoint.x)));
+        firstSideRequiresReroutingStub = firstPoint.anchor[3] !== (lastPoint.y - firstPoint.y) / Math.abs(lastPoint.y - firstPoint.y);
+        lastSideRequiresReroutingStub = lastPoint.anchor[2] !== (firstPoint.x - lastPoint.x) / Math.abs(firstPoint.x - lastPoint.x);
       } else {
-        return (lastPoint.anchor[3] === (firstPoint.y - lastPoint.y) / Math.abs(firstPoint.y - lastPoint.y) && (firstPoint.anchor[2] === (firstPoint.x - lastPoint.x) / Math.abs(firstPoint.x - lastPoint.x)));
+        firstSideRequiresReroutingStub = firstPoint.anchor[2] !== (lastPoint.x - firstPoint.x) / Math.abs(lastPoint.x - firstPoint.x);
+        lastSideRequiresReroutingStub = lastPoint.anchor[3] !== (firstPoint.y - lastPoint.y) / Math.abs(firstPoint.y - lastPoint.y);
       }
     }
+    if (firstSideRequiresReroutingStub) {
+      sidesRequiringReroutingStub.push('first');
+    }
+    if (lastSideRequiresReroutingStub) {
+      sidesRequiringReroutingStub.push('last');
+    }
+    return sidesRequiringReroutingStub;
   }
 
   function getAndCompareSides(firstPoint, lastPoint){
