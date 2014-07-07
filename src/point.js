@@ -1,5 +1,6 @@
 var Strcase = require('tower-strcase')
   , _ = require('lodash')
+  , GpmlUtilities = require('./gpml-utilities.js')
   ;
 
 module.exports = (function(){
@@ -205,6 +206,7 @@ module.exports = (function(){
         }
       };
 
+      /*
       // TODO Use the code from GpmlUtilities and remove this section below.
       function convertAttributesToJson(elementSelection, pvjsonElement, converter, attributeDependencyOrder) {
         var attributes = elementSelection[0].attributes || elementSelection[0].attribs;
@@ -212,8 +214,9 @@ module.exports = (function(){
 
         var attributeList = [];
 
-        _.forIn(attributes, function(value, key) {
-          console.log(key);
+        _.forEach(attributes, function(attribute) {
+          var key = attribute.name;
+          var value = attribute.value;
           if (converterKeys.indexOf(key) > -1) {
             attributeList.push({
               name: key,
@@ -235,8 +238,11 @@ module.exports = (function(){
         });
         return pvjsonElement;
       }
+      //*/
 
-      explicitPoint = convertAttributesToJson(gpmlPointSelection, explicitPoint, gpmlToPvjsonConverter, attributeDependencyOrder);
+      //pvjsonElement = GpmlUtilities.convertAttributesToJson(elementSelection, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
+      explicitPoint = GpmlUtilities.convertAttributesToJson(gpmlPointSelection, explicitPoint, gpmlToPvjsonConverter, attributeDependencyOrder);
+      //explicitPoint = convertAttributesToJson(gpmlPointSelection, explicitPoint, gpmlToPvjsonConverter, attributeDependencyOrder);
       explicitPoints.push(explicitPoint);
     });
 
