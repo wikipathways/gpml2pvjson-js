@@ -211,18 +211,20 @@ module.exports = (function(){
         var converterKeys = _.keys(converter);
 
         var attributeList = [];
-        _.forEach(attributes, function(attribute) {
-          var attributeKey = attribute.name;
-          if (converterKeys.indexOf(attributeKey) > -1) {
+
+        _.forIn(attributes, function(value, key) {
+          console.log(key);
+          if (converterKeys.indexOf(key) > -1) {
             attributeList.push({
-              name: attributeKey,
-              value: attribute.value,
-              dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
+              name: key,
+              value: value,
+              dependencyOrder: attributeDependencyOrder.indexOf(key),
             });
           } else {
-            console.warn('No handler for attribute "' + attributeKey + '" for element "' + elementSelection.html() + '"');
+            console.warn('No handler for attribute "' + key + '" for element "' + elementSelection.html() + '"');
           }
         });
+
         if (attributeList.length > 1) {
           attributeList.sort(function(a, b) {
             return a.dependencyOrder - b.dependencyOrder;

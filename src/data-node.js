@@ -18,7 +18,8 @@ module.exports = {
     'Unknown':'PhysicalEntity',
     'GeneProduct':'Dna',
     //'GeneProduct':['Dna','Gene','Rna','Protein'],
-    'Pathway':'Pathway'
+    'Pathway':'Pathway',
+    'Complex':'Complex'
   },
   generateEntityReference: function(displayName, dataSourceName, dbId, organism, entityType, callback){
     var bridgeDbDataSourcesRow
