@@ -10,7 +10,7 @@ var GpmlElement = require('./element.js')
 //var BridgeDbDataSources = JSON.parse(fs.readFileSync('../data-sources.json'));
 
 module.exports = {
-  // Insert preferred Biopax term first, with other terms following.
+  // Use closest Biopax term.
   gpmlToBiopaxMappings: {
     'Metabolite':'SmallMolecule',
     'Protein':'Protein',
