@@ -32,7 +32,7 @@ module.exports = {
           dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
         };
       });
-    } else { // if browser
+    } else if (!!elementSelection && elementSelection.length > 0) { // if browser
       attributes = elementSelection[0].attributes || [];
       //var attributes = elementSelection[0].attributes || elementSelection[0].attribs;
 
@@ -50,14 +50,16 @@ module.exports = {
         }
       });
     }
-    if (attributeList.length > 1) {
-      attributeList.sort(function(a, b) {
-        return a.dependencyOrder - b.dependencyOrder;
+    if (!!attributeList && attributeList.length > 0) {
+      if (attributeList.length > 1) {
+        attributeList.sort(function(a, b) {
+          return a.dependencyOrder - b.dependencyOrder;
+        });
+      }
+      _(attributeList).forEach(function(attributeListItem) {
+        converter[attributeListItem.name](attributeListItem.value);
       });
     }
-    _(attributeList).forEach(function(attributeListItem) {
-      converter[attributeListItem.name](attributeListItem.value);
-    });
     return pvjsonElement;
   },
 

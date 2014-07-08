@@ -24,7 +24,10 @@ var Gpml2Json = {
   toPvjson: function(gpmlPathwaySelection, pathwayMetadata, callbackOutside){
 
     var xmlns = gpmlPathwaySelection.attr('xmlns');
+    self.mygpmlPathwaySelection = gpmlPathwaySelection;
     gpmlPathwaySelection = this.fixBiopax(this.addIsPartOfAttribute(this.makeExplicit(gpmlPathwaySelection)));
+    console.log('gpmlPathwaySelection');
+    console.log(gpmlPathwaySelection);
     var pvjson = {};
 
     var pathwayIri = 'http://identifiers.org/wikipathways/' + pathwayMetadata.dbId;
@@ -78,7 +81,16 @@ var Gpml2Json = {
               // TODO check whether this will always be completed by the time it is needed
               // look at http://www.biopax.org/owldoc/Level3/ for correct terms
               // TODO look at whether ontology terms or other items need to be updated
-              var biopaxString = '<Biopax>' + xmlBiopaxSelection.html().replace(/bp:ID/g, 'bp:id').replace(/bp:DB/g, 'bp:db').replace(/bp:TITLE/g, 'bp:title').replace(/bp:SOURCE/g, 'bp:source').replace(/bp:YEAR/g, 'bp:year').replace(/bp:AUTHORS/g, 'bp:author').replace(/rdf:id/g, 'rdf:ID') + '</Biopax>';
+              var biopaxStringUnedited;
+              // TODO don't repeat this environment detection. another version is already defined at the bottom of this file.
+              if (!!window) { // isNode
+                var serializer = new XMLSerializer();
+                biopaxStringUnedited = serializer.serializeToString(xmlBiopaxSelection[0]);
+              } else { // isBrowser
+                biopaxStringUnedited = xmlBiopaxSelection.html();
+              }
+
+              var biopaxString = '<Biopax>' + biopaxStringUnedited.replace(/bp:ID/g, 'bp:id').replace(/bp:DB/g, 'bp:db').replace(/bp:TITLE/g, 'bp:title').replace(/bp:SOURCE/g, 'bp:source').replace(/bp:YEAR/g, 'bp:year').replace(/bp:AUTHORS/g, 'bp:author').replace(/rdf:id/g, 'rdf:ID') + '</Biopax>';
               Biopax.toJson(biopaxString, pathwayMetadata, function(err, thisJsonBiopax) {
                 jsonBiopax = thisJsonBiopax;
                 if (!!jsonBiopax && !!jsonBiopax.entities && jsonBiopax.entities.length > 0) {
@@ -380,7 +392,7 @@ var Gpml2Json = {
       var publicationXrefId = xmlPublicationXrefSelection.attr('rdf:id');
       xmlPublicationXrefSelection.attr('rdf:id', null);
       xmlPublicationXrefSelection.attr('rdf:about', publicationXrefId);
-      // still need to lowercaes Biopax element names, e.g., bp:ID and bp:DB to bp:id and bp:db
+      // still need to lowercase Biopax element names, e.g., bp:ID and bp:DB to bp:id and bp:db
       // will do it with a simple string regex before passing it into the Biopax library
     });
     return gpmlPathwaySelection;
@@ -424,7 +436,7 @@ var Gpml2Json = {
   // Fills in implicit values
   makeExplicit: function(gpmlPathwaySelection) {
     var groupGroupSelection, groupNoneSelection, groupPathwaySelection, groupComplexSelection, cellularComponentValue,
-      groupGraphicsSelection, groupGroupGraphicsSelection, groupNoneGraphicsSelection, groupPathwayGraphicsSelection, groupComplexGraphicsSelection,
+      groupGroupGraphicsSelection, groupNoneGraphicsSelection, groupPathwayGraphicsSelection, groupComplexGraphicsSelection,
       graphId, graphIdStub, graphIdStubs = [];
 
     var selectAllGraphicalElementsArgs = {};
@@ -471,17 +483,23 @@ var Gpml2Json = {
       });
 
       var groupsSelection = gpmlPathwaySelection.find('Group');
-      groupsSelection.each(function(){
-        var groupSelection = $( this );
-        var groupGraphicsSelection = groupSelection.append('<Graphics Align="Center" Valign="Middle" FontWeight="Bold" LineThickness="1" FillOpacity="0.1"></Graphics>');
-        /*
-        groupGraphicsSelection.attr('Align', 'Center')
-        .attr('Valign', 'Middle')
-        .attr('FontWeight', 'Bold')
-        .attr('LineThickness', 1)
-        .attr('FillOpacity', 0.1);
-        //*/
-      });
+      // TODO use one node vs. browser detection function throughout code!
+      if (!!document && !!document.createElementNS) {
+        var graphicsElement = document.createElementNS('http://pathvisio.org/GPML/2013a', 'Graphics');
+        graphicsElement.setAttribute('Align', 'Center');
+        graphicsElement.setAttribute('Valign', 'Middle');
+        graphicsElement.setAttribute('FontWeight', 'Bold');
+        graphicsElement.setAttribute('LineThickness', 1);
+        graphicsElement.setAttribute('FillOpacity', 0.1);
+
+        groupsSelection.each(function(){
+          var groupElement = $( this )[0];
+          var graphicsElementInstance = graphicsElement.cloneNode();
+          groupElement.appendChild(graphicsElementInstance);
+        });
+      } else {
+        groupsSelection.append('<Graphics Align="Center" Valign="Middle" FontWeight="Bold" LineThickness="1" FillOpacity="0.1"></Graphics>');
+      }
       var groupGroupsSelection = gpmlPathwaySelection.find('Group[Style=Group]').each(function(){
         var groupGroupSelection = $( this );
         var groupGroupGraphicsSelection = groupGroupSelection.find('Graphics')
@@ -824,13 +842,25 @@ var Gpml2Json = {
 
         var anchorsSelection = gpmlPathwaySelection.find('Anchor');
         if (anchorsSelection.length > 0) {
-          anchorsSelection.each(function(){
+           anchorsSelection.each(function(){
             var anchorSelection = $(this);
             var parentGraphicsSelection = anchorSelection.parent();
             var shapeTypeValue = anchorSelection.attr('Shape') || 'None';
             var positionValue = anchorSelection.attr('Position');
 
-            var graphics = anchorSelection.append('<Graphics Position="' + positionValue + '" ShapeType="' + shapeTypeValue + '" LineThickness="' + 0 + '" FillColor="' + parentGraphicsSelection.attr('Color') + '"></Graphics>');
+            // TODO use one node vs. browser detection function throughout code!
+            if (!!document && !!document.createElementNS) {
+              var graphicsElement = document.createElementNS('http://pathvisio.org/GPML/2013a', 'Graphics');
+              graphicsElement.setAttribute('Position', positionValue);
+              graphicsElement.setAttribute('ShapeType', shapeTypeValue);
+              graphicsElement.setAttribute('LineThickness', 0);
+              graphicsElement.setAttribute('FillColor', parentGraphicsSelection.attr('Color'));
+              var anchorElement = anchorSelection[0];
+              anchorElement.appendChild(graphicsElement);
+            } else {
+              anchorSelection.append('<Graphics Position="' + positionValue + '" ShapeType="' + shapeTypeValue + '" LineThickness="' + 0 + '" FillColor="' + parentGraphicsSelection.attr('Color') + '"></Graphics>');
+            }
+
             anchorSelection.attr('Position', null);
             anchorSelection.attr('Shape', null);
             // In a future version of GPML, we could improve rendering speed if we included the cached X and Y values for Anchors, just like we currently do for Points.
@@ -994,7 +1024,7 @@ var Gpml2Json = {
     // Establish the root object, `window` in the browser, or `global` on the server.
     var root = this; 
 
-    // Create a refeence to this
+    // Create a reference to this
     //var Gpml2JsonInstance = JSON.parse(JSON.stringify(Gpml2Json));
     //var Gpml2JsonInstance = _.cloneDeep(Gpml2Json);
 
@@ -1006,7 +1036,7 @@ var Gpml2Json = {
     if (typeof module !== 'undefined' && module.exports) {
             module.exports = Gpml2Json;
             root.Gpml2Json = Gpml2Json;
-            isNode = true;
+            root.isNode = true;
     } else {
             root.Gpml2Json = Gpml2Json;
     }

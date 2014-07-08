@@ -29,8 +29,7 @@ var Group = {
         dimensions.topLeftCorner.y = Math.min(dimensions.topLeftCorner.y, groupContent.y);
         dimensions.bottomRightCorner.x = Math.max(dimensions.bottomRightCorner.x, groupContent.x + groupContent.width);
         dimensions.bottomRightCorner.y = Math.max(dimensions.bottomRightCorner.y, groupContent.y + groupContent.height);
-      }
-      else {
+      } else {
         dimensions.topLeftCorner.x = Math.min(dimensions.topLeftCorner.x, groupContent.points[0].x, groupContent.points[groupContent.points.length - 1].x);
         dimensions.topLeftCorner.y = Math.min(dimensions.topLeftCorner.y, groupContent.points[0].y, groupContent.points[groupContent.points.length - 1].y);
         dimensions.bottomRightCorner.x = Math.max(dimensions.bottomRightCorner.x, groupContent.points[0].x, groupContent.points[groupContent.points.length - 1].x);
@@ -68,8 +67,12 @@ var Group = {
         if (contents.length > 0) {
           pvjsonPath.contains = contents;
           Group.getGroupDimensions(pvjsonPath, function(dimensions){
+            console.log('dimensions');
+            console.log(dimensions);
             pvjsonPath.x = dimensions.x || 0;
             pvjsonPath.y = dimensions.y || 0;
+            console.log('pvjsonPath');
+            console.log(pvjsonPath);
             if (pvjsonPath.x === 0 || pvjsonPath.y === 0) {
               console.warn('Error in groups. cannot get x or y value.');
             }
