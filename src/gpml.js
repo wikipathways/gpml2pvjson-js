@@ -24,10 +24,7 @@ var Gpml2Json = {
   toPvjson: function(gpmlPathwaySelection, pathwayMetadata, callbackOutside){
 
     var xmlns = gpmlPathwaySelection.attr('xmlns');
-    self.mygpmlPathwaySelection = gpmlPathwaySelection;
     gpmlPathwaySelection = this.fixBiopax(this.addIsPartOfAttribute(this.makeExplicit(gpmlPathwaySelection)));
-    console.log('gpmlPathwaySelection');
-    console.log(gpmlPathwaySelection);
     var pvjson = {};
 
     var pathwayIri = 'http://identifiers.org/wikipathways/' + pathwayMetadata.dbId;

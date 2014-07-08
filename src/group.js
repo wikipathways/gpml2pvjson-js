@@ -67,12 +67,8 @@ var Group = {
         if (contents.length > 0) {
           pvjsonPath.contains = contents;
           Group.getGroupDimensions(pvjsonPath, function(dimensions){
-            console.log('dimensions');
-            console.log(dimensions);
             pvjsonPath.x = dimensions.x || 0;
             pvjsonPath.y = dimensions.y || 0;
-            console.log('pvjsonPath');
-            console.log(pvjsonPath);
             if (pvjsonPath.x === 0 || pvjsonPath.y === 0) {
               console.warn('Error in groups. cannot get x or y value.');
             }
