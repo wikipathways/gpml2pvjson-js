@@ -19,10 +19,37 @@ var GpmlUtilities = require('./gpml-utilities.js')
   // , Text = require('./text.js')
   ;
 
-//module.exports = {
-var Gpml2Json = {
-  toPvjson: function(gpmlPathwaySelection, pathwayMetadata, callbackOutside){
+// architecture/exporting based on underscore.js code
+(function () {
 
+  // Establish the root object, `window` in the browser, or `global` on the server.
+  var root = this; 
+
+  // Create a reference to this
+  //var Gpml2JsonInstance = JSON.parse(JSON.stringify(Gpml2Json));
+  //var Gpml2JsonInstance = _.cloneDeep(Gpml2Json);
+
+  var isBrowser = false;
+
+  // detect environment: browser vs. Node.js
+  // I would prefer to use the code from underscore.js or lodash.js, but it doesn't appear to work for me,
+  // possibly because I'm using browserify.js and want to detect browser vs. Node.js, whereas
+  // the other libraries are just trying to detect whether we're in CommonJS or not.
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    isBrowser = true;
+  }
+
+  // Create a safe reference to the Gpml2Json object for use below.
+  var Gpml2Json = function(obj) {
+    if (obj instanceof Gpml2Json) {
+      return obj;
+    }
+    if (!(this instanceof Gpml2Json)) {
+      return new Gpml2Json(obj);
+    }
+  };
+
+  Gpml2Json.toPvjson = function(gpmlPathwaySelection, pathwayMetadata, callbackOutside){
     var xmlns = gpmlPathwaySelection.attr('xmlns');
     gpmlPathwaySelection = this.fixBiopax(this.addIsPartOfAttribute(this.makeExplicit(gpmlPathwaySelection)));
     var pvjson = {};
@@ -80,10 +107,10 @@ var Gpml2Json = {
               // TODO look at whether ontology terms or other items need to be updated
               var biopaxStringUnedited;
               // TODO don't repeat this environment detection. another version is already defined at the bottom of this file.
-              if (!!window) { // isNode
+              if (isBrowser) { // isBrowser
                 var serializer = new XMLSerializer();
                 biopaxStringUnedited = serializer.serializeToString(xmlBiopaxSelection[0]);
-              } else { // isBrowser
+              } else { // isNode
                 biopaxStringUnedited = xmlBiopaxSelection.html();
               }
 
@@ -379,10 +406,10 @@ var Gpml2Json = {
         ]);
       }
     }
-  },
+  };
 
   // Corrects some errors in current Biopax embedded in GPML
-  fixBiopax: function(gpmlPathwaySelection) {
+  Gpml2Json.fixBiopax = function(gpmlPathwaySelection) {
     var xmlBiopaxSelection = gpmlPathwaySelection.find('Biopax');
     xmlBiopaxSelection.find('bp\\:PublicationXref').each(function() {
       var xmlPublicationXrefSelection = $( this );
@@ -393,10 +420,10 @@ var Gpml2Json = {
       // will do it with a simple string regex before passing it into the Biopax library
     });
     return gpmlPathwaySelection;
-  },
+  };
 
   // Removes confusion of GroupId vs. GraphId by just using GraphId to identify containing elements
-  addIsPartOfAttribute: function(gpmlPathwaySelection) {
+  Gpml2Json.addIsPartOfAttribute = function(gpmlPathwaySelection) {
     gpmlPathwaySelection.find('Group').each(function() {
       var groupSelection = $(this);
       var groupId = groupSelection.attr('GroupId');
@@ -409,9 +436,9 @@ var Gpml2Json = {
       });
     });
     return gpmlPathwaySelection;
-  },
+  };
 
-  selectByMultipleTagNames: function(args){
+  Gpml2Json.selectByMultipleTagNames = function(args){
     var gpmlPathwaySelection = args.gpmlPathwaySelection;
     var elementTags = args.elementTags;
     var elementsSelection;
@@ -428,10 +455,10 @@ var Gpml2Json = {
       }
     });
     return elementsSelection;
-  },
+  };
 
   // Fills in implicit values
-  makeExplicit: function(gpmlPathwaySelection) {
+  Gpml2Json.makeExplicit = function(gpmlPathwaySelection) {
     var groupGroupSelection, groupNoneSelection, groupPathwaySelection, groupComplexSelection, cellularComponentValue,
       groupGroupGraphicsSelection, groupNoneGraphicsSelection, groupPathwayGraphicsSelection, groupComplexGraphicsSelection,
       graphId, graphIdStub, graphIdStubs = [];
@@ -481,7 +508,7 @@ var Gpml2Json = {
 
       var groupsSelection = gpmlPathwaySelection.find('Group');
       // TODO use one node vs. browser detection function throughout code!
-      if (!!document && !!document.createElementNS) {
+      if (isBrowser) {
         var graphicsElement = document.createElementNS('http://pathvisio.org/GPML/2013a', 'Graphics');
         graphicsElement.setAttribute('Align', 'Center');
         graphicsElement.setAttribute('Valign', 'Middle');
@@ -892,10 +919,10 @@ var Gpml2Json = {
     }
 
     return gpmlPathwaySelection;
-  },
+  };
 
 
-  toBiopaxjson: function(gpmlPathwaySelection, pathwayMetadata, callback){
+  Gpml2Json.toBiopaxjson = function(gpmlPathwaySelection, pathwayMetadata, callback){
     this.toPvjson(gpmlPathwaySelection, pathwayMetadata, function(err, pvjson) {
       var biopaxjson = {};
       biopaxjson['@context'] = pvjson['@context'];
@@ -1012,29 +1039,18 @@ var Gpml2Json = {
       biopaxjson['@graph'].push(pathway);
       callback(null, biopaxjson);
     });
-  }
-};
+  };
 
-// from Underscore
-(function () {
-
-    // Establish the root object, `window` in the browser, or `global` on the server.
-    var root = this; 
-
-    // Create a reference to this
-    //var Gpml2JsonInstance = JSON.parse(JSON.stringify(Gpml2Json));
-    //var Gpml2JsonInstance = _.cloneDeep(Gpml2Json);
-
-    var isNode = false;
-
-    // Export the Gpml2Json object for **CommonJS**.
-    // If we're not in CommonJS, add `Gpml2Json` to the
-    // global object.
+  // Export the Gpml2Json object for **Node.js**, with
+  // backwards-compatibility for the old `require()` API. If we're in
+  // the browser, add `Gpml2Json` as a global object via a string identifier,
+  // for Closure Compiler "advanced" mode.
+  if (typeof exports !== 'undefined') {
     if (typeof module !== 'undefined' && module.exports) {
-            module.exports = Gpml2Json;
-            root.Gpml2Json = Gpml2Json;
-            root.isNode = true;
-    } else {
-            root.Gpml2Json = Gpml2Json;
+      exports = module.exports = Gpml2Json;
     }
+    exports.Gpml2Json = Gpml2Json;
+  } else {
+    root.Gpml2Json = Gpml2Json;
+  }
 })();
