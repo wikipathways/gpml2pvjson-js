@@ -17,8 +17,10 @@ module.exports = {
     // this is an ugly hack, but it's what I'm doing to get the attributes of an element in Node.js vs. in the browser
     // Cheerio uses "attribs", and browser uses "attributes" :-(
     if (typeof window === 'undefined') { // if Node.js
+      /*
       console.log('elementSelection');
       console.log(elementSelection);
+      //*/
       attributes = elementSelection[0].attribs;
       var attributeKeys = _.keys(attributes);
       var handledAttributeKeys = _.intersection(converterKeys, attributeKeys);

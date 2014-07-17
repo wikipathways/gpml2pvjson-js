@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var GpmlUtilities = require('./gpml-utilities.js')
   , Async = require('async')
   , Biopax = require('biopax2json')
@@ -77,15 +79,19 @@ var GpmlUtilities = require('./gpml-utilities.js')
 
     pvjson.elements = [];
 
-    /* Dev only
+    //* Dev only
     var pd = require('pretty-data').pd;
-    var rawGpmlAsString = gpmlPathwaySelection.find('*').html();
+    var rawGpmlAsString = gpmlPathwaySelection.html();
     var rawGpmlAsPrettyString = pd.xml(rawGpmlAsString);
     //console.log('rawGpmlAsPrettyString');
     //console.log(rawGpmlAsPrettyString);
-    var updatedGpmlAsString = gpmlPathwaySelection.find('*').html();
+    var updatedGpmlAsString = gpmlPathwaySelection.html();
     var processedGpmlAsPrettyString = pd.xml(updatedGpmlAsString);
+    console.log('*******************************************************************************************************');
+    console.log('*******************************************************************************************************');
     console.log('processedGpmlAsPrettyString');
+    console.log('*******************************************************************************************************');
+    console.log('*******************************************************************************************************');
     console.log(processedGpmlAsPrettyString);
     //*/
 
@@ -371,10 +377,10 @@ var GpmlUtilities = require('./gpml-utilities.js')
               // Note: this calculates all the data for each group-node, except for its dimensions.
               // The dimenensions can only be calculated once all the rest of the elements have been
               // converted from GPML to JSON.
-              var groupSelection, groupsSelection = gpmlPathwaySelection.find('Group');
-              if (groupsSelection.length > 0) {
+              var groupSelection, groupCollectionSelection = gpmlPathwaySelection.find('Group');
+              if (groupCollectionSelection.length > 0) {
                 var groups = [];
-                gpmlPathwaySelection.find('Group').each(function() {
+                groupCollectionSelection.each(function() {
                   var groupSelection = $( this );
                   Group.toPvjson(pvjson, pvjson.elements, gpmlPathwaySelection, groupSelection, function(pvjsonElements) {
                     pvjson.elements = pvjson.elements.concat(pvjsonElements);
@@ -507,85 +513,111 @@ var GpmlUtilities = require('./gpml-utilities.js')
         filteredResult.attr('GraphId', 'id' + largestGraphIdStub);
       });
 
-      var groupsSelection = gpmlPathwaySelection.find('Group');
-      // TODO use one node vs. browser detection function throughout code!
-      //if (isBrowser) {
-      if (typeof(document) !== 'undefined' && !!document && !!document.createElementNS) {
-        var graphicsElement = document.createElementNS('http://pathvisio.org/GPML/2013a', 'Graphics');
-        graphicsElement.setAttribute('Align', 'Center');
-        graphicsElement.setAttribute('Valign', 'Middle');
-        graphicsElement.setAttribute('FontWeight', 'Bold');
-        graphicsElement.setAttribute('LineThickness', 1);
-        graphicsElement.setAttribute('FillOpacity', 0.1);
+      var createGraphicsElementForGroup = function(attributes) {
+        var defaultAttributes = {
+          Align: 'Center',
+          Valign: 'Middle',
+          FontWeight: 'Bold',
+          LineThickness: 1,
+          FillOpacity: 0.1
+        };
 
-        groupsSelection.each(function(){
-          var groupElement = $( this )[0];
-          var graphicsElementInstance = graphicsElement.cloneNode();
+        _.defaults(attributes, defaultAttributes);
+        // TODO use one node vs. browser detection function throughout code!
+        //if (isBrowser) {
+        if (typeof(document) !== 'undefined' && !!document && !!document.createElementNS) { // is Browser
+          var graphicsElement = document.createElementNS('http://pathvisio.org/GPML/2013a', 'Graphics');
+
+          _.forIn(attributes, function(value, name) {
+            graphicsElement.setAttribute(name, value);
+          });
+
+          return graphicsElement.cloneNode();
+        } else { // is Node
+          var graphicsString = '<Graphics';
+          _.forIn(attributes, function(value, name) {
+            graphicsString += ' ' + name + '="' + value + '"';
+          });
+          graphicsString += '></Graphics>';
+          return graphicsString;
+        }
+      };
+
+      var appendGraphicsElementToGroup = function(groupSelection, graphicsElementOrString) {
+        // TODO use one node vs. browser detection function throughout code!
+        //if (isBrowser) {
+        if (typeof(document) !== 'undefined' && !!document && !!document.createElementNS) { // is Browser
+          var groupElement = $(groupSelection)[0];
+          // it's an element here
+          var graphicsElementInstance = graphicsElementOrString.cloneNode();
           groupElement.appendChild(graphicsElementInstance);
-        });
-      } else {
-        groupsSelection.append('<Graphics Align="Center" Valign="Middle" FontWeight="Bold" LineThickness="1" FillOpacity="0.1"></Graphics>');
-      }
-      var groupGroupsSelection = gpmlPathwaySelection.find('Group[Style=Group]').each(function(){
-        var groupGroupSelection = $( this );
-        var groupGroupGraphicsSelection = groupGroupSelection.find('Graphics')
-        .attr('FontSize', '1')
-        .attr('Padding', '8')
-        .attr('ShapeType', 'None')
-        .attr('LineStyle', 'Broken')
-        .attr('Color', '808080')
-        .attr('FillColor', 'Transparent');
-      });
-      var groupNonesSelection = gpmlPathwaySelection.find('Group[Style=None]').each(function(){
-        var groupNoneSelection = $( this );
-        var groupNoneGraphicsSelection = groupNoneSelection.find('Graphics')
-        .attr('FontSize', '1')
-        .attr('Padding', '8')
-        .attr('ShapeType', 'Rectangle')
-        .attr('LineStyle', 'Broken')
-        .attr('Color', '808080')
-        .attr('FillColor', 'B4B464');
+        } else { // is Node
+          // it's a string here
+          groupSelection.append(graphicsElementOrString);
+        }
+      };
+
+      var groupTypeNoneGraphicsElementAttributes = {
+        FontSize: 1,
+        Padding: 8,
+        ShapeType: 'Rectangle',
+        LineStyle: 'Broken',
+        Color: '808080',
+        FillColor: 'B4B464'
+      };
+      var graphicsElementForGroupTypeNone = createGraphicsElementForGroup(groupTypeNoneGraphicsElementAttributes);
+
+      // TODO in GPML now, groups of type "None" appear to always lack the Style attribute,
+      // unlike all other group types. Check to make this is a safe assumption.
+      // Right now, we're just setting all groups to have the default Graphics element for Groups, then
+      // we're going through the groups of a specific type and resetting the Graphics element.
+      var groupTypeNoneCollectionSelection = gpmlPathwaySelection.find('Group').each(function(){
+      //var groupTypeNoneCollectionSelection = gpmlPathwaySelection.find('Group:not([Style])').each(function(){
+      //var groupTypeNoneCollectionSelection = gpmlPathwaySelection.find('Group[Style=None]').each(function(){
+        var groupSelection = $( this );
+        appendGraphicsElementToGroup(groupSelection, graphicsElementForGroupTypeNone);
       });
 
-      if (groupsSelection.length > 0) {
-        groupsSelection.filter(function(){
-          var groupSelection = $( this );
-          var graphicsSelection = groupSelection.find('Graphics');
-          return (!graphicsSelection.attr('ShapeType'));
-        }).each(function(){
-          var groupNoneSelectionGraphicsSelection = $( this ).find('Graphics');
-
-          groupNoneSelectionGraphicsSelection.attr('ShapeType', 'None')
-          .attr('FontSize', '1')
-          .attr('Padding', '8')
-          .attr('ShapeType', 'Rectangle')
-          .attr('LineStyle', 'Broken')
-          .attr('Color', '808080')
-          .attr('FillColor', 'B4B464');
-          //*/
-        });
-      }
-
-      var groupComplexesSelection = gpmlPathwaySelection.find('Group[Style=Complex]').each(function(){
-        groupComplexSelection = $(this);
-        groupComplexGraphicsSelection = groupComplexSelection.find('Graphics')
-        .attr('FontSize', '1')
-        .attr('Padding', '11')
-        .attr('ShapeType', 'Complex')
-        .attr('Color', '808080')
-        .attr('FillColor', 'B4B464')
-        .attr('LineStyle', 'Solid');
+      var groupTypeGroupGraphicsElementAttributes = {
+        FontSize: 1,
+        Padding: 8,
+        ShapeType: 'None',
+        LineStyle: 'Broken',
+        Color: '808080',
+        FillColor: 'Transparent'
+      };
+      var graphicsElementForGroupTypeGroup = createGraphicsElementForGroup(groupTypeGroupGraphicsElementAttributes);
+      var groupTypeGroupCollectionSelection = gpmlPathwaySelection.find('Group[Style=Group]').each(function(){
+        var groupSelection = $( this );
+        appendGraphicsElementToGroup(groupSelection, graphicsElementForGroupTypeGroup);
       });
-      var groupPathwaysSelection = gpmlPathwaySelection.find('Group[Style=Pathway]').each(function(){
-        groupPathwaySelection = $(this);
-        groupPathwayGraphicsSelection = groupPathwaySelection.find('Graphics')
-        .attr('FontSize', '1')
-        //.attr('FontSize', '32')
-        .attr('Padding', '8')
-        .attr('ShapeType', 'Rectangle')
-        .attr('LineStyle', 'Broken')
-        .attr('Color', '808080')
-        .attr('FillColor', '00FF00');
+
+      var groupTypeComplexGraphicsElementAttributes = {
+        FontSize: 1,
+        Padding: 11,
+        ShapeType: 'Complex',
+        LineStyle: 'Solid',
+        Color: '808080',
+        FillColor: 'B4B464'
+      };
+      var graphicsElementForGroupTypeComplex = createGraphicsElementForGroup(groupTypeComplexGraphicsElementAttributes);
+      var groupTypeComplexCollectionSelection = gpmlPathwaySelection.find('Group[Style=Complex]').each(function(){
+        var groupSelection = $( this );
+        appendGraphicsElementToGroup(groupSelection, graphicsElementForGroupTypeComplex);
+      });
+
+      var groupTypePathwayGraphicsElementAttributes = {
+        FontSize: 1,
+        Padding: 8,
+        ShapeType: 'Rectangle',
+        LineStyle: 'Broken',
+        Color: '808080',
+        FillColor: '00FF00'
+      };
+      var graphicsElementForGroupTypePathway = createGraphicsElementForGroup(groupTypePathwayGraphicsElementAttributes);
+      var groupTypePathwayCollectionSelection = gpmlPathwaySelection.find('Group[Style=Pathway]').each(function(){
+        var groupSelection = $( this );
+        appendGraphicsElementToGroup(groupSelection, graphicsElementForGroupTypePathway);
       });
 
       // nodesSelection does not include Groups
@@ -1042,6 +1074,52 @@ var GpmlUtilities = require('./gpml-utilities.js')
       callback(null, biopaxjson);
     });
   };
+
+  /* TODO finish this. it's currently non-functional and only part-way done.
+  function enableCommandLine(Wikipathways) {
+    function list(val) {
+      return val.split(',');
+    }
+
+    var program = require('commander');
+    var npmPackage = JSON.parse(fs.readFileSync('./package.json', {encoding: 'utf8'}));
+    program
+      .version(npmPackage.version);
+
+     program
+       .command('convert-to-json <wikpathways-id>')
+       .description('Convert GPML to JSON.')
+       .action(function(gpml){
+
+         // haven't figured out how to go from command line to input args
+          var gpmlPathwaySelection = gpml
+          var pathwayMetadata = 
+
+          Gpml2Json.toPvjson(gpmlPathwaySelection, pathwayMetadata,
+          function(err, pathway) {
+            if (err) {
+              console.log(err);
+              process.exit(1);
+            }
+            console.log(JSON.stringify(pathway, null, '\t'));
+            process.exit(0);
+          });
+       });
+
+     program
+       .command('*')
+       .description('deploy the given env')
+       .action(function(env){
+         console.log('deploying "%s"', env);
+       });
+
+      program.parse(process.argv);
+
+    if (program.listPathways) {
+      console.log('List of pathways of type %s', program.listPathways);
+    }
+  }
+  //*/
 
   // Export the Gpml2Json object for **Node.js**, with
   // backwards-compatibility for the old `require()` API. If we're in

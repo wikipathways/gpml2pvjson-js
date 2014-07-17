@@ -60,7 +60,7 @@ module.exports = {
         return gpmlGraphIdValue;
       },
       Style: function(gpmlStyleValue){
-        pvjsonElement.groupStyle = gpmlStyleValue;
+        pvjsonElement['gpml:Style'] = gpmlStyleValue;
         return gpmlStyleValue;
       },
       Href: function(gpmlHrefValue){
@@ -78,9 +78,7 @@ module.exports = {
         return gpmlTypeValue;
       },
       CellularComponent: function(gpmlCellularComponentValue){
-        //pvjsonElement.type = pvjsonElement.type || [];
-        //pvjsonElement.type.push('PhysicalEntity');
-        //pvjsonElement.type.push('CellularComponent');
+        //pvjsonElement.type = 'PhysicalEntity'; // this is probably more valid as Biopax
         pvjsonElement.type = 'CellularComponent'; // this is not valid Biopax
         pvjsonElement.entityReference = gpmlCellularComponentValue;
         return gpmlCellularComponentValue;

@@ -6,6 +6,14 @@ var _ = require('lodash')
   , Async = require('async')
   ;
 
+// Biopax when possible, otherwise GPML. Note that Biopax is the default namespace,
+// so if a namespace is not specified below, there is an implied "bp:"
+var gpmlToSemanticMappings = {
+  'gpml:Group': 'gpml:Group',
+  'gpml:Complex': 'Complex',
+  'gpml:Pathway': 'Pathway'
+};
+
 var Group = {
   getGroupDimensions: function(group, callback) {
     var dimensions = {};
@@ -50,14 +58,8 @@ var Group = {
 
   toPvjson: function(pvjson, elementsPossiblyInGroup, gpmlPathwaySelection, groupSelection, callback) {
     var pvjsonPath = {},
-      pvjsonElements = [],
-      groupId,
-      groupType
+      pvjsonElements = []
       ;
-
-    groupType = groupSelection.attr('Style') || 'None';
-    pvjsonPath.groupType = groupType;
-    pvjsonPath.type = groupType;
 
     GpmlElement.toPvjson(pvjson, gpmlPathwaySelection, groupSelection, pvjsonPath, function(pvjsonPath) {
       Graphics.toPvjson(pvjson, gpmlPathwaySelection, groupSelection, pvjsonPath, function(pvjsonPath) {
@@ -65,6 +67,12 @@ var Group = {
           return element.isPartOf === pvjsonPath.id;
         });
         if (contents.length > 0) {
+
+          var type = gpmlToSemanticMappings[ pvjsonPath['gpml:Type'] ] || 'gpml:Group';
+          pvjsonPath.type = type;
+
+          // TODO once GPML supports it, we should create entityReferences for Groups of Type "Complex" and "Pathway"
+
           pvjsonPath.contains = contents;
           Group.getGroupDimensions(pvjsonPath, function(dimensions){
             pvjsonPath.x = dimensions.x || 0;
