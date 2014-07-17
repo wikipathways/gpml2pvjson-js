@@ -78,9 +78,10 @@ module.exports = {
         return gpmlTypeValue;
       },
       CellularComponent: function(gpmlCellularComponentValue){
-        pvjsonElement.type = pvjsonElement.type || [];
-        pvjsonElement.type.push('PhysicalEntity');
-        pvjsonElement.type.push('CellularComponent');
+        //pvjsonElement.type = pvjsonElement.type || [];
+        //pvjsonElement.type.push('PhysicalEntity');
+        //pvjsonElement.type.push('CellularComponent');
+        pvjsonElement.type = 'CellularComponent'; // this is not valid Biopax
         pvjsonElement.entityReference = gpmlCellularComponentValue;
         return gpmlCellularComponentValue;
       },

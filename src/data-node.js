@@ -86,7 +86,7 @@ module.exports = {
           , userSpecifiedXref
           , xrefSelection = dataNodeSelection.find('Xref').eq(0)
           ;
-        if (xrefSelection.length > 0 && entityType !== 'Pathway') {
+        if (xrefSelection.length > 0) {
           dataSourceName = xrefSelection.attr('Database');
           dbId = xrefSelection.attr('ID');
           if (!!dataSourceName && !!dbId) {
@@ -99,10 +99,14 @@ module.exports = {
                   return entity.id === entityReferenceId;
                 }).length > 0;
 
-                if (!entityReferenceExists) {
-                  pvjsonElements = [entity, entityReference];
-                } else {
+                // TODO how should be best handle sub-pathway instances in a pathway?
+                if (entityType === 'Pathway' || !!entityReferenceExists) {
+                  if (entityType === 'Pathway') {
+                    entity.organism = organism;
+                  } 
                   pvjsonElements = [entity];
+                } else {
+                  pvjsonElements = [entity, entityReference];
                 }
                 callbackInside(pvjsonElements);
               } else {
@@ -117,9 +121,6 @@ module.exports = {
             callbackInside(pvjsonElements);
           }
         } else {
-          if (entityType === 'Pathway') {
-            entity.organism = organism;
-          }
           pvjsonElements = [entity];
           callbackInside(pvjsonElements);
         }

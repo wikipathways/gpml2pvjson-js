@@ -61,6 +61,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
     //globalContext.push('http://test2.wikipathways.org/v2/contexts/pathway.jsonld');
     globalContext.push('http://test2.wikipathways.org/v2/contexts/biopax.jsonld');
     globalContext.push('http://test2.wikipathways.org/v2/contexts/organism.jsonld');
+    globalContext.push('http://test2.wikipathways.org/v2/contexts/cellular-location.jsonld');
     globalContext.push('http://test2.wikipathways.org/v2/contexts/display.jsonld');
     //globalContext.push('http://test2.wikipathways.org/v2/contexts/interaction-type.jsonld');
     pvjson['@context'] = globalContext;
@@ -508,7 +509,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
 
       var groupsSelection = gpmlPathwaySelection.find('Group');
       // TODO use one node vs. browser detection function throughout code!
-      if (isBrowser) {
+      //if (isBrowser) {
+      if (typeof(document) !== 'undefined' && !!document && !!document.createElementNS) {
         var graphicsElement = document.createElementNS('http://pathvisio.org/GPML/2013a', 'Graphics');
         graphicsElement.setAttribute('Align', 'Center');
         graphicsElement.setAttribute('Valign', 'Middle');
@@ -873,7 +875,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
             var positionValue = anchorSelection.attr('Position');
 
             // TODO use one node vs. browser detection function throughout code!
-            if (!!document && !!document.createElementNS) {
+            if (typeof(document) !== 'undefined' && !!document && !!document.createElementNS) {
               var graphicsElement = document.createElementNS('http://pathvisio.org/GPML/2013a', 'Graphics');
               graphicsElement.setAttribute('Position', positionValue);
               graphicsElement.setAttribute('ShapeType', shapeTypeValue);
