@@ -60,7 +60,7 @@ module.exports = {
         return gpmlGraphIdValue;
       },
       Style: function(gpmlStyleValue){
-        pvjsonElement['gpml:Style'] = gpmlStyleValue;
+        pvjsonElement['gpml:Style'] = 'gpml:' + gpmlStyleValue;
         return gpmlStyleValue;
       },
       Href: function(gpmlHrefValue){
