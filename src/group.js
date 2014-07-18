@@ -14,6 +14,12 @@ var gpmlToSemanticMappings = {
   'gpml:Pathway': 'Pathway'
 };
 
+var gpmlToSemanticMappings = {
+  'gpml:Group': 'gpml:Group',
+  'gpml:Complex': 'Complex',
+  'gpml:Pathway': 'Pathway'
+};
+
 var Group = {
   getGroupDimensions: function(group, callback) {
     var dimensions = {};

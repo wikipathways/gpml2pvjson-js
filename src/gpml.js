@@ -79,7 +79,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
 
     pvjson.elements = [];
 
-    //* Dev only
+    /* Dev only
     var pd = require('pretty-data').pd;
     var rawGpmlAsString = gpmlPathwaySelection.html();
     var rawGpmlAsPrettyString = pd.xml(rawGpmlAsString);
@@ -513,6 +513,10 @@ var GpmlUtilities = require('./gpml-utilities.js')
         filteredResult.attr('GraphId', 'id' + largestGraphIdStub);
       });
 
+      /********************************************
+       * Groups
+       ********************************************/
+
       var createGraphicsElementForGroup = function(attributes) {
         var defaultAttributes = {
           Align: 'Center',
@@ -557,6 +561,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
         }
       };
 
+      var groupGraphicsElements = {};
+
       var groupTypeNoneGraphicsElementAttributes = {
         FontSize: 1,
         Padding: 8,
@@ -565,18 +571,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
         Color: '808080',
         FillColor: 'B4B464'
       };
-      var graphicsElementForGroupTypeNone = createGraphicsElementForGroup(groupTypeNoneGraphicsElementAttributes);
-
-      // TODO in GPML now, groups of type "None" appear to always lack the Style attribute,
-      // unlike all other group types. Check to make this is a safe assumption.
-      // Right now, we're just setting all groups to have the default Graphics element for Groups, then
-      // we're going through the groups of a specific type and resetting the Graphics element.
-      var groupTypeNoneCollectionSelection = gpmlPathwaySelection.find('Group').each(function(){
-      //var groupTypeNoneCollectionSelection = gpmlPathwaySelection.find('Group:not([Style])').each(function(){
-      //var groupTypeNoneCollectionSelection = gpmlPathwaySelection.find('Group[Style=None]').each(function(){
-        var groupSelection = $( this );
-        appendGraphicsElementToGroup(groupSelection, graphicsElementForGroupTypeNone);
-      });
+      groupGraphicsElements.None = createGraphicsElementForGroup(groupTypeNoneGraphicsElementAttributes);
 
       var groupTypeGroupGraphicsElementAttributes = {
         FontSize: 1,
@@ -586,11 +581,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
         Color: '808080',
         FillColor: 'Transparent'
       };
-      var graphicsElementForGroupTypeGroup = createGraphicsElementForGroup(groupTypeGroupGraphicsElementAttributes);
-      var groupTypeGroupCollectionSelection = gpmlPathwaySelection.find('Group[Style=Group]').each(function(){
-        var groupSelection = $( this );
-        appendGraphicsElementToGroup(groupSelection, graphicsElementForGroupTypeGroup);
-      });
+      groupGraphicsElements.Group = createGraphicsElementForGroup(groupTypeGroupGraphicsElementAttributes);
 
       var groupTypeComplexGraphicsElementAttributes = {
         FontSize: 1,
@@ -600,11 +591,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
         Color: '808080',
         FillColor: 'B4B464'
       };
-      var graphicsElementForGroupTypeComplex = createGraphicsElementForGroup(groupTypeComplexGraphicsElementAttributes);
-      var groupTypeComplexCollectionSelection = gpmlPathwaySelection.find('Group[Style=Complex]').each(function(){
-        var groupSelection = $( this );
-        appendGraphicsElementToGroup(groupSelection, graphicsElementForGroupTypeComplex);
-      });
+      groupGraphicsElements.Complex = createGraphicsElementForGroup(groupTypeComplexGraphicsElementAttributes);
 
       var groupTypePathwayGraphicsElementAttributes = {
         FontSize: 1,
@@ -614,10 +601,18 @@ var GpmlUtilities = require('./gpml-utilities.js')
         Color: '808080',
         FillColor: '00FF00'
       };
-      var graphicsElementForGroupTypePathway = createGraphicsElementForGroup(groupTypePathwayGraphicsElementAttributes);
-      var groupTypePathwayCollectionSelection = gpmlPathwaySelection.find('Group[Style=Pathway]').each(function(){
+      groupGraphicsElements.Pathway = createGraphicsElementForGroup(groupTypePathwayGraphicsElementAttributes);
+
+      var groupCollectionSelection = gpmlPathwaySelection.find('Group').each(function(){
         var groupSelection = $( this );
-        appendGraphicsElementToGroup(groupSelection, graphicsElementForGroupTypePathway);
+
+        // TODO in GPML now, groups of type "None" appear to always lack the Style attribute,
+        // unlike all other group types. Check to make this is a safe assumption.
+        // Right now, we're just setting all groups to have the default Graphics element for Groups, then
+        // we're going through the groups of a specific type and resetting the Graphics element.
+
+        var groupStyle = groupSelection.attr('Style') || 'None';
+        appendGraphicsElementToGroup(groupSelection, groupGraphicsElements[groupStyle]);
       });
 
       // nodesSelection does not include Groups
