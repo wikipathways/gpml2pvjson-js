@@ -24,7 +24,11 @@
     "biopax2json": "wikipathways/biopax2json",
     "bridgedbjs": "bridgedb/bridgedbjs",
     "tower-strcase": "ariutta/strcase",
-    "uuid": "~1.4.1"
+    "uuid": "~1.4.1",
+    "highland": "~1.27.1",
+    "sax": "~0.6.0",
+    "node-xml-lite": "0.0.3",
+    "request": "~2.40.0"
   },
   "devDependencies": {
     "pretty-data": "~0.40.0",

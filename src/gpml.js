@@ -9,6 +9,9 @@ var GpmlUtilities = require('./gpml-utilities.js')
   , DataNode = require('./data-node.js')
   // , Element = require('./element.js')
   , fs = require('fs')
+  , http = require('http')
+  , request = require('request')
+  , highland = require('highland')
   , GraphicalLine = require('./graphical-line.js')
   // , Graphics = require('./graphics.js')
   , Group = require('./group.js')
@@ -51,7 +54,177 @@ var GpmlUtilities = require('./gpml-utilities.js')
     }
   };
 
-  Gpml2Json.toPvjson = function(gpmlPathwaySelection, pathwayMetadata, callbackOutside){
+  /**
+   * toPvjson
+   *
+   * @param input (URL string only now. in the future: GPML string, document, jQuery selection)
+   * @param pathwayMetadata object
+   * @param callbackOutside
+   * @return
+   */
+  Gpml2Json.toPvjson = function(input, pathwayMetadata, callbackOutside){
+    var strict = true; // set to false for html-mode
+
+    var i = 0;
+    var through = highland.pipeline(highland.map(function(node) {
+      i++;
+      console.log(i);
+      console.log(node);
+      return node;
+    }));
+
+    // stream usage
+    // takes the same options as the parser
+    var saxStream = require('sax').createStream(strict, {
+      xmlns: true
+    });
+    //.pipe(through);
+    //*
+    saxStream.on('error', function (e) {
+      // unhandled errors will throw, since this is a proper node
+      // event emitter.
+      console.error('error!', e);
+      // clear the error
+      this._parser.error = null;
+      this._parser.resume();
+    });
+    //*/
+    var xmlNodeStream = highland('opentag', saxStream);
+
+    //*
+    var shapeElementStream = xmlNodeStream.fork();
+    var dataNodeElementStream = xmlNodeStream.fork();
+
+    shapeElementStream.filter(function(node) {
+      return node.name === 'Shape';
+    })
+    .each(function(shape) {
+      console.log('*************************************************************************************************************************');
+      console.log('*************************************************************************************************************************');
+      console.log('*************************************************************************************************************************');
+      console.log('*************************************************************************************************************************');
+      console.log('shape');
+      console.log(shape);
+    });
+
+    dataNodeElementStream.filter(function(node) {
+      return node.name === 'DataNode';
+    })
+    .each(function(node) {
+      console.log('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$');
+      console.log('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$');
+      console.log('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$');
+      console.log('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$');
+      console.log('DataNode');
+      console.log(node);
+    });
+    //*/
+
+    request('http://www.wikipathways.org/wpi/wpi.php?action=downloadFile&type=gpml&pwTitle=Pathway:WP525')
+      .pipe(saxStream)
+      //.pipe(through)
+      .pipe(fs.createWriteStream('../test/output/file-copy.xml'));
+  };
+
+  Gpml2Json.toPvjsonOld2 = function(input, pathwayMetadata, callbackOutside){
+    var strict = true; // set to false for html-mode
+
+
+    var i = 0;
+    var j = 0;
+    var through = highland.pipeline(highland.map(function(node) {
+      i++;
+      //console.log(i);
+      //console.log(node);
+      return node;
+    }));
+
+    // stream usage
+    // takes the same options as the parser
+    var saxStream = require('sax').createStream(strict, {
+      xmlns: true
+    })
+    .on('error', function (e) {
+      // unhandled errors will throw, since this is a proper node
+      // event emitter.
+      console.error('error!', e);
+      // clear the error
+      this._parser.error = null;
+      this._parser.resume();
+    })
+    .on('opentag', function (node) {
+      j++;
+      //console.log(j);
+      //console.log('node');
+      //console.log(node);
+      // same object as above
+    });
+    // pipe is supported, and it's readable/writable
+    // same chunks coming in also go out.
+    fs.createReadStream(input)
+    .on('data', function(chunk) {
+      console.log('got %d bytes of data locally', chunk.length);
+      console.log(chunk);
+    });
+    highland(fs.createReadStream(input))
+      .pipe(saxStream)
+      .pipe(through)
+      .pipe(fs.createWriteStream('../test/output/file-copy.xml'));
+
+
+    var sax = require('sax'),
+        parser = sax.parser(strict);
+
+    parser.onerror = function (e) {
+      // an error happened.
+    };
+    parser.ontext = function (t) {
+      // got some text.  t is the string of text.
+    };
+    parser.onopentag = function (node) {
+      // opened a tag.  node has "name" and "attributes"
+      console.log(node);
+    };
+    parser.onattribute = function (attr) {
+      // an attribute.  attr has "name" and "value"
+    };
+    parser.onend = function () {
+      // parser stream is done, and ready to have more stuff written to it.
+    };
+
+
+    var http = require('http');
+    //http://www.wikipathways.org//wpi/wpi.php?action=downloadFile&type=gpml&pwTitle=Pathway:WP525
+    //The url we want is: 'www.random.org/integers/?num=1&min=1&max=10&col=1&base=10&format=plain&rnd=new'
+    var options = {
+      host: 'www.wikipathways.org',
+      path: '/wpi/wpi.php?action=downloadFile&type=gpml&pwTitle=Pathway:WP525'
+    };
+
+    var callback = function(response) {
+      response.setEncoding('utf8');
+      var str = '';
+
+      //another chunk of data has been received
+      response.on('data', function (chunk) {
+        console.log('*************************************************************************************************************************');
+        console.log('*************************************************************************************************************************');
+        console.log('got %d bytes of data over http', chunk.length);
+        console.log(chunk);
+        parser.write(chunk);
+      });
+
+      //the whole response has been recieved, so we just print it out here
+      response.on('end', function () {
+        parser.close();
+        //console.log(str);
+      });
+    };
+
+    http.request(options, callback).end();
+  };
+
+  Gpml2Json.toPvjsonOld1 = function(gpmlPathwaySelection, pathwayMetadata, callbackOutside){
     var xmlns = gpmlPathwaySelection.attr('xmlns');
     gpmlPathwaySelection = this.fixBiopax(this.addIsPartOfAttribute(this.makeExplicit(gpmlPathwaySelection)));
     var pvjson = {};
