@@ -11,49 +11,29 @@ module.exports = {
     'http://genmapp.org/GPML/2007'
   ],
 
-  convertAttributesToJson: function(elementSelection, pvjsonElement, converter, attributeDependencyOrder) {
+  convertAttributesToJson: function(gpmlElement, pvjsonElement, converter, attributeDependencyOrder) {
     var converterKeys = _.keys(converter);
     var attributeList, attributes;
-    // this is an ugly hack, but it's what I'm doing to get the attributes of an element in Node.js vs. in the browser
-    // Cheerio uses "attribs", and browser uses "attributes" :-(
-    if (typeof window === 'undefined') { // if Node.js
-      /*
-      console.log('elementSelection');
-      console.log(elementSelection);
-      //*/
-      attributes = elementSelection[0].attribs;
-      var attributeKeys = _.keys(attributes);
-      var handledAttributeKeys = _.intersection(converterKeys, attributeKeys);
-      if (handledAttributeKeys.length < attributes.length) {
-        var unhandledAttributeKeys = _.difference(converterKeys, attributeKeys);
-        console.warn('No handler for attribute(s) "' + unhandledAttributeKeys.join(', ') + '" for element "' + elementSelection.html() + '"');
-      }
-
-      attributeList = _.map(handledAttributeKeys, function(attributeKey) {
-        return {
-          name: attributeKey,
-          value: attributes[attributeKey],
-          dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
-        };
-      });
-    } else if (!!elementSelection && elementSelection.length > 0) { // if browser
-      attributes = elementSelection[0].attributes || [];
-      //var attributes = elementSelection[0].attributes || elementSelection[0].attribs;
-
-      attributeList = [];
-      _.forEach(attributes, function(attribute) {
-        var attributeKey = attribute.name;
-        if (converterKeys.indexOf(attributeKey) > -1) {
-          attributeList.push({
-            name: attributeKey,
-            value: attribute.value,
-            dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
-          });
-        } else {
-          console.warn('No handler for attribute "' + attributeKey + '" for element "' + elementSelection.html() + '"');
-        }
-      });
+    /*
+    console.log('gpmlElement');
+    console.log(gpmlElement);
+    //*/
+    attributes = gpmlElement.attributes;
+    var attributeKeys = _.keys(attributes);
+    var handledAttributeKeys = _.intersection(converterKeys, attributeKeys);
+    if (handledAttributeKeys.length < attributes.length) {
+      var unhandledAttributeKeys = _.difference(converterKeys, attributeKeys);
+      console.warn('No handler for attribute(s) "' + unhandledAttributeKeys.join(', ') + '" for element "' + gpmlElement.name + '"');
     }
+
+    attributeList = _.map(handledAttributeKeys, function(attributeKey) {
+      return {
+        name: attributeKey,
+        value: attributes[attributeKey].value,
+        dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
+      };
+    });
+
     if (!!attributeList && attributeList.length > 0) {
       if (attributeList.length > 1) {
         attributeList.sort(function(a, b) {

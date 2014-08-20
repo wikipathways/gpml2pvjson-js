@@ -14,12 +14,15 @@ module.exports = {
     }
   },
 
-  toPvjson: function(pvjson, gpmlPathwaySelection, elementSelection, pvjsonElement, callback) {
-      var parentElement,
-      attribute,
+  toPvjson: function(pvjson, graphics, currentPvjsonClassElement, currentGpmlClassElement) {
+    if (!pvjson || !graphics || !currentGpmlClassElement || !currentPvjsonClassElement) {
+      throw new Error('Missing input element(s) in graphics.toPvjson()');
+    }
+
+    var attribute,
       i,
-      graphicsSelection = elementSelection.find('Graphics').eq(0),
       gpmlDoubleLineProperty = '',
+      graphicsDefaults = currentGpmlClassElement.Graphics,
       pvjsonHeight,
       pvjsonWidth,
       pvjsonBorderWidth,
@@ -53,43 +56,43 @@ module.exports = {
         // TODO hard-coding these here is not the most maintainable
         if (gpmlLineStyleValue === 'Broken') {
           pvjsonStrokeDasharray = '5,3';
-          pvjsonElement.strokeDasharray = pvjsonStrokeDasharray;
+          currentPvjsonClassElement.strokeDasharray = pvjsonStrokeDasharray;
         }
         else if (gpmlLineStyleValue === 'Double') {
           gpmlDoubleLineProperty = '-double';
           // The line below is left here for future reference, but after discussing with AP, the desired behavior is for the entire shape to be filled. -AR
-          //pvjsonElement.fillRule = 'evenodd';
+          //currentPvjsonClassElement.fillRule = 'evenodd';
         }
         return pvjsonStrokeDasharray;
       },
       ShapeType: function(gpmlShapeTypeValue){
         gpmlShapeType = gpmlShapeTypeValue;
         pvjsonShape = Strcase.paramCase(gpmlShapeType) + gpmlDoubleLineProperty;
-        pvjsonElement.shape = pvjsonShape;
+        currentPvjsonClassElement.shape = pvjsonShape;
         return pvjsonShape;
       },
       ConnectorType: function(gpmlConnectorTypeValue){
         var gpmlConnectorType = gpmlConnectorTypeValue;
         pvjsonShape = Strcase.paramCase('line-' + gpmlConnectorType) + gpmlDoubleLineProperty;
-        pvjsonElement.shape = pvjsonShape;
+        currentPvjsonClassElement.shape = pvjsonShape;
         return pvjsonShape;
       },
       FillColor: function(gpmlFillColorValue){
         var cssColor = this.gpmlColorToCssColor(gpmlFillColorValue);
         if (gpmlShapeType.toLowerCase() !== 'none') {
-          pvjsonElement.backgroundColor = cssColor;
+          currentPvjsonClassElement.backgroundColor = cssColor;
         }
         else {
-          pvjsonElement.backgroundColor = 'transparent';
+          currentPvjsonClassElement.backgroundColor = 'transparent';
         }
       },
       FillOpacity: function(gpmlFillOpacityValue){
         var cssFillOpacity = parseFloat(gpmlFillOpacityValue);
-        pvjsonElement.fillOpacity = cssFillOpacity;
+        currentPvjsonClassElement.fillOpacity = cssFillOpacity;
       },
       Color: function(gpmlColorValue){
         var cssColor = this.gpmlColorToCssColor(gpmlColorValue);
-        pvjsonElement.color = cssColor;
+        currentPvjsonClassElement.color = cssColor;
       },
       Padding: function(gpmlPaddingValue){
         var cssPadding;
@@ -99,7 +102,7 @@ module.exports = {
         else {
           cssPadding = gpmlPaddingValue;
         }
-        pvjsonElement.padding = cssPadding;
+        currentPvjsonClassElement.padding = cssPadding;
       },
       FontSize: function(gpmlFontSizeValue){
         var cssFontSize;
@@ -109,19 +112,19 @@ module.exports = {
         else {
           cssFontSize = gpmlFontSizeValue;
         }
-        pvjsonElement.fontSize = cssFontSize;
+        currentPvjsonClassElement.fontSize = cssFontSize;
       },
       FontName: function(gpmlFontNameValue){
         var cssFontFamily = gpmlFontNameValue;
-        pvjsonElement.fontFamily = cssFontFamily;
+        currentPvjsonClassElement.fontFamily = cssFontFamily;
       },
       FontStyle: function(gpmlFontStyleValue){
         var cssFontStyle = gpmlFontStyleValue.toLowerCase();
-        pvjsonElement.fontStyle = cssFontStyle;
+        currentPvjsonClassElement.fontStyle = cssFontStyle;
       },
       FontWeight: function(gpmlFontWeightValue){
         var cssFontWeight = gpmlFontWeightValue.toLowerCase();
-        pvjsonElement.fontWeight = cssFontWeight;
+        currentPvjsonClassElement.fontWeight = cssFontWeight;
       },
       Rotation: function(gpmlRotationValue) {
         // GPML can hold a rotation value for State elements in an element named "Attribute" like this:
@@ -129,98 +132,98 @@ module.exports = {
         // From discussion with AP and KH, we've decided to ignore this value, because we don't actually want States to be rotated.
         gpmlRotationValue = parseFloat(gpmlRotationValue);
         var pvjsonRotation = gpmlRotationValue * 180/Math.PI; //converting from radians to degrees
-        pvjsonElement.rotation = pvjsonRotation;
+        currentPvjsonClassElement.rotation = pvjsonRotation;
         return pvjsonRotation;
       },
       LineThickness: function(gpmlLineThicknessValue) {
         pvjsonBorderWidth = parseFloat(gpmlLineThicknessValue);
-        pvjsonElement.borderWidth = pvjsonBorderWidth;
+        currentPvjsonClassElement.borderWidth = pvjsonBorderWidth;
         return pvjsonBorderWidth;
       },
       Position: function(gpmlPositionValue) {
         var pvjsonPosition = parseFloat(gpmlPositionValue);
-        pvjsonElement.position = pvjsonPosition;
+        currentPvjsonClassElement.position = pvjsonPosition;
         return pvjsonPosition;
       },
       Width: function(gpmlWidthValue) {
         gpmlWidthValue = parseFloat(gpmlWidthValue);
         pvjsonWidth = gpmlWidthValue + pvjsonBorderWidth;
-        pvjsonElement.width = pvjsonWidth;
+        currentPvjsonClassElement.width = pvjsonWidth;
         return pvjsonWidth;
       },
       Height: function(gpmlHeightValue) {
         gpmlHeightValue = parseFloat(gpmlHeightValue);
         pvjsonHeight = gpmlHeightValue + pvjsonBorderWidth;
-        pvjsonElement.height = pvjsonHeight;
+        currentPvjsonClassElement.height = pvjsonHeight;
         return pvjsonHeight;
       },
       CenterX: function(gpmlCenterXValue) {
         gpmlCenterXValue = parseFloat(gpmlCenterXValue);
         pvjsonX = gpmlCenterXValue - pvjsonWidth/2;
-        pvjsonElement.x = pvjsonX;
+        currentPvjsonClassElement.x = pvjsonX;
         return pvjsonX;
       },
       CenterY: function(gpmlCenterYValue) {
         gpmlCenterYValue = parseFloat(gpmlCenterYValue);
         pvjsonY = gpmlCenterYValue - pvjsonHeight/2;
-        pvjsonElement.y = pvjsonY;
+        currentPvjsonClassElement.y = pvjsonY;
         return pvjsonY;
       },
+      /*
       RelX: function(gpmlRelXValue) {
         var pvjsonRelX = parseFloat(gpmlRelXValue);
-        pvjsonElement.relX = pvjsonRelX;
-        parentElement = gpmlPathwaySelection.find('[GraphId=' + elementSelection.attr('GraphRef') + ']');
+        currentPvjsonClassElement.relX = pvjsonRelX;
+        parentElement = gpmlPathwaySelection.find('[GraphId=' + gpmlParentElement.attr('GraphRef') + ']');
         //if (parentElement.length < 1) throw new Error('cannot find parent');
         var parentCenterX = parseFloat(parentElement.find('Graphics').attr('CenterX'));
         var parentWidth = parseFloat(parentElement.find('Graphics').attr('Width'));
         var parentZIndex = parseFloat(parentElement.find('Graphics').attr('ZOrder'));
         var gpmlCenterXValue = parentCenterX + gpmlRelXValue * parentWidth/2;
         pvjsonX = gpmlCenterXValue - pvjsonWidth/2;
-        pvjsonElement.x = pvjsonX || 0;
-        pvjsonElement.zIndex = parentZIndex + 0.2 || 0;
+        currentPvjsonClassElement.x = pvjsonX || 0;
+        currentPvjsonClassElement.zIndex = parentZIndex + 0.2 || 0;
         //pvjsonText.containerPadding = '0';
         //pvjsonText.fontSize = '10';
         return pvjsonX;
       },
       RelY: function(gpmlRelYValue) {
         var pvjsonRelY = parseFloat(gpmlRelYValue);
-        pvjsonElement.relY = pvjsonRelY;
+        currentPvjsonClassElement.relY = pvjsonRelY;
         var parentCenterY = parseFloat(parentElement.find('Graphics').attr('CenterY'));
         var parentHeight = parseFloat(parentElement.find('Graphics').attr('Height'));
         var elementCenterY = parentCenterY + pvjsonRelY * parentHeight/2;
         // TODO do we need to consider LineThickness (strokewidth) here?
         pvjsonY = elementCenterY - pvjsonHeight/2;
-        pvjsonElement.y = pvjsonY || 0;
+        currentPvjsonClassElement.y = pvjsonY || 0;
         // TODO this and other elements here are hacks
         //pvjsonText.containerY = pvjsonY + 12;
         return pvjsonY;
       },
+      //*/
       Align: function(gpmlAlignValue) {
         pvjsonTextAlign = Strcase.paramCase(gpmlAlignValue);
-        pvjsonElement.textAlign = pvjsonTextAlign;
+        currentPvjsonClassElement.textAlign = pvjsonTextAlign;
         return pvjsonTextAlign;
       },
       Valign: function(gpmlValignValue) {
         pvjsonVerticalAlign = Strcase.paramCase(gpmlValignValue);
-        pvjsonElement.verticalAlign = pvjsonVerticalAlign;
+        currentPvjsonClassElement.verticalAlign = pvjsonVerticalAlign;
         return pvjsonVerticalAlign;
       },
       ZOrder: function(gpmlZOrderValue) {
         pvjsonZIndex = parseFloat(gpmlZOrderValue);
-        pvjsonElement.zIndex = pvjsonZIndex;
+        currentPvjsonClassElement.zIndex = pvjsonZIndex;
         return pvjsonZIndex;
       },
       gpmlColorToCssColor: function(gpmlColor) {
         var color;
         if (gpmlColor.toLowerCase() === 'transparent') {
           return 'transparent';
-        }
-        else {
+        } else {
           color = new RGBColor(gpmlColor);
           if (color.ok) {
             return color.toHex();
-          }
-          else {
+          } else {
             console.warn('Could not convert GPML Color value of "' + gpmlColor + '" to a valid CSS color. Using "#c0c0c0" as a fallback.');
             return '#c0c0c0';
           }
@@ -228,11 +231,12 @@ module.exports = {
       }
     };
 
-    if (!!graphicsSelection) {
-      pvjsonElement = GpmlUtilities.convertAttributesToJson(graphicsSelection, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
+    if (!!graphicsDefaults && !!graphicsDefaults.attributes) {
+      _.defaults(graphics.attributes, graphicsDefaults.attributes);
     }
 
-    callback(pvjsonElement);
+    currentPvjsonClassElement = GpmlUtilities.convertAttributesToJson(graphics, currentPvjsonClassElement, gpmlToPvjsonConverter, attributeDependencyOrder);
+    return currentPvjsonClassElement;
   },
 
 };

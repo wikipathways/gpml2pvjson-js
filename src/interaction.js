@@ -3,6 +3,7 @@ var GpmlElement = require('./element.js')
   , Point = require('./point.js')
   , strcase = require('tower-strcase')
   , Anchor = require('./anchor.js')
+  , _ = require('lodash')
   ;
 
 var markerNameToIdentifierMappings = {
@@ -100,7 +101,36 @@ var markerNameToIdentifierMappings = {
 };
 
 module.exports = {
-  toPvjson: function(pvjson, gpmlSelection, interactionSelection, callback) {
+  applyDefaultGraphicsAttributes: function(gpmlElement) {
+    var defaults = {
+      Color: {
+        name: 'Color',
+        value: '000000'
+      },
+      FillColor: {
+        name: 'FillColor',
+        value: 'Transparent'
+      },
+      LineThickness: {
+        name: 'LineThickness',
+        value: 1
+      }
+    };
+
+    gpmlElement.Graphics = {};
+    gpmlElement.Graphics.attributes = defaults;
+
+    return gpmlElement;
+  },
+
+  toPvjson: function(pvjson, gpmlElement) {
+    var currentPvjsonClassElement = {};
+    currentPvjsonClassElement.id = gpmlElement.attributes.GraphId.value;
+    gpmlElement = this.applyDefaultGraphicsAttributes(pvjson, gpmlElement);
+    return {currentPvjsonClassElement:currentPvjsonClassElement, gpmlElement:gpmlElement};
+  },
+
+  toPvjsonOld: function(pvjson, gpmlSelection, interactionSelection, callback) {
     var jsonAnchorInteraction
       , anchor
       , jsonAnchor
