@@ -14,6 +14,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
   , highland = require('highland')
   , GraphicalLine = require('./graphical-line.js')
    , Graphics = require('./graphics.js')
+  , Pathway = require('./pathway.js')
   , Group = require('./group.js')
   , Interaction = require('./interaction.js')
   , Label = require('./label.js')
@@ -161,6 +162,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
         xmlNodeStream.destroy();
         return callbackOutside('Pathvisiojs may not fully support the version of GPML provided (xmlns: ' + xmlns + '). Please convert to the supported version of GPML (xmlns: ' + GpmlUtilities.supportedNamespaces[0] + ').', {});
       }
+
+      pvjson = Pathway.toPvjson(pvjson, pathway);
     });
 
     biopaxStream.filter(function(gpmlElement) {
@@ -269,6 +272,9 @@ var GpmlUtilities = require('./gpml-utilities.js')
         console.log('Graphics');
         console.log(gpmlElement);
         //*/
+      } else {
+        // this is for the Pathway element
+        pvjson = Graphics.toPvjson(pvjson, gpmlElement, pvjson, currentGpmlClassElement);
       }
       /*
       if (!!gpmlElement.attributes.LineThickness && typeof gpmlElement.attributes.LineThickness.value !== 'undefined') {
@@ -299,6 +305,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
       .map(function(array) {
         console.log('pvjson');
         console.log(pvjson);
+        // TODO
+        // * add ids to every pvjson class element
         return array.toString();
       })
       .pipe(fs.createWriteStream('../test/output/file-copy.xml'));

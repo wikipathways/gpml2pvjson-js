@@ -9,9 +9,6 @@ var BiopaxRef = require('./biopax-ref.js')
 // ...element includes all GPML elements and is the parent of both ...node and ...edge.
 module.exports = {
   toPvjson: function(pvjson, gpmlSelection, elementSelection, pvjsonElement, callback) {
-  },
-
-  toPvjsonOld: function(pvjson, gpmlSelection, elementSelection, pvjsonElement, callback) {
     var attribute
       , i
       , pvjsonHeight
