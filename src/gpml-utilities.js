@@ -10,6 +10,20 @@ module.exports = {
     'http://genmapp.org/GPML/2008a',
     'http://genmapp.org/GPML/2007'
   ],
+  extendDefaults: function(gpmlElement, defaults) {
+    return gpmlElement;
+  },
+
+  applyDefaults: function(gpmlElement, defaultsArray) {
+    // from http://lodash.com/docs#partialRight
+    var defaultsDeep = _.partialRight(_.merge, function deep(value, other) {
+      return _.merge(value, other, deep);
+    });
+    var defaultsArrayClone = _.cloneDeep(defaultsArray);
+    return _.reduce(defaultsArrayClone, function(accumulator, defaults) {
+      return defaultsDeep(accumulator, defaults);
+    }, gpmlElement);
+  },
 
   convertAttributesToJson: function(gpmlElement, pvjsonElement, converter, attributeDependencyOrder) {
     var converterKeys = _.keys(converter);

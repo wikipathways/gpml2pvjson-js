@@ -1,8 +1,8 @@
 'use strict';
 
-var GpmlElement = require('./element.js')
-  , Graphics = require('./graphics.js')
+var Graphics = require('./graphics.js')
   , fs = require('fs')
+  , GpmlUtilities = require('./gpml-utilities.js')
   , BridgeDb = require('bridgedbjs')
   , BridgeDbDataSources = require('./data-sources.json')
   ;
@@ -10,6 +10,18 @@ var GpmlElement = require('./element.js')
 //var BridgeDbDataSources = JSON.parse(fs.readFileSync('../data-sources.json'));
 
 module.exports = {
+  defaults: {
+    attributes: {
+    },
+    Graphics: {
+      attributes: {
+      }
+    }
+  },
+  applyDefaults: function(gpmlElement, defaults) {
+    GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
+    return gpmlElement;
+  },
   // Use closest Biopax term.
   gpmlToBiopaxMappings: {
     'Metabolite':'SmallMolecule',
@@ -78,7 +90,7 @@ module.exports = {
       entity.type = entityType;
     }
 
-    GpmlElement.toPvjson(pathway, gpmlSelection, dataNodeSelection, entity, function(entity) {
+    //GpmlElement.toPvjson(pathway, gpmlSelection, dataNodeSelection, entity, function(entity) {
       Graphics.toPvjson(pathway, gpmlSelection, dataNodeSelection, entity, function(entity) {
         var entityReferences = [entity.id]
           , dataSourceName
@@ -125,6 +137,6 @@ module.exports = {
           callbackInside(pvjsonElements);
         }
       });
-    });
+    //});
   }
 };

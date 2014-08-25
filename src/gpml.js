@@ -7,14 +7,13 @@ var GpmlUtilities = require('./gpml-utilities.js')
   , BiopaxRef = require('./biopax-ref.js')
   // , Comment = require('./comment.js')
   , DataNode = require('./data-node.js')
-  // , Element = require('./element.js')
+  , XmlElement = require('./xml-element.js')
   , fs = require('fs')
   , http = require('http')
   , request = require('request')
   , highland = require('highland')
   , GraphicalLine = require('./graphical-line.js')
    , Graphics = require('./graphics.js')
-  , Pathway = require('./pathway.js')
   , Group = require('./group.js')
   , Interaction = require('./interaction.js')
   , Label = require('./label.js')
@@ -22,6 +21,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
   , Shape = require('./shape.js')
   , State = require('./state.js')
   , _ = require('lodash')
+  , EventEmitter = require('events').EventEmitter
   // , Text = require('./text.js')
   ;
 
@@ -64,7 +64,27 @@ var GpmlUtilities = require('./gpml-utilities.js')
    * @return
    */
   Gpml2Json.toPvjson = function(input, pathwayMetadata, callbackOutside){
-    var pvjson = {};
+    var k = 0;
+    function generateKString() {
+      var kString = '';
+      for (var l = 0; l < 60; l++) {
+        kString += ' ';
+        //kString += String(k) + ' ';
+      }
+      k += 1;
+      return kString + String(k);
+    }
+
+    console.log('************************************************************************************************************************************************************************');
+    console.log('************************************************************************************************************************************************************************');
+    console.log('************************************************************************************************************************************************************************');
+    console.log('************************************************************************************************************************************************************************');
+    console.log('************************************************************************************************************************************************************************');
+
+    var pvjson = {}
+      , currentClassLevelPvjsonAndGpmlElements = {}
+      , currentClassLevelGpmlElementIsPathway
+      ;
 
     var pathwayIri = 'http://identifiers.org/wikipathways/' + pathwayMetadata.dbId;
 
@@ -88,14 +108,12 @@ var GpmlUtilities = require('./gpml-utilities.js')
     pvjson.xrefs = [];
 
     pvjson.elements = [];
-    var currentPvjsonClassElement;
-    var currentGpmlClassElement;
 
     var strict = true; // set to false for html-mode
 
     var through = highland.pipeline(
       highland.map(function(xmlStringChunk) {
-        //*
+        /*
         console.log('xmlStringChunk');
         console.log(xmlStringChunk);
         //*/
@@ -116,186 +134,95 @@ var GpmlUtilities = require('./gpml-utilities.js')
       this._parser.error = null;
       this._parser.resume();
     });
+
     var xmlNodeStream = highland('opentag', saxStream);
-    var pathwayStream = xmlNodeStream.fork();
-    var biopaxStream = xmlNodeStream.fork();
-    var dataNodeStream = xmlNodeStream.fork();
-    var graphicalLineStream = xmlNodeStream.fork();
-    var groupStream = xmlNodeStream.fork();
-    var interactionStream = xmlNodeStream.fork();
-    var labelStream = xmlNodeStream.fork();
-    var shapeStream = xmlNodeStream.fork();
-    var graphicsStream = xmlNodeStream.fork();
-    var pointStream = xmlNodeStream.fork();
 
-    var k = 0;
-    function generateKString() {
-      var kString = '';
-      for (var l = 0; l < 60; l++) {
-        kString += ' ';
-        //kString += String(k) + ' ';
-      }
-      k += 1;
-      return kString + String(k);
-    }
-
-    console.log('************************************************************************************************************************************************************************');
-    console.log('************************************************************************************************************************************************************************');
-    console.log('************************************************************************************************************************************************************************');
-    console.log('************************************************************************************************************************************************************************');
-    console.log('************************************************************************************************************************************************************************');
- 
-    pathwayStream.filter(function(gpmlElement) {
-      return gpmlElement.name === 'Pathway';
-    })
-    .each(function(pathway) {
-      var attributes = pathway.attributes;
-      var xmlns = attributes.xmlns.value;
-
-      if (GpmlUtilities.supportedNamespaces.indexOf(xmlns) === -1) {
-        // test for whether file is GPML
-        xmlNodeStream.destroy();
-        return callbackOutside('Pathvisiojs does not support the data format provided. Please convert to GPML and retry.', {});
-      } else if (GpmlUtilities.supportedNamespaces.indexOf(xmlns) !== 0) {
-        // test for whether the GPML file version matches the latest version (only the latest version will be supported by pathvisiojs).
-        // TODO call the Java RPC updater or in some other way call for the file to be updated.
-        xmlNodeStream.destroy();
-        return callbackOutside('Pathvisiojs may not fully support the version of GPML provided (xmlns: ' + xmlns + '). Please convert to the supported version of GPML (xmlns: ' + GpmlUtilities.supportedNamespaces[0] + ').', {});
-      }
-
-      pvjson = Pathway.toPvjson(pvjson, pathway);
-    });
-
-    biopaxStream.filter(function(gpmlElement) {
-      return gpmlElement.name === 'Biopax';
-    })
-    .each(function(biopax) {
-      if (!!currentPvjsonClassElement && !!currentGpmlClassElement) {
-        pvjson.elements.push(currentPvjsonClassElement);
-      }
-      currentPvjsonClassElement = {};
-    });
- 
-    graphicalLineStream.filter(function(gpmlElement) {
-      return gpmlElement.name === 'GraphicalLine';
-    })
-    .each(function(graphicalLine) {
-      if (!!currentPvjsonClassElement && !!currentGpmlClassElement) {
-        pvjson.elements.push(currentPvjsonClassElement);
-      }
-      currentPvjsonClassElement = {};
-    });
- 
-    labelStream.filter(function(gpmlElement) {
-      return gpmlElement.name === 'Label';
-    })
-    .each(function(label) {
-      if (!!currentPvjsonClassElement && !!currentGpmlClassElement) {
-        pvjson.elements.push(currentPvjsonClassElement);
-      }
-      currentPvjsonClassElement = {};
-    });
- 
-    groupStream.filter(function(gpmlElement) {
-      return gpmlElement.name === 'Group';
-    })
-    .each(function(group) {
-      if (!!currentPvjsonClassElement && !!currentGpmlClassElement) {
-        pvjson.elements.push(currentPvjsonClassElement);
-      }
-      currentPvjsonClassElement = {};
-    });
-
-    shapeStream.filter(function(gpmlElement) {
-      return gpmlElement.name === 'Shape';
-    })
-    .each(function(shape) {
-      if (!!currentPvjsonClassElement && !!currentGpmlClassElement) {
-        pvjson.elements.push(currentPvjsonClassElement);
-      }
-      currentPvjsonClassElement = {};
-      /*
-      console.log('*************************************************************************************************************************');
+    var xmlNodeStreamEvents = new EventEmitter();
+    var classLevelGpmlElementStreamEvents = new EventEmitter();
+    var classLevelGpmlElementTagNames = _.keys(XmlElement.classLevelElements);
+    xmlNodeStream.each(function(xmlElement) {
+      console.log('G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G');
       console.log(generateKString());
-      console.log('*************************************************************************************************************************');
-      console.log('shape');
-      console.log(shape);
-      //*/
-    });
+      console.log('G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G');
+      if (classLevelGpmlElementTagNames.indexOf(xmlElement.name) > -1) {
+        if (xmlElement.name === 'Pathway') {
+          var attributes = xmlElement.attributes;
+          var xmlns = attributes.xmlns.value;
 
-    dataNodeStream.filter(function(gpmlElement) {
-      return gpmlElement.name === 'DataNode';
-    })
-    .each(function(gpmlElement) {
-      if (!!currentPvjsonClassElement && !!currentGpmlClassElement) {
-        pvjson.elements.push(currentPvjsonClassElement);
-      }
-      currentPvjsonClassElement = {};
-      /*
-      console.log('- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -');
-      console.log(generateKString());
-      console.log('- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -');
-      console.log('DataNode');
-      console.log(gpmlElement);
-      //*/
-    });
-
-    interactionStream.filter(function(gpmlElement) {
-      return gpmlElement.name === 'Interaction';
-    })
-    .each(function(gpmlElement) {
-      if (!!currentPvjsonClassElement && !!currentGpmlClassElement) {
-        pvjson.elements.push(currentPvjsonClassElement);
-      }
-      var result = Interaction.toPvjson(pvjson, gpmlElement);   
-      currentPvjsonClassElement = result.currentPvjsonClassElement;
-      currentGpmlClassElement = result.gpmlElement;
-      /*
-      console.log('--> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> -->');
-      console.log(generateKString());
-      console.log('--> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> --> -->');
-      console.log('Interaction');
-      console.log(gpmlElement);
-      //*/
-    });
-
-    graphicsStream.filter(function(gpmlElement) {
-      return gpmlElement.name === 'Graphics';
-    })
-    .each(function(gpmlElement) {
-      if (!!currentPvjsonClassElement && !!currentGpmlClassElement) {
-        currentPvjsonClassElement = Graphics.toPvjson(pvjson, gpmlElement, currentPvjsonClassElement, currentGpmlClassElement);
-        /*
-        console.log('G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G');
-        console.log(generateKString());
-        console.log('G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G G');
-        console.log('Graphics');
-        console.log(gpmlElement);
-        //*/
+          if (GpmlUtilities.supportedNamespaces.indexOf(xmlns) === -1) {
+            // test for whether file is GPML
+            xmlNodeStream.destroy();
+            return callbackOutside('Pathvisiojs does not support the data format provided. Please convert to valid GPML and retry.', {});
+          } else if (GpmlUtilities.supportedNamespaces.indexOf(xmlns) !== 0) {
+            // test for whether the GPML file version matches the latest version (only the latest version will be supported by pathvisiojs).
+            // TODO call the Java RPC updater or in some other way call for the file to be updated.
+            xmlNodeStream.destroy();
+            return callbackOutside('Pathvisiojs may not fully support the version of GPML provided (xmlns: ' + xmlns + '). Please convert to the supported version of GPML (xmlns: ' + GpmlUtilities.supportedNamespaces[0] + ').', {});
+          }
+        }
+        xmlNodeStreamEvents.emit('ClassLevelElement', xmlElement);
       } else {
-        // this is for the Pathway element
-        pvjson = Graphics.toPvjson(pvjson, gpmlElement, pvjson, currentGpmlClassElement);
+        xmlNodeStreamEvents.emit(xmlElement.name, xmlElement);
       }
-      /*
-      if (!!gpmlElement.attributes.LineThickness && typeof gpmlElement.attributes.LineThickness.value !== 'undefined') {
-        currentPvjsonClassElement.strokeWidth = parseFloat(gpmlElement.attributes.LineThickness.value || 1);
+        /*
+      } else if (xmlElement.name === 'Graphics') {
+        xmlNodeStreamEvents.emit('graphics', xmlElement);
+      } else if (xmlElement.name === 'Biopax') {
+        xmlNodeStreamEvents.emit('biopax', xmlElement);
       }
       //*/
-
     });
 
-    pointStream.filter(function(gpmlElement) {
-      return gpmlElement.name === 'Point';
+    var biopaxStream = highland('Biopax', xmlNodeStreamEvents)
+    .each(function(biopax) {
+    });
+
+    var classLevelGpmlElementStream = highland('ClassLevelElement', xmlNodeStreamEvents)
+    .map(function(gpmlElement) {
+      var lastClassLevelGpmlElementWasPathway = currentClassLevelGpmlElementIsPathway;
+      currentClassLevelGpmlElementIsPathway = (gpmlElement.name === 'Pathway');
+      if (lastClassLevelGpmlElementWasPathway === false) {
+        pvjson.elements.push(currentClassLevelPvjsonAndGpmlElements.pvjsonElement);
+        currentClassLevelPvjsonAndGpmlElements.pvjsonElement = {};
+      } else {
+        currentClassLevelPvjsonAndGpmlElements.pvjsonElement = pvjson;
+      }
+      currentClassLevelPvjsonAndGpmlElements.gpmlElement = gpmlElement;
+      currentClassLevelPvjsonAndGpmlElements = XmlElement.toPvjson(currentClassLevelPvjsonAndGpmlElements);   
+      //console.log('H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H');
+      //console.log(generateKString());
+      //console.log('H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H H');
+      return currentClassLevelPvjsonAndGpmlElements;
     })
-    .each(function(gpmlElement) {
-      //currentPvjsonClassElement.id = gpmlElement.attributes.GraphId.value;
-      /*
-      console.log('+  +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +  +');
-      console.log(generateKString());
-      console.log('+  +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +  +');
-      console.log('Point');
-      console.log(gpmlElement);
-      //*/
+    .map(function(gpmlElement) {
+      //console.log('classLevelGpmlElement AFTER');
+      //console.log(gpmlElement);
+      return gpmlElement;
+    });
+
+    var biopaxRefStream = highland('BiopaxRef', xmlNodeStreamEvents)
+    .zip(classLevelGpmlElementStream.fork())
+    .each(function(args) {
+      console.log('biopaxRef args');
+      console.log(args);
+      classLevelGpmlElementStream.resume();
+    });
+
+    var graphicsStream = highland('Graphics', xmlNodeStreamEvents)
+    .zip(classLevelGpmlElementStream.fork())
+    .each(function(args) {
+      console.log('args');
+      console.log(args);
+      console.log('currentClassLevelGpmlElementIsPathway ********************************');
+      console.log(currentClassLevelGpmlElementIsPathway);
+      highland(args).apply(function(graphics, classLevelPvjsonAndGpmlElements) {
+        classLevelPvjsonAndGpmlElements = Graphics.toPvjson(graphics, classLevelPvjsonAndGpmlElements);
+        console.log('classLevelPvjsonAndGpmlElements');
+        console.log(classLevelPvjsonAndGpmlElements);
+        console.log('Graphics');
+        console.log(graphics);
+        classLevelGpmlElementStream.resume();
+      });
     });
 
     request('http://www.wikipathways.org/wpi/wpi.php?action=downloadFile&type=gpml&pwTitle=Pathway:WP525')
@@ -303,8 +230,11 @@ var GpmlUtilities = require('./gpml-utilities.js')
       .pipe(through)
       .last()
       .map(function(array) {
+        //*
         console.log('pvjson');
         console.log(pvjson);
+        console.log('yes');
+        //*/
         // TODO
         // * add ids to every pvjson class element
         return array.toString();
@@ -1391,3 +1321,5 @@ var GpmlUtilities = require('./gpml-utilities.js')
     root.Gpml2Json = Gpml2Json;
   }
 })();
+
+

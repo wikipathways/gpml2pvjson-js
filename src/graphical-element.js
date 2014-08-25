@@ -8,9 +8,29 @@ var BiopaxRef = require('./biopax-ref.js')
 
 // ...element includes all GPML elements and is the parent of both ...node and ...edge.
 module.exports = {
-  toPvjson: function(pvjson, gpmlSelection, elementSelection, pvjsonElement, callback) {
+  defaults: {
+    Graphics: {
+      attributes: {
+        Color: {
+          name: 'Color',
+          value: '000000'
+        },
+        FillColor: {
+          name: 'FillColor',
+          value: 'Transparent'
+        },
+        LineThickness: {
+          name: 'LineThickness',
+          value: 1
+        }
+      }
+    }
+  },
+
+  toPvjson: function(gpmlElement) {
     var attribute
       , i
+      , pvjsonElement = {}
       , pvjsonHeight
       , pvjsonWidth
       , pvjsonStrokeWidth
@@ -26,8 +46,7 @@ module.exports = {
       , type
       ;
 
-    // jQuery in browser uses tagName, but Cheerio in Node.js uses name
-    var tagName = elementSelection[0].tagName || elementSelection[0].name;
+    var tagName = gpmlElement.name;
     /*
     var tagNameToBiopaxMappings = {
       'Interaction':'Interaction'
@@ -93,7 +112,8 @@ module.exports = {
       },
     };
 
-    var biopaxRefsSelection = elementSelection.find('BiopaxRef');
+    /*
+    var biopaxRefsSelection = gpmlElement.find('BiopaxRef');
     // TODO don't repeat this code with the same code in gpml.js
     if (biopaxRefsSelection.length > 0) {
       pvjsonElement.xrefs = pvjsonElement.xrefs || [];
@@ -109,9 +129,16 @@ module.exports = {
         }
       });
     }
+    //*/
 
-    pvjsonElement = GpmlUtilities.convertAttributesToJson(elementSelection, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
+    pvjsonElement = GpmlUtilities.convertAttributesToJson(gpmlElement, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
+    gpmlElement = GpmlUtilities.extendDefaults(gpmlElement, this.defaults);
+    console.log('pvjsonElement');
+    console.log(pvjsonElement);
 
-    callback(pvjsonElement);
+    return {
+      pvjsonElement:pvjsonElement
+      , gpmlElement:gpmlElement
+    };
   }
 };

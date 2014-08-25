@@ -1,9 +1,9 @@
 'use strict';
 
 var _ = require('lodash')
-  , GpmlElement = require('./element.js')
   , Graphics = require('./graphics.js')
   , Async = require('async')
+  , GpmlUtilities = require('./gpml-utilities.js')
   ;
 
 // Biopax when possible, otherwise GPML. Note that Biopax is the default namespace,
@@ -14,13 +14,144 @@ var gpmlToSemanticMappings = {
   'gpml:Pathway': 'Pathway'
 };
 
-var gpmlToSemanticMappings = {
-  'gpml:Group': 'gpml:Group',
-  'gpml:Complex': 'Complex',
-  'gpml:Pathway': 'Pathway'
-};
-
 var Group = {
+  defaults: {
+    attributes: {
+      Style: {
+        name: 'Style',
+        value: 'None'
+      }
+    },
+    Graphics: {
+      attributes: {
+        Align: {
+          name: 'Align',
+          value: 'Center'
+        },
+        Color: {
+          name: 'Color',
+          value: '808080'
+        },
+        Valign: {
+          name: 'Valign',
+          value: 'Middle'
+        },
+        FontSize: {
+          name: 'FontSize',
+          value: 1
+        },
+        FontWeight: {
+          name: 'FontWeight',
+          value: 'Bold'
+        },
+        LineThickness: {
+          name: 'LineThickness',
+          value: 1
+        },
+        FillOpacity: {
+          name: 'FillOpacity',
+          value: 0.1
+        }
+      }
+    }
+  },
+  applyDefaults: function(gpmlElement, defaults) {
+    var defaultsByStyle = {
+      None: {
+        Graphics: {
+          attributes: {
+            Padding: {
+              name: 'Padding',
+              value: 8
+            },
+            ShapeType: {
+              name: 'ShapeType',
+              value: 'Rectangle'
+            },
+            LineStyle: {
+              name: 'LineStyle',
+              value: 'Broken'
+            },
+            FillColor: {
+              name: 'FillColor',
+              value: 'B4B464'
+            },
+          }
+        }
+      },
+      Group: {
+        Graphics: {
+          attributes: {
+            Padding: {
+              name: 'Padding',
+              value: 8
+            },
+            ShapeType: {
+              name: 'ShapeType',
+              value: 'None'
+            },
+            LineStyle: {
+              name: 'LineStyle',
+              value: 'Broken'
+            },
+            FillColor: {
+              name: 'FillColor',
+              value: 'Transparent'
+            },
+          }
+        }
+      },
+      Complex: {
+        Graphics: {
+          attributes: {
+            Padding: {
+              name: 'Padding',
+              value: 11
+            },
+            ShapeType: {
+              name: 'ShapeType',
+              value: 'Complex'
+            },
+            LineStyle: {
+              name: 'LineStyle',
+              value: 'Solid'
+            },
+            FillColor: {
+              name: 'FillColor',
+              value: 'B4B464'
+            },
+          }
+        }
+      },
+      Pathway: {
+        Graphics: {
+          attributes: {
+            Padding: {
+              name: 'Padding',
+              value: 8
+            },
+            ShapeType: {
+              name: 'ShapeType',
+              value: 'Rectangle'
+            },
+            LineStyle: {
+              name: 'LineStyle',
+              value: 'Broken'
+            },
+            FillColor: {
+              name: 'FillColor',
+              value: '00FF00'
+            },
+          }
+        }
+      },
+    };
+
+    var groupStyle = gpmlElement.attributes.Style || 'None';
+    GpmlUtilities.applyDefaults(gpmlElement, [defaultsByStyle[groupStyle], this.defaults, defaults]);
+
+    return gpmlElement;
+  },
   getGroupDimensions: function(group, callback) {
     var dimensions = {};
     dimensions.topLeftCorner = {};
@@ -62,12 +193,12 @@ var Group = {
     });
   },
 
-  toPvjson: function(pvjson, elementsPossiblyInGroup, gpmlPathwaySelection, groupSelection, callback) {
+  toPvjsonOld: function(pvjson, elementsPossiblyInGroup, gpmlPathwaySelection, groupSelection, callback) {
     var pvjsonPath = {},
       pvjsonElements = []
       ;
 
-    GpmlElement.toPvjson(pvjson, gpmlPathwaySelection, groupSelection, pvjsonPath, function(pvjsonPath) {
+    //GpmlElement.toPvjson(pvjson, gpmlPathwaySelection, groupSelection, pvjsonPath, function(pvjsonPath) {
       Graphics.toPvjson(pvjson, gpmlPathwaySelection, groupSelection, pvjsonPath, function(pvjsonPath) {
         var contents = elementsPossiblyInGroup.filter(function(element){
           return element.isPartOf === pvjsonPath.id;
@@ -94,7 +225,7 @@ var Group = {
         }
         callback(pvjsonElements);
       });
-    });
+    //});
   }
 };
 

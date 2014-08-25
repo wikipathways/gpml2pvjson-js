@@ -1,5 +1,4 @@
-var GpmlElement = require('./element.js')
-  , Graphics = require('./graphics.js')
+var Graphics = require('./graphics.js')
   ;
 
 module.exports = (function() {
@@ -36,7 +35,7 @@ module.exports = (function() {
       pvjsonAnchor.zIndex = pvjsonEdge.zIndex + 0.1;
       pvjsonAnchor.networkType = 'node';
 
-      GpmlElement.toPvjson(pvjs, gpmlSelection, anchorSelection, pvjsonAnchor, function(pvjsonAnchor) {
+      //GpmlElement.toPvjson(pvjs, gpmlSelection, anchorSelection, pvjsonAnchor, function(pvjsonAnchor) {
         Graphics.toPvjson(pvjs, gpmlSelection, anchorSelection, pvjsonAnchor, function(pvjsonAnchor) {
           attachedPoint = gpmlSelection('point[GraphRef=' + pvjsonAnchor.id + ']');
           pvjsonAnchorWidth = pvjsonAnchor.width;
@@ -55,7 +54,7 @@ module.exports = (function() {
 
           pvjsonAnchors.push(pvjsonAnchor);
           });
-        });
+        //});
     });
     callback(pvjsonAnchors);
   }

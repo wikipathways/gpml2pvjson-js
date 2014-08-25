@@ -1,5 +1,4 @@
-var GpmlElement = require('./element.js')
-  , Graphics = require('./graphics.js')
+var Graphics = require('./graphics.js')
   ;
 
 module.exports = (function(){
@@ -15,7 +14,7 @@ module.exports = (function(){
     //*/
 
         //*
-        GpmlElement.toPvjson(pvjs, gpmlSelection, stateSelection, pvjsonPath, function(pvjsonPath) {
+        //GpmlElement.toPvjson(pvjs, gpmlSelection, stateSelection, pvjsonPath, function(pvjsonPath) {
           Graphics.toPvjson(pvjs, gpmlSelection, stateSelection, pvjsonPath, function(pvjsonPath) {
             var pvjsonElements = [pvjsonPath];
             /*
@@ -28,7 +27,7 @@ module.exports = (function(){
             //*/
             callback(pvjsonElements);
           });
-        });
+        //});
         //*/
   };
 

@@ -1,5 +1,5 @@
-var GpmlElement = require('./element.js')
-  , Graphics = require('./graphics.js')
+var Graphics = require('./graphics.js')
+  , GpmlUtilities = require('./gpml-utilities.js')
   , Point = require('./point.js')
   , strcase = require('tower-strcase')
   , Anchor = require('./anchor.js')
@@ -101,33 +101,32 @@ var markerNameToIdentifierMappings = {
 };
 
 module.exports = {
-  applyDefaultGraphicsAttributes: function(gpmlElement) {
-    var defaults = {
-      Color: {
-        name: 'Color',
-        value: '000000'
-      },
-      FillColor: {
-        name: 'FillColor',
-        value: 'Transparent'
-      },
-      LineThickness: {
-        name: 'LineThickness',
-        value: 1
+  defaults: {
+    Graphics: {
+      attributes: {
+        Color: {
+          name: 'Color',
+          value: '000000'
+        },
+        FillColor: {
+          name: 'FillColor',
+          value: 'Transparent'
+        },
+        LineThickness: {
+          name: 'LineThickness',
+          value: 1
+        }
       }
-    };
-
-    gpmlElement.Graphics = {};
-    gpmlElement.Graphics.attributes = defaults;
-
+    }
+  },
+  applyDefaults: function(gpmlElement, defaults) {
+    GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
     return gpmlElement;
   },
-
-  toPvjson: function(pvjson, gpmlElement) {
-    var currentPvjsonClassElement = {};
-    currentPvjsonClassElement.id = gpmlElement.attributes.GraphId.value;
-    gpmlElement = this.applyDefaultGraphicsAttributes(pvjson, gpmlElement);
-    return {currentPvjsonClassElement:currentPvjsonClassElement, gpmlElement:gpmlElement};
+  toPvjson: function(gpmlElement) {
+    var pvjsonElement = {};
+    gpmlElement = GpmlUtilities.extendDefaults(gpmlElement, this.defaults);
+    return {pvjsonElement:pvjsonElement, gpmlElement:gpmlElement};
   },
 
   toPvjsonOld: function(pvjson, gpmlSelection, interactionSelection, callback) {
@@ -146,7 +145,7 @@ module.exports = {
       , pvjsonPath = {}
       ;
 
-    GpmlElement.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath) {
+    //GpmlElement.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath) {
       Graphics.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath) {
         Point.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath, referencedElementTags) {
           Anchor.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonAnchor) {
@@ -223,6 +222,6 @@ module.exports = {
           });
         });
       });
-    });
+    //});
   }
 };
