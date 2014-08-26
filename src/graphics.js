@@ -12,9 +12,6 @@ module.exports = {
       , gpmlElement = currentClassLevelPvjsonAndGpmlElements.gpmlElement
       ;
 
-    console.log('gpmlElement.Graphics in graphics');
-    console.log(gpmlElement.Graphics);
-
     if (!graphics || !gpmlElement || !pvjsonElement) {
       throw new Error('Missing input element(s) in graphics.toPvjson()');
     }
@@ -50,6 +47,22 @@ module.exports = {
     ];
 
     var gpmlToPvjsonConverter = {
+      BoardHeight: function(gpmlValue){
+        pvjsonElement.image = pvjsonElement.image || {
+          '@context': {
+            '@vocab': 'http://schema.org/'
+          }
+        };
+        pvjsonElement.image.height = parseFloat(gpmlValue);
+      },
+      BoardWidth: function(gpmlValue){
+        pvjsonElement.image = pvjsonElement.image || {
+          '@context': {
+            '@vocab': 'http://schema.org/'
+          }
+        };
+        pvjsonElement.image.width = parseFloat(gpmlValue);
+      },
       LineStyle: function(gpmlLineStyleValue){
         var pvjsonStrokeDasharray;
         // TODO hard-coding these here is not the most maintainable
@@ -59,12 +72,8 @@ module.exports = {
         } else if (gpmlLineStyleValue === 'Double') {
           lineStyleIsDouble = true;
         }
-        return pvjsonStrokeDasharray;
       },
       ShapeType: function(gpmlShapeTypeValue){
-        if (!gpmlShapeTypeValue) {
-          console.log(gpmlShapeTypeValue);
-        }
         if (gpmlShapeType !== 'Oval') {
           gpmlShapeType = gpmlShapeTypeValue;
         } else {
@@ -72,13 +81,11 @@ module.exports = {
         }
         pvjsonShape = Strcase.paramCase(gpmlShapeType);
         pvjsonElement.shape = !lineStyleIsDouble ? pvjsonShape : pvjsonShape + '-double';
-        return pvjsonShape;
       },
       ConnectorType: function(gpmlConnectorTypeValue){
         var gpmlConnectorType = gpmlConnectorTypeValue;
         pvjsonShape = Strcase.paramCase('line-' + gpmlConnectorType);
         pvjsonElement.shape = pvjsonShape;
-        return pvjsonShape;
       },
       FillColor: function(gpmlFillColorValue){
         var cssColor = this.gpmlColorToCssColor(gpmlFillColorValue);
@@ -140,18 +147,13 @@ module.exports = {
         }
       },
       LineThickness: function(gpmlLineThicknessValue) {
-        console.log('gpmlLineThicknessValue');
-        console.log(gpmlLineThicknessValue);
         pvjsonBorderWidth = parseFloat(gpmlLineThicknessValue);
-        console.log('pvjsonBorderWidth');
-        console.log(pvjsonBorderWidth);
         pvjsonElement.borderWidth = pvjsonBorderWidth;
         return pvjsonBorderWidth;
       },
       Position: function(gpmlPositionValue) {
         var pvjsonPosition = parseFloat(gpmlPositionValue);
         pvjsonElement.position = pvjsonPosition;
-        return pvjsonPosition;
       },
       Width: function(gpmlWidthValue) {
         gpmlWidthValue = parseFloat(gpmlWidthValue);
@@ -163,7 +165,6 @@ module.exports = {
         gpmlHeightValue = parseFloat(gpmlHeightValue);
         pvjsonHeight = gpmlHeightValue + pvjsonBorderWidth;
         pvjsonElement.height = pvjsonHeight;
-        return pvjsonHeight;
       },
       CenterX: function(gpmlCenterXValue) {
         gpmlCenterXValue = parseFloat(gpmlCenterXValue);
@@ -175,7 +176,6 @@ module.exports = {
         gpmlCenterYValue = parseFloat(gpmlCenterYValue);
         pvjsonY = gpmlCenterYValue - pvjsonHeight/2;
         pvjsonElement.y = pvjsonY;
-        return pvjsonY;
       },
       /*
       RelX: function(gpmlRelXValue) {
@@ -211,17 +211,14 @@ module.exports = {
       Align: function(gpmlAlignValue) {
         pvjsonTextAlign = Strcase.paramCase(gpmlAlignValue);
         pvjsonElement.textAlign = pvjsonTextAlign;
-        return pvjsonTextAlign;
       },
       Valign: function(gpmlValignValue) {
         pvjsonVerticalAlign = Strcase.paramCase(gpmlValignValue);
         pvjsonElement.verticalAlign = pvjsonVerticalAlign;
-        return pvjsonVerticalAlign;
       },
       ZOrder: function(gpmlZOrderValue) {
         pvjsonZIndex = parseFloat(gpmlZOrderValue);
         pvjsonElement.zIndex = pvjsonZIndex;
-        return pvjsonZIndex;
       },
       gpmlColorToCssColor: function(gpmlColor) {
         var color;

@@ -15,10 +15,6 @@ module.exports = {
   },
 
   applyDefaults: function(gpmlElement, defaultsArray) {
-    //*
-    console.log('defaultsArray');
-    console.log(defaultsArray);
-    //*/
     var defaultsArrayClone = _.cloneDeep(defaultsArray);
     // from http://lodash.com/docs#partialRight
     var defaultsDeep = _.partialRight(_.merge, function deep(value, other) {
@@ -39,8 +35,6 @@ module.exports = {
     attributes = gpmlElement.attributes;
     var attributeKeys = _.keys(attributes);
     var handledAttributeKeys = _.intersection(converterKeys, attributeKeys);
-    console.log('handledAttributeKeys');
-    console.log(handledAttributeKeys);
     if (handledAttributeKeys.length < attributes.length) {
       var unhandledAttributeKeys = _.difference(converterKeys, attributeKeys);
       console.warn('No handler for attribute(s) "' + unhandledAttributeKeys.join(', ') + '" for element "' + gpmlElement.name + '"');
@@ -63,8 +57,6 @@ module.exports = {
           return typeof attribute.value !== 'undefined' && !isNaN(attribute.value) && attribute.value !== null;
         });
       }
-      console.log('attributeList');
-      console.log(attributeList);
       _(attributeList).forEach(function(attributeListItem) {
         converter[attributeListItem.name](attributeListItem.value);
       });

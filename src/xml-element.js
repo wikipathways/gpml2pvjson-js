@@ -73,6 +73,48 @@ module.exports = {
     ];
 
     var gpmlToPvjsonConverter = {
+      Author: function(gpmlValue){
+        pvjsonElement.author = gpmlValue;
+      },
+      'Data-Source': function(gpmlValue){
+        pvjsonElement.dataSource = gpmlValue;
+      },
+      Email: function(gpmlValue){
+        pvjsonElement.email = gpmlValue;
+      },
+      GraphId: function(gpmlValue){
+        /*
+        var uuid = require('uuid')
+        pvjsonElement.id = gpmlValue || uuid.v1();
+        //*/
+        pvjsonElement.id = gpmlValue;
+      },
+      GraphRef: function(gpmlValue){
+        pvjsonElement.isAttachedTo = gpmlValue;
+      },
+      GroupId: function(gpmlValue){
+        pvjsonElement['gpml:GroupId'] = gpmlValue;
+      },
+      GroupRef: function(gpmlValue){
+        pvjsonElement['gpml:GroupRef'] = gpmlValue;
+        //pvjsonElement.isPartOf = gpmlValue;
+      },
+      Href: function(gpmlHrefValue){
+        pvjsonHref = encodeURI(He.decode(gpmlHrefValue));
+        pvjsonElement.href = pvjsonHref;
+      },
+      IsPartOf: function(gpmlValue){
+        pvjsonElement.isPartOf = gpmlValue;
+      },
+      'Last-Modified': function(gpmlValue){
+        pvjsonElement.lastModified = gpmlValue;
+      },
+      License: function(gpmlValue){
+        pvjsonElement.license = gpmlValue;
+      },
+      Maintainer: function(gpmlValue){
+        pvjsonElement.maintainer = gpmlValue;
+      },
       Name: function(nameValue){
         var splitName = nameValue.split(' (');
         if (!!splitName && splitName.length === 2 && !!nameValue.match(/\(/g) && nameValue.match(/\(/g).length === 1 && !!nameValue.match(/\)/g) && nameValue.match(/\)/g).length === 1) {
@@ -82,6 +124,9 @@ module.exports = {
           pvjsonElement.standardName = nameValue;
           pvjsonElement.displayName = nameValue;
         }
+      },
+      Organism: function(gpmlValue){
+        pvjsonElement.organism = gpmlValue;
       },
       Style: function(gpmlValue){
         // this is for GPML Group elements
@@ -96,43 +141,15 @@ module.exports = {
         var type = gpmlToSemanticMappings[ pvjsonElement['gpml:Type'] ] || 'gpml:Group';
         pvjsonElement.type = type;
       },
-      Href: function(gpmlHrefValue){
-        pvjsonHref = encodeURI(He.decode(gpmlHrefValue));
-        pvjsonElement.href = pvjsonHref;
-        return pvjsonHref;
-      },
       TextLabel: function(gpmlTextLabelValue){
-        console.log('gpmlTextLabelValue');
-        console.log(gpmlTextLabelValue);
         pvjsonTextContent = He.decode(gpmlTextLabelValue);
         pvjsonElement.textContent = pvjsonTextContent;
-        return pvjsonTextContent;
       },
       Type: function(gpmlTypeValue){
         pvjsonElement['gpml:Type'] = 'gpml:' + gpmlTypeValue;
-        return gpmlTypeValue;
       },
-      IsPartOf: function(gpmlValue){
-        pvjsonElement.isPartOf = gpmlValue;
-        return gpmlValue;
-      },
-      GroupId: function(gpmlValue){
-        pvjsonElement['gpml:GroupId'] = gpmlValue;
-        return gpmlValue;
-      },
-      GraphId: function(gpmlValue){
-        /*
-        var uuid = require('uuid')
-        pvjsonElement.id = gpmlValue || uuid.v1();
-        //*/
-        pvjsonElement.id = gpmlValue;
-      },
-      GraphRef: function(gpmlValue){
-        pvjsonElement.isAttachedTo = gpmlValue;
-      },
-      GroupRef: function(gpmlValue){
-        pvjsonElement['gpml:GroupRef'] = gpmlValue;
-        //pvjsonElement.isPartOf = gpmlValue;
+      Version: function(gpmlValue){
+        pvjsonElement.idVersion = gpmlValue;
       },
     };
 

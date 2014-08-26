@@ -23,6 +23,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
   , State = require('./state.js')
   , _ = require('lodash')
   , EventEmitter = require('events').EventEmitter
+  , UnificationXref = require('./unification-xrefs.js')
   // , Text = require('./text.js')
   ;
 
@@ -83,11 +84,12 @@ var GpmlUtilities = require('./gpml-utilities.js')
     console.log('START START START START START START START START START START START START START START START START START START START START START START START START START START');
     console.log('************************************************************************************************************************************************************************');
     console.log('************************************************************************************************************************************************************************');
-    console.log('************************************************************************************************************************************************************************');
+    console.log('');
 
     var pvjson = {}
       , currentClassLevelPvjsonAndGpmlElements = {}
       , currentClassLevelGpmlElementIsPathway
+      , currentText
       ;
 
     var pathwayIri = 'http://identifiers.org/wikipathways/' + pathwayMetadata.dbId;
@@ -142,6 +144,13 @@ var GpmlUtilities = require('./gpml-utilities.js')
     var classLevelGpmlElementTagNames = _.keys(XmlElement.classLevelElements);
 
     var openTagStream = highland('opentag', saxStream);
+    var textStream = highland('text', saxStream);
+    var closeTagStreamEvents = new EventEmitter();
+    var closeTagStreamEvents2 = new EventEmitter();
+    textStream.fork().each(function(text) {
+      currentText = text;
+      textStream.resume();
+    });
     var closeTagStream = highland('closetag', saxStream);
 
     var openTagStreamEvents = new EventEmitter();
@@ -155,6 +164,15 @@ var GpmlUtilities = require('./gpml-utilities.js')
       }
     });
 
+    closeTagStream.fork().each(function(tagName) {
+      if (classLevelGpmlElementTagNames.indexOf(tagName) > -1 && tagName !== 'Pathway') {
+        closeTagStreamEvents.emit('closeNonPathwayClassLevelElement', tagName);
+      } else {
+        closeTagStreamEvents.emit('close' + tagName, tagName);
+      }
+      closeTagStream.resume();
+    });
+
     /*
     var biopaxStream = highland('Biopax', openTagStreamEvents)
     .each(function(biopax) {
@@ -164,8 +182,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
     var classLevelGpmlElementStream = highland('ClassLevelElement', openTagStreamEvents)
     .map(function(xmlElement) {
       console.log('CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS');
-      console.log(generateKString());
-      console.log(xmlElement.name);
+      console.log(generateKString() + ' ' + xmlElement.name);
       console.log('CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS');
       if (xmlElement.name === 'Pathway') {
         var attributes = xmlElement.attributes;
@@ -194,45 +211,85 @@ var GpmlUtilities = require('./gpml-utilities.js')
       return currentClassLevelPvjsonAndGpmlElements;
     });
 
-    /*
-    var biopaxRefStream = highland('BiopaxRef', openTagStreamEvents)
-    .zip(classLevelGpmlElementStream.fork())
-    .each(function(args) {
-      classLevelGpmlElementStream.resume();
+    var biopaxRefStream = highland('closeBiopaxRef', closeTagStreamEvents)
+    .each(function(tagName) {
+      currentClassLevelPvjsonAndGpmlElements.pvjsonElement.xrefs = currentClassLevelPvjsonAndGpmlElements.pvjsonElement.xrefs || [];
+      currentClassLevelPvjsonAndGpmlElements.pvjsonElement.xrefs.push(currentText);
     });
-    //*/
 
     //*
-    // NOTE: this is handling an XML element that is named "Attribute" in GPML
+    // NOTE: this is handling an XML _ELEMENT_. The element tagName is "Attribute."
     var attributeElementStream = highland('Attribute', openTagStreamEvents)
     .each(function(attributeElement) {
-      console.log('time625');
-      console.log('currentClassLevelPvjsonAndGpmlElements');
-      console.log(currentClassLevelPvjsonAndGpmlElements);
-      console.log('attributeElement');
-      console.log(attributeElement);
       currentClassLevelPvjsonAndGpmlElements = Attribute.toPvjson(attributeElement, currentClassLevelPvjsonAndGpmlElements);
     });
     //*/
 
-
     var graphicsStream = highland('Graphics', openTagStreamEvents)
     .zip(classLevelGpmlElementStream.fork())
     .each(function(args) {
-      console.log('args');
-      console.log(args);
       highland(args).apply(function(graphics, classLevelPvjsonAndGpmlElements) {
         currentClassLevelPvjsonAndGpmlElements = Graphics.toPvjson(graphics, currentClassLevelPvjsonAndGpmlElements);
         classLevelGpmlElementStream.resume();
       });
     });
 
-    closeTagStream.filter(function(tagName) {
-      return classLevelGpmlElementTagNames.indexOf(tagName) > -1 && tagName !== 'Pathway';
+    var xrefElementStream = highland('Xref', openTagStreamEvents)
+    .map(function(element) {
+      //classLevelGpmlElementStream.pause();
+      return {
+        xrefElement: element
+        , pvjson: pvjson
+        , currentClassLevelPvjsonAndGpmlElements: currentClassLevelPvjsonAndGpmlElements
+      };
     })
+    .map(function(element) {
+      console.log('element');
+      console.log(element);
+      return element;
+    })
+    .map(UnificationXref.toPvjson)
+    .map(function(args) {
+      console.log('args');
+      console.log(args);
+      return args;
+    })
+    .each(function(args) {
+      args.apply(function(args) {
+        var pvjsonElement = args[0];
+        var entityReference = args[1];
+        console.log('pvjsonElement');
+        console.log(pvjsonElement);
+        console.log('entityReference');
+        console.log(entityReference);
+        currentClassLevelPvjsonAndGpmlElements.pvjsonElement = pvjsonElement;
+        if (!!entityReference) {
+          pvjson.elements.push(entityReference);
+        }
+      });
+    /*
+      result.toArray(function(xs) {
+        console.log('xs');
+        console.log(xs);
+      });
+    //*/
+    });
+    /*
+    .apply(function(pvjsonElement, entityReference) {
+      console.log('pvjsonElement');
+      console.log(pvjsonElement);
+      console.log('entityReference');
+      console.log(entityReference);
+      currentClassLevelPvjsonAndGpmlElements.pvjsonElement = pvjsonElement;
+      if (!!entityReference) {
+        pvjson.elements.push(entityReference);
+      }
+      //classLevelGpmlElementStream.resume();
+    });
+    //*/
+
+    highland('closeNonPathwayClassLevelElement', closeTagStreamEvents)
     .each(function(tagName) {
-      console.log('tagName AFTER');
-      console.log(tagName);
       pvjson.elements.push(currentClassLevelPvjsonAndGpmlElements.pvjsonElement);
     });
 
@@ -242,13 +299,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
       .pipe(through)
       .last()
       .map(function(array) {
-        //*
         console.log('pvjson');
         console.log(pvjson);
-        console.log('yes');
-        //*/
-        // TODO
-        // * add ids to every pvjson class element
         return array.toString();
       })
       .pipe(fs.createWriteStream('../test/output/file-copy.xml'));
