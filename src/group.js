@@ -147,9 +147,8 @@ var Group = {
       },
     };
 
-    var groupStyle = gpmlElement.attributes.Style || 'None';
-    GpmlUtilities.applyDefaults(gpmlElement, [defaultsByStyle[groupStyle], this.defaults, defaults]);
-
+    var groupStyle = gpmlElement.attributes.Style || {value: 'None'};
+    gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [defaultsByStyle[groupStyle.value], this.defaults, defaults]);
     return gpmlElement;
   },
   getGroupDimensions: function(group, callback) {

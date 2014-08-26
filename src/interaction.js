@@ -120,7 +120,7 @@ module.exports = {
     }
   },
   applyDefaults: function(gpmlElement, defaults) {
-    GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
+    gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
     return gpmlElement;
   },
   toPvjson: function(gpmlElement) {

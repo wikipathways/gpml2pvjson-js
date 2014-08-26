@@ -11,7 +11,7 @@ module.exports = {
   classLevelElements: {
     Pathway: require('./pathway'),
     Group: require('./group'),
-    /*
+    //*
     DataNode: require('./data-node'),
     GraphicalLine: require('./graphical-line'),
     Interaction: require('./interaction'),
@@ -34,10 +34,6 @@ module.exports = {
           name: 'FillColor',
           value: 'ffffff'
         },
-        FontSize: {
-          Type:'FontSize',
-          Value:10
-        }
       }
     }
   },
@@ -115,12 +111,6 @@ module.exports = {
       Type: function(gpmlTypeValue){
         pvjsonElement['gpml:Type'] = 'gpml:' + gpmlTypeValue;
         return gpmlTypeValue;
-      },
-      CellularComponent: function(gpmlCellularComponentValue){
-        //pvjson.type = 'PhysicalEntity'; // this is probably more valid as Biopax
-        pvjsonElement.type = 'CellularComponent'; // this is not valid Biopax
-        pvjsonElement.entityReference = gpmlCellularComponentValue;
-        return gpmlCellularComponentValue;
       },
       IsPartOf: function(gpmlValue){
         pvjsonElement.isPartOf = gpmlValue;

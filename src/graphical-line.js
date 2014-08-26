@@ -14,7 +14,7 @@ module.exports = {
     }
   },
   applyDefaults: function(gpmlElement, defaults) {
-    GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
+    gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
     return gpmlElement;
   },
   // TODO this isn't getting the linetype info for determining whether activity is direct or indirect yet

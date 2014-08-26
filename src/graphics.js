@@ -11,13 +11,17 @@ module.exports = {
     var pvjsonElement = currentClassLevelPvjsonAndGpmlElements.pvjsonElement
       , gpmlElement = currentClassLevelPvjsonAndGpmlElements.gpmlElement
       ;
+
+    console.log('gpmlElement.Graphics in graphics');
+    console.log(gpmlElement.Graphics);
+
     if (!graphics || !gpmlElement || !pvjsonElement) {
       throw new Error('Missing input element(s) in graphics.toPvjson()');
     }
 
     var attribute,
       i,
-      gpmlDoubleLineProperty = '',
+      lineStyleIsDouble,
       pvjsonHeight,
       pvjsonWidth,
       pvjsonBorderWidth,
@@ -52,23 +56,27 @@ module.exports = {
         if (gpmlLineStyleValue === 'Broken') {
           pvjsonStrokeDasharray = '5,3';
           pvjsonElement.strokeDasharray = pvjsonStrokeDasharray;
-        }
-        else if (gpmlLineStyleValue === 'Double') {
-          gpmlDoubleLineProperty = '-double';
-          // The line below is left here for future reference, but after discussing with AP, the desired behavior is for the entire shape to be filled. -AR
-          //pvjsonElement.fillRule = 'evenodd';
+        } else if (gpmlLineStyleValue === 'Double') {
+          lineStyleIsDouble = true;
         }
         return pvjsonStrokeDasharray;
       },
       ShapeType: function(gpmlShapeTypeValue){
-        gpmlShapeType = gpmlShapeTypeValue;
-        pvjsonShape = Strcase.paramCase(gpmlShapeType) + gpmlDoubleLineProperty;
-        pvjsonElement.shape = pvjsonShape;
+        if (!gpmlShapeTypeValue) {
+          console.log(gpmlShapeTypeValue);
+        }
+        if (gpmlShapeType !== 'Oval') {
+          gpmlShapeType = gpmlShapeTypeValue;
+        } else {
+          gpmlShapeType = 'Ellipse';
+        }
+        pvjsonShape = Strcase.paramCase(gpmlShapeType);
+        pvjsonElement.shape = !lineStyleIsDouble ? pvjsonShape : pvjsonShape + '-double';
         return pvjsonShape;
       },
       ConnectorType: function(gpmlConnectorTypeValue){
         var gpmlConnectorType = gpmlConnectorTypeValue;
-        pvjsonShape = Strcase.paramCase('line-' + gpmlConnectorType) + gpmlDoubleLineProperty;
+        pvjsonShape = Strcase.paramCase('line-' + gpmlConnectorType);
         pvjsonElement.shape = pvjsonShape;
         return pvjsonShape;
       },
@@ -126,12 +134,17 @@ module.exports = {
         // Key="org.pathvisio.core.StateRotation"
         // From discussion with AP and KH, we've decided to ignore this value, because we don't actually want States to be rotated.
         gpmlRotationValue = parseFloat(gpmlRotationValue);
-        var pvjsonRotation = gpmlRotationValue * 180/Math.PI; //converting from radians to degrees
-        pvjsonElement.rotation = pvjsonRotation;
-        return pvjsonRotation;
+        if (gpmlRotationValue !== 0) {
+          var pvjsonRotation = gpmlRotationValue * 180/Math.PI; //converting from radians to degrees
+          pvjsonElement.rotation = pvjsonRotation;
+        }
       },
       LineThickness: function(gpmlLineThicknessValue) {
+        console.log('gpmlLineThicknessValue');
+        console.log(gpmlLineThicknessValue);
         pvjsonBorderWidth = parseFloat(gpmlLineThicknessValue);
+        console.log('pvjsonBorderWidth');
+        console.log(pvjsonBorderWidth);
         pvjsonElement.borderWidth = pvjsonBorderWidth;
         return pvjsonBorderWidth;
       },
@@ -226,6 +239,7 @@ module.exports = {
       }
     };
 
+    graphics.attributes = GpmlUtilities.applyDefaults(graphics.attributes, gpmlElement.Graphics);
     pvjsonElement = GpmlUtilities.convertAttributesToJson(graphics, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
 
     var result = {};
