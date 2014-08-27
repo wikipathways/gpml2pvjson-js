@@ -22,6 +22,7 @@ module.exports = {
       pvjsonHeight,
       pvjsonWidth,
       pvjsonBorderWidth,
+      pvjsonRotation,
       gpmlShapeType = '',
       pvjsonShape,
       pvjsonZIndex,
@@ -29,10 +30,18 @@ module.exports = {
       pvjsonVerticalAlign,
       pvjsonRelY,
       pvjsonX,
-      pvjsonY
+      pvjsonY,
+      gpmlCenterX,
+      gpmlCenterY,
+      gpmlWidth,
+      gpmlHeight,
+      gpmlRotation,
+      angleToControlPoint,
+      correctionFactors
       ;
 
     var attributeDependencyOrder = [
+      'Rotation',
       'LineStyle',
       'ShapeType',
       'FillColor',
@@ -46,7 +55,13 @@ module.exports = {
       'CenterY'
     ];
 
+    // TODO bring over correction factors for shapes
+
     var gpmlToPvjsonConverter = {
+      Align: function(gpmlAlignValue) {
+        pvjsonTextAlign = Strcase.paramCase(gpmlAlignValue);
+        pvjsonElement.textAlign = pvjsonTextAlign;
+      },
       BoardHeight: function(gpmlValue){
         pvjsonElement.image = pvjsonElement.image || {
           '@context': {
@@ -63,24 +78,45 @@ module.exports = {
         };
         pvjsonElement.image.width = parseFloat(gpmlValue);
       },
-      LineStyle: function(gpmlLineStyleValue){
-        var pvjsonStrokeDasharray;
-        // TODO hard-coding these here is not the most maintainable
-        if (gpmlLineStyleValue === 'Broken') {
-          pvjsonStrokeDasharray = '5,3';
-          pvjsonElement.strokeDasharray = pvjsonStrokeDasharray;
-        } else if (gpmlLineStyleValue === 'Double') {
-          lineStyleIsDouble = true;
+      CenterX: function(gpmlValue) {
+        gpmlCenterX = parseFloat(gpmlValue);
+        pvjsonX = gpmlCenterX - pvjsonWidth/2;
+
+        if (!!correctionFactors) {
+          angleToControlPoint = angleToControlPoint || 0;
+          if (gpmlShapeType === 'Triangle') {
+            var xCorrection = (correctionFactors.x) * Math.cos(angleToControlPoint) * gpmlWidth + (correctionFactors.y) * Math.sin(angleToControlPoint) * gpmlHeight;
+            pvjsonX = (gpmlCenterX - gpmlWidth/2) + xCorrection;
+          // TODO can we reuse the same code as for Triangle for the ones below? Analogous question for CenterY.
+          } else if (gpmlShapeType === 'Arc') {
+            pvjsonX += pvjsonHeight * Math.sin(angleToControlPoint);
+          } else if (gpmlShapeType === 'Pentagon') {
+            var correctedGpmlCenterX = gpmlCenterX + gpmlWidth * (1 - correctionFactors.width) / 2;
+            pvjsonX = correctedGpmlCenterX - pvjsonWidth/2;
+          }
         }
+
+        pvjsonElement.x = pvjsonX;
       },
-      ShapeType: function(gpmlShapeTypeValue){
-        if (gpmlShapeType !== 'Oval') {
-          gpmlShapeType = gpmlShapeTypeValue;
-        } else {
-          gpmlShapeType = 'Ellipse';
+      CenterY: function(gpmlValue) {
+        gpmlCenterY = parseFloat(gpmlValue);
+        pvjsonY = gpmlCenterY - pvjsonHeight/2;
+
+        if (!!correctionFactors) {
+          if (gpmlShapeType === 'Triangle') {
+            var distanceTriangleTipExtendsBeyondBBox = ((gpmlCenterX + (correctionFactors.x) * gpmlWidth - gpmlWidth/2) + pvjsonWidth) - (gpmlCenterX + gpmlWidth/2);
+            var yCorrection = (-1) * distanceTriangleTipExtendsBeyondBBox * Math.sin(angleToControlPoint) + (correctionFactors.y) * Math.cos(angleToControlPoint) * gpmlHeight;
+            pvjsonY = (gpmlCenterY - gpmlHeight/2) + yCorrection;
+          } else if (gpmlShapeType === 'Arc') {
+            pvjsonY += pvjsonHeight * Math.cos(angleToControlPoint);
+          }
         }
-        pvjsonShape = Strcase.paramCase(gpmlShapeType);
-        pvjsonElement.shape = !lineStyleIsDouble ? pvjsonShape : pvjsonShape + '-double';
+
+        pvjsonElement.y = pvjsonY;
+      },
+      Color: function(gpmlColorValue){
+        var cssColor = this.gpmlColorToCssColor(gpmlColorValue);
+        pvjsonElement.color = cssColor;
       },
       ConnectorType: function(gpmlConnectorTypeValue){
         var gpmlConnectorType = gpmlConnectorTypeValue;
@@ -91,8 +127,7 @@ module.exports = {
         var cssColor = this.gpmlColorToCssColor(gpmlFillColorValue);
         if (gpmlShapeType.toLowerCase() !== 'none') {
           pvjsonElement.backgroundColor = cssColor;
-        }
-        else {
+        } else {
           pvjsonElement.backgroundColor = 'transparent';
         }
       },
@@ -100,33 +135,18 @@ module.exports = {
         var cssFillOpacity = parseFloat(gpmlFillOpacityValue);
         pvjsonElement.fillOpacity = cssFillOpacity;
       },
-      Color: function(gpmlColorValue){
-        var cssColor = this.gpmlColorToCssColor(gpmlColorValue);
-        pvjsonElement.color = cssColor;
-      },
-      Padding: function(gpmlPaddingValue){
-        var cssPadding;
-        if (_.isNumber(gpmlPaddingValue)) {
-          cssPadding = parseFloat(gpmlPaddingValue);
-        }
-        else {
-          cssPadding = gpmlPaddingValue;
-        }
-        pvjsonElement.padding = cssPadding;
+      FontName: function(gpmlFontNameValue){
+        var cssFontFamily = gpmlFontNameValue;
+        pvjsonElement.fontFamily = cssFontFamily;
       },
       FontSize: function(gpmlFontSizeValue){
         var cssFontSize;
         if (_.isNumber(gpmlFontSizeValue)) {
           cssFontSize = parseFloat(gpmlFontSizeValue);
-        }
-        else {
+        } else {
           cssFontSize = gpmlFontSizeValue;
         }
         pvjsonElement.fontSize = cssFontSize;
-      },
-      FontName: function(gpmlFontNameValue){
-        var cssFontFamily = gpmlFontNameValue;
-        pvjsonElement.fontFamily = cssFontFamily;
       },
       FontStyle: function(gpmlFontStyleValue){
         var cssFontStyle = gpmlFontStyleValue.toLowerCase();
@@ -136,46 +156,88 @@ module.exports = {
         var cssFontWeight = gpmlFontWeightValue.toLowerCase();
         pvjsonElement.fontWeight = cssFontWeight;
       },
-      Rotation: function(gpmlRotationValue) {
-        // GPML can hold a rotation value for State elements in an element named "Attribute" like this:
-        // Key="org.pathvisio.core.StateRotation"
-        // From discussion with AP and KH, we've decided to ignore this value, because we don't actually want States to be rotated.
-        gpmlRotationValue = parseFloat(gpmlRotationValue);
-        if (gpmlRotationValue !== 0) {
-          var pvjsonRotation = gpmlRotationValue * 180/Math.PI; //converting from radians to degrees
-          pvjsonElement.rotation = pvjsonRotation;
+      Height: function(gpmlValue) {
+        gpmlHeight = parseFloat(gpmlValue);
+        if (!correctionFactors) {
+          pvjsonHeight = gpmlHeight;
+        } else {
+          pvjsonHeight = gpmlHeight * correctionFactors.height;
+        }
+        pvjsonHeight = gpmlHeight + pvjsonBorderWidth;
+        pvjsonElement.height = pvjsonHeight;
+      },
+      LineStyle: function(gpmlLineStyleValue){
+        var pvjsonStrokeDasharray;
+        // TODO hard-coding these here is not the most maintainable
+        if (gpmlLineStyleValue === 'Broken') {
+          pvjsonStrokeDasharray = '5,3';
+          pvjsonElement.strokeDasharray = pvjsonStrokeDasharray;
+        } else if (gpmlLineStyleValue === 'Double') {
+          lineStyleIsDouble = true;
         }
       },
       LineThickness: function(gpmlLineThicknessValue) {
         pvjsonBorderWidth = parseFloat(gpmlLineThicknessValue);
         pvjsonElement.borderWidth = pvjsonBorderWidth;
-        return pvjsonBorderWidth;
+      },
+      Padding: function(gpmlPaddingValue){
+        var cssPadding;
+        if (_.isNumber(gpmlPaddingValue)) {
+          cssPadding = parseFloat(gpmlPaddingValue);
+        } else {
+          cssPadding = gpmlPaddingValue;
+        }
+        pvjsonElement.padding = cssPadding;
       },
       Position: function(gpmlPositionValue) {
         var pvjsonPosition = parseFloat(gpmlPositionValue);
         pvjsonElement.position = pvjsonPosition;
       },
-      Width: function(gpmlWidthValue) {
-        gpmlWidthValue = parseFloat(gpmlWidthValue);
-        pvjsonWidth = gpmlWidthValue + pvjsonBorderWidth;
+      ShapeType: function(gpmlValue){
+        gpmlShapeType = gpmlValue;
+        // most graphics libraries use 'ellipse', so we're converting
+        // the GPML's term 'Oval' to be consistent with them
+        if (gpmlValue !== 'Oval') {
+          pvjsonShape = gpmlValue;
+        } else {
+          pvjsonShape = 'Ellipse';
+        }
+        pvjsonShape = !lineStyleIsDouble ? pvjsonShape : pvjsonShape + '-double';
+        pvjsonShape = Strcase.paramCase(pvjsonShape);
+        pvjsonElement.shape = pvjsonShape;
+      },
+      Rotation: function(gpmlValue) {
+        // GPML can hold a rotation value for State elements in an element named "Attribute" like this:
+        // Key="org.pathvisio.core.StateRotation"
+        // From discussion with AP and KH, we've decided to ignore this value, because we don't actually want States to be rotated.
+
+        gpmlRotation = parseFloat(gpmlValue);
+
+        // GPML saves rotation in radians, even though PathVisio-Java displays rotation in degrees.
+        // converting from radians to degrees
+        pvjsonRotation = gpmlRotation * 180/Math.PI;
+        if (gpmlRotation !== 0) {
+          pvjsonElement.rotation = pvjsonRotation;
+        }
+
+        // This conversion changes the rotation to reflect the angle between the green rotation control dot in PathVisio-Java and the X-axis.
+        // The units are radians, unlike the units for pvjsonRotation.
+        var angleToControlPoint = 2 * Math.PI - gpmlRotation;
+      },
+      Valign: function(gpmlValignValue) {
+        pvjsonVerticalAlign = Strcase.paramCase(gpmlValignValue);
+        pvjsonElement.verticalAlign = pvjsonVerticalAlign;
+      },
+      Width: function(gpmlValue) {
+        gpmlWidth = parseFloat(gpmlValue);
+        correctionFactors = this.correctionFactors[gpmlShapeType];
+        if (!correctionFactors) {
+          pvjsonWidth = gpmlWidth;
+        } else {
+          pvjsonWidth = gpmlWidth * (correctionFactors.width);
+        }
+        pvjsonWidth = gpmlWidth + pvjsonBorderWidth;
         pvjsonElement.width = pvjsonWidth;
-        return pvjsonWidth;
-      },
-      Height: function(gpmlHeightValue) {
-        gpmlHeightValue = parseFloat(gpmlHeightValue);
-        pvjsonHeight = gpmlHeightValue + pvjsonBorderWidth;
-        pvjsonElement.height = pvjsonHeight;
-      },
-      CenterX: function(gpmlCenterXValue) {
-        gpmlCenterXValue = parseFloat(gpmlCenterXValue);
-        pvjsonX = gpmlCenterXValue - pvjsonWidth/2;
-        pvjsonElement.x = pvjsonX;
-        return pvjsonX;
-      },
-      CenterY: function(gpmlCenterYValue) {
-        gpmlCenterYValue = parseFloat(gpmlCenterYValue);
-        pvjsonY = gpmlCenterYValue - pvjsonHeight/2;
-        pvjsonElement.y = pvjsonY;
       },
       /*
       RelX: function(gpmlRelXValue) {
@@ -208,18 +270,11 @@ module.exports = {
         return pvjsonY;
       },
       //*/
-      Align: function(gpmlAlignValue) {
-        pvjsonTextAlign = Strcase.paramCase(gpmlAlignValue);
-        pvjsonElement.textAlign = pvjsonTextAlign;
-      },
-      Valign: function(gpmlValignValue) {
-        pvjsonVerticalAlign = Strcase.paramCase(gpmlValignValue);
-        pvjsonElement.verticalAlign = pvjsonVerticalAlign;
-      },
       ZOrder: function(gpmlZOrderValue) {
         pvjsonZIndex = parseFloat(gpmlZOrderValue);
         pvjsonElement.zIndex = pvjsonZIndex;
       },
+      // everything below in this object: helper values/functions
       gpmlColorToCssColor: function(gpmlColor) {
         var color;
         if (gpmlColor.toLowerCase() === 'transparent') {
@@ -232,6 +287,45 @@ module.exports = {
             console.warn('Could not convert GPML Color value of "' + gpmlColor + '" to a valid CSS color. Using "#c0c0c0" as a fallback.');
             return '#c0c0c0';
           }
+        }
+      },
+      // Some shapes have GPML values that do not match what is visually displayed in PathVisio-Java.
+      // Below are correct factors for the GPML so that the display in pathvisiojs will match the display in PathVisio-Java.
+      //
+      // NOTE: If you create an entry in correctionFactors, fill in all the values (x, y, width and height),
+      // using default values if needed. A default value is used when no correction is needed for a given property.
+      // These are the default values for each property:
+      // {
+      //    x: 0,
+      //    y: 0,
+      //    width: 1,
+      //    height: 1
+      // }
+      // TODO: add an entry for sarcoplasmic reticulum
+      correctionFactors: {
+        Arc: {
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 0.5
+        },
+        Triangle: {
+          x: 0.311,
+          y: 0.07,
+          width: 0.938,
+          height: 0.868
+        },
+        Pentagon: {
+          x: 0,
+          y: 0,
+          width: 0.904,
+          height: 0.95
+        },
+        Hexagon: {
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 0.88 
         }
       }
     };

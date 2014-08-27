@@ -87,12 +87,12 @@ UnificationXref.toPvjson = highland.wrapCallback(function(args, callbackInside) 
     , pvjson = args.pvjson
     , organism = pvjson.organism
     , pvjsonElements
-    , gpmlDataNodeType = currentClassLevelGpmlElement.attributes.Type.value
+    , gpmlDataNodeType
     , result = []
     ;
 
-  if (!gpmlDataNodeType) {
-    gpmlDataNodeType = 'Unknown';
+  if (currentClassLevelGpmlElement.name === 'DataNode') {
+    gpmlDataNodeType = currentClassLevelGpmlElement.attributes.Type.value || 'Unknown';
   }
 
   // this converts GPML DataNode Type to a Biopax class, like Protein or SmallMolecule
@@ -107,12 +107,16 @@ UnificationXref.toPvjson = highland.wrapCallback(function(args, callbackInside) 
   if (!dataSourceName || !dbId) {
     console.warn('GPML Xref missing DataSource and/or ID');
     result[0] = currentClassLevelPvjsonElement;
-    // this would indicate incorrect GPML, but
-    // not returning an error here, because this isn't fatal.
+    // Getting to this point would indicate incorrect GPML, but we don't
+    // return an error here, because this isn't a fatal error.
     return callbackInside(null, result);
   }
 
-  // TODO how should we best handle sub-pvjson instances in pvjson?
+  // TODO how should we best handle sub-pathway instances in pvjson?
+  // AP confirms we need to be able to handle multiple instances of
+  // a given sub-pathway in one parent pathway, which would indicate
+  // we should treat pathways the same as other elements instead of
+  // how we're doing it below. --AR
   if (entityType === 'Pathway') {
     currentClassLevelPvjsonElement.organism = pvjson.organism;
   }

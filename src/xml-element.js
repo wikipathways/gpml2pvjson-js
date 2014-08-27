@@ -1,7 +1,6 @@
 'use strict';
 
-var BiopaxRef = require('./biopax-ref.js')
-  , He = require('he')
+var He = require('he')
   , Strcase = require('tower-strcase')
   , GpmlUtilities = require('./gpml-utilities.js')
   , _ = require('lodash')
@@ -103,9 +102,6 @@ module.exports = {
         pvjsonHref = encodeURI(He.decode(gpmlHrefValue));
         pvjsonElement.href = pvjsonHref;
       },
-      IsPartOf: function(gpmlValue){
-        pvjsonElement.isPartOf = gpmlValue;
-      },
       'Last-Modified': function(gpmlValue){
         pvjsonElement.lastModified = gpmlValue;
       },
@@ -129,9 +125,10 @@ module.exports = {
         pvjsonElement.organism = gpmlValue;
       },
       Style: function(gpmlValue){
-        // this is for GPML Group elements
-        // Biopax when possible, otherwise GPML. Note that Biopax is the default namespace,
-        // so if a namespace is not specified below, there is an implied "bp:"
+        // This code handles 'Style' attributes for GPML 'Group' elements
+        // It uses Biopax terms when possible, otherwise GPML.
+        // Note that Biopax is the default namespace in JSON-LD for jsonpv,
+        // so if a namespace is not specified below, there is an implied "bp:" preceding the term
         var gpmlToSemanticMappings = {
           'gpml:Group': 'gpml:Group',
           'gpml:Complex': 'Complex',
