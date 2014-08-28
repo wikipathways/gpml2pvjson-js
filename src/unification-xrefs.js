@@ -78,8 +78,6 @@ UnificationXref.generateEntityReference = function(args, callback){
 };
 
 UnificationXref.toPvjson = highland.wrapCallback(function(args, callbackInside) {
-  console.log('args in UX');
-  console.log(args);
   var currentClassLevelPvjsonAndGpmlElements = args.currentClassLevelPvjsonAndGpmlElements
     , currentClassLevelPvjsonElement = currentClassLevelPvjsonAndGpmlElements.pvjsonElement
     , currentClassLevelGpmlElement = currentClassLevelPvjsonAndGpmlElements.gpmlElement

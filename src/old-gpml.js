@@ -222,15 +222,6 @@
 
   // Fills in implicit values
   Gpml2Json.makeExplicit = function(gpmlPathwaySelection) {
-      var selectAllEdgesArgs = {};
-      selectAllEdgesArgs.gpmlPathwaySelection = gpmlPathwaySelection;
-      selectAllEdgesArgs.elementTags = [
-        'Interaction',
-        'GraphicalLine'
-      ];
-      var edgesSelector = selectAllEdgesArgs.elementTags.join(', ');
-      var edgesSelection = gpmlPathwaySelection.find(edgesSelector);
-
       if (edgesSelection.length > 0) {
         var anchorsSelection = gpmlPathwaySelection.find('Anchor');
         if (anchorsSelection.length > 0) {
