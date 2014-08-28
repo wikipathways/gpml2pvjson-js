@@ -7,25 +7,21 @@ var GpmlUtilities = require('./gpml-utilities.js')
 module.exports = {
   defaults: {
     attributes: {
-    },
-    Graphics: {
-      attributes: {
-        Color: {
-          name: 'Color',
-          value: '000000'
-        },
-        ConnectorType: {
-          name: 'ConnectorType',
-          value: 'Straight'
-        },
-        FillColor: {
-          name: 'FillColor',
-          value: 'Transparent'
-        },
-        LineThickness: {
-          name: 'LineThickness',
-          value: 1
-        }
+      Color: {
+        name: 'Color',
+        value: '000000'
+      },
+      ConnectorType: {
+        name: 'ConnectorType',
+        value: 'Straight'
+      },
+      FillColor: {
+        name: 'FillColor',
+        value: 'Transparent'
+      },
+      LineThickness: {
+        name: 'LineThickness',
+        value: 1
       }
     }
   },

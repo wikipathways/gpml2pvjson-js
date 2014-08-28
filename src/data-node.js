@@ -11,47 +11,42 @@ var Graphics = require('./graphics.js')
 module.exports = {
   defaults: {
     attributes: {
-    },
-    Graphics: {
-      attributes: {
-        Align: {
-          name: 'Align',
-          value: 'Center'
-        },
-        Color: {
-          name: 'Color',
-          value: '000000'
-        },
-        FontSize: {
-          name:'FontSize',
-          value:10
-        },
-        LineThickness: {
-          name: 'LineThickness',
-          value: 1
-        },
-        Padding: {
-          name: 'Padding',
-          value: '0.5em'
-        },
-        ShapeType: {
-          name: 'ShapeType',
-          value: 'Rectangle'
-        },
-        Valign: {
-          name: 'Valign',
-          value: 'Top'
-        },
-        ZOrder: {
-          name: 'ZOrder',
-          value: 0
-        },
-      }
+      Align: {
+        name: 'Align',
+        value: 'Center'
+      },
+      Color: {
+        name: 'Color',
+        value: '000000'
+      },
+      FontSize: {
+        name:'FontSize',
+        value:10
+      },
+      LineThickness: {
+        name: 'LineThickness',
+        value: 1
+      },
+      Padding: {
+        name: 'Padding',
+        value: '0.5em'
+      },
+      ShapeType: {
+        name: 'ShapeType',
+        value: 'Rectangle'
+      },
+      Valign: {
+        name: 'Valign',
+        value: 'Top'
+      },
+      ZOrder: {
+        name: 'ZOrder',
+        value: 0
+      },
     }
   },
 
   applyDefaults: function(gpmlElement, defaults) {
-    gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
-    return gpmlElement;
+    return GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
   }
 };

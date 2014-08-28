@@ -227,8 +227,10 @@ var GpmlUtilities = require('./gpml-utilities.js')
       } else if (tagNamesForSupplementalElementsWithAttributes.indexOf(x.name) > -1) {
         _.merge(currentTargetElement.attributes, x.attributes);
       } else if (tagNamesForNestedElements.indexOf(x.name) > -1) {
-        currentTargetElement.attributes[x.name] = currentTargetElement.attributes[x.name] || [];
-        currentTargetElement.attributes[x.name].push(x.attributes);
+        currentTargetElement.attributes[x.name] = currentTargetElement.attributes[x.name] || {};
+        currentTargetElement.attributes[x.name].name = x.name;
+        currentTargetElement.attributes[x.name].value = currentTargetElement.attributes[x.name].value || [];
+        currentTargetElement.attributes[x.name].value.push(x.attributes);
       } else if (tagNamesForSupplementalElementsWithText.indexOf(currentTagName) > -1) {
         currentTargetElement.attributes[currentTagName] = currentTargetElement.attributes[currentTagName] || [];
         currentTargetElement.attributes[currentTagName].push(x);
@@ -245,77 +247,23 @@ var GpmlUtilities = require('./gpml-utilities.js')
       console.log(generateKString() + ' ' + element.name);
       console.log('CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS');
 
-      // TODO make the Defaults.apply function based (exactly the same as???) on XmlElement.applyDefaults
-      return Defaults.apply(element);
+      return XmlElement.applyDefaults(element);
     })
-    .reduce(pvjson, function(accumulator, element) {
-      // TODO make the converter.apply function
-      if (element.name !== 'Pathway') {
-        var pvjsonElement = Converter.apply(accumulator, element);   
-        return accumulator.elements.push(pvjsonElement);
-      } else {
-        return Converter.apply(accumulator, element);   
-      }
+    .reduce(pvjson, function(accumulator, consolidatedTargetElement) {
+      var pvjsonElement = (consolidatedTargetElement.name !== 'Pathway') ? {} : accumulator;
+      return XmlElement.toPvjson({
+        pvjson: accumulator,
+        pvjsonElement: pvjsonElement,
+        gpmlElement: consolidatedTargetElement
+      });
+    })
+    .each(function(pvjsonElement) {
+      pvjson.elements.push(pvjsonElement);
     });
 
 
     // TODO handle things like Biopax conversion, updating Groups so they have x, y, width, height, etc.
 
-    // TODO merge the following code into the above system and delete it.
-
-    var biopaxRefStream = highland('closeBiopaxRef', closeTagStreamEvents)
-    .each(function(tagName) {
-      currentClassLevelPvjsonAndGpmlElements.pvjsonElement.xrefs = currentClassLevelPvjsonAndGpmlElements.pvjsonElement.xrefs || [];
-      // TODO write something to fill these out once the Biopax is parsed
-      currentClassLevelPvjsonAndGpmlElements.pvjsonElement.xrefs.push(currentText);
-    });
-
-    //*
-    // NOTE: this is handling an XML _ELEMENT_. The element tagName is "Attribute."
-    var attributeElementStream = highland('Attribute', openTagStreamEvents)
-    .each(function(attributeElement) {
-      currentClassLevelPvjsonAndGpmlElements = Attribute.toPvjson(attributeElement, currentClassLevelPvjsonAndGpmlElements);
-    });
-    //*/
-
-    var graphicsStream = highland('Graphics', openTagStreamEvents)
-    .zip(classLevelGpmlElementStream.fork())
-    .each(function(args) {
-      highland(args).apply(function(graphics, classLevelPvjsonAndGpmlElements) {
-        currentClassLevelPvjsonAndGpmlElements = Graphics.toPvjson(graphics, currentClassLevelPvjsonAndGpmlElements);
-        classLevelGpmlElementStream.resume();
-      });
-    });
-
-    var xrefElementStream = highland('Xref', openTagStreamEvents)
-    .map(function(element) {
-      //classLevelGpmlElementStream.pause();
-      return {
-        xrefElement: element
-        , pvjson: pvjson
-        , currentClassLevelPvjsonAndGpmlElements: currentClassLevelPvjsonAndGpmlElements
-      };
-    })
-    .map(UnificationXref.toPvjson)
-    //*
-    .each(function(args) {
-      // TODO figure out how to use highland better for this
-      args.apply(function(args) {
-        var pvjsonElement = args[0];
-        var entityReference = args[1];
-        console.log('pvjsonElement');
-        console.log(pvjsonElement);
-        console.log('entityReference');
-        console.log(entityReference);
-        currentClassLevelPvjsonAndGpmlElements.pvjsonElement = pvjsonElement;
-        if (!!entityReference) {
-          // TODO the old converter pushed the entityReference into the
-          // elements array, but wouldn't it make more sense to push it
-          // into the xrefs array?
-          pvjson.elements.push(entityReference);
-        }
-      });
-    });
     //*/
     /*
     .apply(function(pvjsonElement, entityReference) {
@@ -342,11 +290,6 @@ var GpmlUtilities = require('./gpml-utilities.js')
       pvjson.elements.push(anchor);
     });
     //*/
-
-    highland('closeNonPathwayClassLevelElement', closeTagStreamEvents)
-    .each(function(tagName) {
-      pvjson.elements.push(currentClassLevelPvjsonAndGpmlElements.pvjsonElement);
-    });
 
     /*
     var biopaxStream = highland('Biopax', openTagStreamEvents)

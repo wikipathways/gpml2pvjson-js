@@ -9,17 +9,13 @@ var _ = require('lodash')
 var Pathway = {
   defaults: {
     attributes: {
+      BoardHeight: {
+        name: 'BoardHeight',
+        value: 500
+      },
       Name: {
         name: 'Name',
         value: 'Untitled Pathway'
-      }
-    },
-    Graphics: {
-      attributes: {
-        BoardHeight: {
-          name: 'BoardHeight',
-          value: 500
-        }
       }
     }
   },

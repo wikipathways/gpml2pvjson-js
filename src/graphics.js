@@ -55,8 +55,6 @@ module.exports = {
       'CenterY'
     ];
 
-    // TODO bring over correction factors for shapes
-
     var gpmlToPvjsonConverter = {
       Align: function(gpmlAlignValue) {
         pvjsonTextAlign = Strcase.paramCase(gpmlAlignValue);
@@ -330,7 +328,6 @@ module.exports = {
       }
     };
 
-    graphics.attributes = GpmlUtilities.applyDefaults(graphics.attributes, gpmlElement.Graphics);
     pvjsonElement = GpmlUtilities.convertAttributesToJson(graphics, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
 
     var result = {};

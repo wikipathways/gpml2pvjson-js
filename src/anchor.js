@@ -59,49 +59,41 @@ module.exports = (function() {
     var defaultsByShape = {
       Circle: {
         attributes: {
+          Height: {
+            name: 'Height',
+            value: 8
+          },
+          LineThickness: {
+            name: 'LineThickness',
+            value: 0
+          },
           Shape: {
             name: 'Shape',
             value: 'Circle'
-          }
-        },
-        Graphics: {
-          attributes: {
-            Height: {
-              name: 'Height',
-              value: 8
-            },
-            LineThickness: {
-              name: 'LineThickness',
-              value: 0
-            },
-            Width: {
-              name: 'Width',
-              value: 8
-            }
+          },
+          Width: {
+            name: 'Width',
+            value: 8
           }
         }
       },
       None: {
         attributes: {
+          Height: {
+            name: 'Height',
+            value: 4
+          },
+          LineThickness: {
+            name: 'LineThickness',
+            value: 0
+          },
           Shape: {
             name: 'Shape',
             value: 'None'
-          }
-        },
-        Graphics: {
-          attributes: {
-            Height: {
-              name: 'Height',
-              value: 4
-            },
-            LineThickness: {
-              name: 'LineThickness',
-              value: 0
-            },
-            Width: {
-              name: 'Width',
-              value: 4
-            }
+          },
+          Width: {
+            name: 'Width',
+            value: 4
           }
         }
       }

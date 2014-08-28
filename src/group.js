@@ -17,134 +17,122 @@ var gpmlToSemanticMappings = {
 var Group = {
   defaults: {
     attributes: {
+      Align: {
+        name: 'Align',
+        value: 'Center'
+      },
+      Color: {
+        name: 'Color',
+        value: '808080'
+      },
+      Valign: {
+        name: 'Valign',
+        value: 'Middle'
+      },
+      FontSize: {
+        name: 'FontSize',
+        value: 1
+      },
+      FontWeight: {
+        name: 'FontWeight',
+        value: 'Bold'
+      },
+      LineThickness: {
+        name: 'LineThickness',
+        value: 1
+      },
+      FillOpacity: {
+        name: 'FillOpacity',
+        value: 0.1
+      },
       Style: {
         name: 'Style',
         value: 'None'
-      }
-    },
-    Graphics: {
-      attributes: {
-        Align: {
-          name: 'Align',
-          value: 'Center'
-        },
-        Color: {
-          name: 'Color',
-          value: '808080'
-        },
-        Valign: {
-          name: 'Valign',
-          value: 'Middle'
-        },
-        FontSize: {
-          name: 'FontSize',
-          value: 1
-        },
-        FontWeight: {
-          name: 'FontWeight',
-          value: 'Bold'
-        },
-        LineThickness: {
-          name: 'LineThickness',
-          value: 1
-        },
-        FillOpacity: {
-          name: 'FillOpacity',
-          value: 0.1
-        }
       }
     }
   },
   applyDefaults: function(gpmlElement, defaults) {
     var defaultsByStyle = {
       None: {
-        Graphics: {
-          attributes: {
-            Padding: {
-              name: 'Padding',
-              value: 8
-            },
-            ShapeType: {
-              name: 'ShapeType',
-              value: 'Rectangle'
-            },
-            LineStyle: {
-              name: 'LineStyle',
-              value: 'Broken'
-            },
-            FillColor: {
-              name: 'FillColor',
-              value: 'B4B464'
-            },
-          }
+        attributes: {
+          Padding: {
+            name: 'Padding',
+            value: 8
+          },
+          ShapeType: {
+            name: 'ShapeType',
+            value: 'Rectangle'
+          },
+          LineStyle: {
+            name: 'LineStyle',
+            value: 'Broken'
+          },
+          FillColor: {
+            name: 'FillColor',
+            value: 'B4B464'
+          },
         }
       },
       Group: {
-        Graphics: {
-          attributes: {
-            Padding: {
-              name: 'Padding',
-              value: 8
-            },
-            ShapeType: {
-              name: 'ShapeType',
-              value: 'None'
-            },
-            LineStyle: {
-              name: 'LineStyle',
-              value: 'Broken'
-            },
-            FillColor: {
-              name: 'FillColor',
-              value: 'Transparent'
-            },
-          }
+        attributes: {
+          Padding: {
+            name: 'Padding',
+            value: 8
+          },
+          ShapeType: {
+            name: 'ShapeType',
+            value: 'None'
+          },
+          LineStyle: {
+            name: 'LineStyle',
+            value: 'Broken'
+          },
+          FillColor: {
+            name: 'FillColor',
+            value: 'Transparent'
+          },
         }
       },
       Complex: {
-        Graphics: {
-          attributes: {
-            Padding: {
-              name: 'Padding',
-              value: 11
-            },
-            ShapeType: {
-              name: 'ShapeType',
-              value: 'Complex'
-            },
-            LineStyle: {
-              name: 'LineStyle',
-              value: 'Solid'
-            },
-            FillColor: {
-              name: 'FillColor',
-              value: 'B4B464'
-            },
-          }
+        attributes: {
+          Padding: {
+            name: 'Padding',
+            value: 11
+          },
+          ShapeType: {
+            name: 'ShapeType',
+            value: 'Complex'
+          },
+          LineStyle: {
+            name: 'LineStyle',
+            value: 'Solid'
+          },
+          FillColor: {
+            name: 'FillColor',
+            value: 'B4B464'
+          },
         }
       },
       Pathway: {
-        Graphics: {
-          attributes: {
-            Padding: {
-              name: 'Padding',
-              value: 8
-            },
-            ShapeType: {
-              name: 'ShapeType',
-              value: 'Rectangle'
-            },
-            LineStyle: {
-              name: 'LineStyle',
-              value: 'Broken'
-            },
-            FillColor: {
-              name: 'FillColor',
-              value: '00FF00'
-            },
-          }
+        attributes: {
+          Padding: {
+            name: 'Padding',
+            value: 8
+          },
+          ShapeType: {
+            name: 'ShapeType',
+            value: 'Rectangle'
+          },
+          LineStyle: {
+            name: 'LineStyle',
+            value: 'Broken'
+          },
+          FillColor: {
+            name: 'FillColor',
+            value: '00FF00'
+          },
         }
-      },
+      }
     };
 
     var groupStyle = gpmlElement.attributes.Style || {value: 'None'};
