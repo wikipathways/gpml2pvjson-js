@@ -1,4 +1,5 @@
 var Graphics = require('./graphics.js')
+  , XmlElement = require('./xml-element.js')
   ;
 
 module.exports = (function() {
@@ -18,8 +19,103 @@ module.exports = (function() {
   //    if the side specified is top or bottom, the starting point is the leftmost point on the side (smallest x or y value in SVG coordinate system).
   // }
 
+  var defaults = {
+    attributes: {
+      Shape: {
+        name: 'Shape',
+        value: 'None'
+      }
+    },
+    Graphics: {
+      attributes: {
+        LineThickness: {
+          name: 'LineThickness',
+          value: 0
+        }
+      }
+    }
+  };
 
-  function toPvjson(pvjs, gpmlSelection, gpmlEdgeSelection, pvjsonEdge, callback) {
+
+  function toPvjson(args, callbackInside) {
+    var currentClassLevelPvjsonAndGpmlElements = args.currentClassLevelPvjsonAndGpmlElements
+      , currentClassLevelPvjsonElement = currentClassLevelPvjsonAndGpmlElements.pvjsonElement
+      , currentClassLevelGpmlElement = currentClassLevelPvjsonAndGpmlElements.gpmlElement
+      , anchorElement = args.anchorElement
+      , pvjson = args.pvjson
+      , points = currentClassLevelPvjsonElement.points
+      , pointCount = points.length
+      , firstPoint = points[0]
+      , lastPoint = points[pointCount - 1]
+      , pvjsonAnchor = {}
+      ;
+
+    // TODO this might be better as 'gpml:Anchor'
+    pvjsonAnchor.gpmlType = 'Anchor';
+    pvjsonAnchor.references = currentClassLevelPvjsonElement.id;
+    pvjsonAnchor.zIndex = currentClassLevelPvjsonElement.zIndex + 0.1;
+    pvjsonAnchor.networkType = 'node';
+
+    var defaultsByShape = {
+      Circle: {
+        attributes: {
+          Shape: {
+            name: 'Shape',
+            value: 'Circle'
+          }
+        },
+        Graphics: {
+          attributes: {
+            Height: {
+              name: 'Height',
+              value: 8
+            },
+            LineThickness: {
+              name: 'LineThickness',
+              value: 0
+            },
+            Width: {
+              name: 'Width',
+              value: 8
+            }
+          }
+        }
+      },
+      None: {
+        attributes: {
+          Shape: {
+            name: 'Shape',
+            value: 'None'
+          }
+        },
+        Graphics: {
+          attributes: {
+            Height: {
+              name: 'Height',
+              value: 4
+            },
+            LineThickness: {
+              name: 'LineThickness',
+              value: 0
+            },
+            Width: {
+              name: 'Width',
+              value: 4
+            }
+          }
+        }
+      }
+    };
+
+    var pvjsonAndGpmlElements = {};
+    pvjsonAndGpmlElements.pvjsonElement = pvjsonAnchor;
+    pvjsonAndGpmlElements.gpmlElement = anchorElement;
+    pvjsonAndGpmlElements = XmlElement.toPvjson(pvjsonAndGpmlElements);   
+  }
+
+
+
+  function toPvjsonOld(pvjs, gpmlSelection, gpmlEdgeSelection, pvjsonEdge, callback) {
     var anchor, anchorSelection, pvjsonAnchor, pvjsonAnchors = [], pvjsonX, pvjsonY, parentElement, pvjsonMarker, attachedPoint, pvjsonAnchorPosition, pvjsonAnchorWidth, pvjsonAnchorHeight;
     var points = pvjsonEdge.points;
     var pointCount = points.length;
@@ -40,6 +136,7 @@ module.exports = (function() {
           attachedPoint = gpmlSelection('point[GraphRef=' + pvjsonAnchor.id + ']');
           pvjsonAnchorWidth = pvjsonAnchor.width;
           pvjsonAnchorHeight = pvjsonAnchor.height;
+          // TODO handle this after finishing first pass though gpml2jsonpv
           if (attachedPoint.length > 0) {
             pvjsonAnchor.x = parseFloat(attachedPoint.attr('X')) - pvjsonAnchorWidth/2;
             pvjsonAnchor.y = parseFloat(attachedPoint.attr('Y')) - pvjsonAnchorHeight/2;
@@ -109,6 +206,7 @@ module.exports = (function() {
   }
 
   return {
+    defaults:defaults,
     toPvjson:toPvjson,
     getAllFromNode:getAllFromNode
   };

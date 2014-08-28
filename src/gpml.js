@@ -3,7 +3,7 @@
 var GpmlUtilities = require('./gpml-utilities.js')
   , Async = require('async')
   , Biopax = require('biopax2json')
-  // , Anchor = require('./anchor.js')
+  //, Anchor = require('./anchor.js')
   // , Comment = require('./comment.js')
   , DataNode = require('./data-node.js')
   , XmlElement = require('./xml-element.js')
@@ -130,6 +130,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
     // takes the same options as the parser
     var saxStream = require('sax').createStream(strict, {
       xmlns: true
+      , trim: true
     });
     saxStream.on('error', function (e) {
       // unhandled errors will throw, since this is a proper node
@@ -142,7 +143,13 @@ var GpmlUtilities = require('./gpml-utilities.js')
 
     var classLevelGpmlElementTagNames = _.keys(XmlElement.classLevelElements);
 
+
     var openTagStream = highland('opentag', saxStream);
+    var currentTagName;
+    openTagStream.fork().each(function(element) {
+      currentTagName = element.name;
+      openTagStream.resume();
+    });
     var textStream = highland('text', saxStream);
     var closeTagStreamEvents = new EventEmitter();
     var closeTagStreamEvents2 = new EventEmitter();
@@ -152,15 +159,82 @@ var GpmlUtilities = require('./gpml-utilities.js')
     });
     var closeTagStream = highland('closetag', saxStream);
 
+    var saxStreamFiltered = highland.merge([openTagStream.fork(), textStream.fork(), closeTagStream.fork()]);
+    //var saxStreamFiltered = highland.otherwise(openTagStream.fork(), textStream.fork(), closeTagStream.fork());
+
+    var targetElementTagNames = [
+      'Pathway'
+      , 'DataNode'
+      , 'Shape'
+      , 'Label'
+      , 'Interaction'
+      , 'GraphicalLine'
+      , 'Anchor'
+    ];
+    var supplementalElementWithAttributesTagNames = [
+      'Graphics'
+      , 'Xref'
+    ];
+    var supplementalElementWithTextTagNames = [
+      'BiopaxRef'
+      , 'Comment'
+    ];
+    var childElementTagNames = [
+      'Point'
+      , 'Attribute'
+    ];
+    var currentTargetElement = {};
+    var targetElementsToConvertToPvjson = saxStreamFiltered.consume(function (err, x, push, next) {
+
+      if (err) {
+        // pass errors along the stream and consume next value
+        push(err);
+        next();
+        return;
+      }
+
+      if (x === highland.nil) {
+        // pass nil (end event) along the stream
+        push(null, x);
+        return;
+      }
+
+      if ((targetElementTagNames.indexOf(x) > -1 || targetElementTagNames.indexOf(x.name) > -1) && currentTargetElement !== {}) {
+        push(null, currentTargetElement);
+      }
+      if (targetElementTagNames.indexOf(x.name) > -1) {
+        currentTargetElement = x;
+      } else if (supplementalElementWithAttributesTagNames.indexOf(x.name) > -1) {
+        _.merge(currentTargetElement.attributes, x.attributes);
+      } else if (childElementTagNames.indexOf(x.name) > -1) {
+        currentTargetElement[x.name] = currentTargetElement[x.name] || [];
+        currentTargetElement[x.name].push(x.attributes);
+      } else if (supplementalElementWithTextTagNames.indexOf(currentTagName) > -1) {
+        currentTargetElement[currentTagName] = currentTargetElement[currentTagName] || [];
+        currentTargetElement[currentTagName].push(x);
+      }
+
+      openTagStream.resume();
+      textStream.resume();
+      closeTagStream.resume();
+
+      next();
+    })
+    .each(function(result) {
+      console.log('result530');
+      console.log(result);
+    });
+
     var openTagStreamEvents = new EventEmitter();
     var classLevelGpmlElementStreamEvents = new EventEmitter();
 
-    openTagStream.each(function(xmlElement) {
+    openTagStream.fork().each(function(xmlElement) {
       if (classLevelGpmlElementTagNames.indexOf(xmlElement.name) > -1) {
         openTagStreamEvents.emit('ClassLevelElement', xmlElement);
       } else {
         openTagStreamEvents.emit(xmlElement.name, xmlElement);
       }
+      openTagStream.resume();
     });
 
     closeTagStream.fork().each(function(tagName) {
@@ -275,6 +349,18 @@ var GpmlUtilities = require('./gpml-utilities.js')
         pvjson.elements.push(entityReference);
       }
       //classLevelGpmlElementStream.resume();
+    });
+    //*/
+
+    /*
+    var anchorStream = highland('Anchor', openTagStreamEvents)
+    .each(function(element) {
+      var anchor = Anchor.toPvjson({
+        anchorElement: element
+        , currentClassLevelPvjsonAndGpmlElements: currentClassLevelPvjsonAndGpmlElements
+        , pvjson: pvjson
+      });
+      pvjson.elements.push(anchor);
     });
     //*/
 

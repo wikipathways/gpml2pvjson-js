@@ -108,6 +108,10 @@ module.exports = {
           name: 'Color',
           value: '000000'
         },
+        ConnectorType: {
+          name: 'ConnectorType',
+          value: 'Straight'
+        },
         FillColor: {
           name: 'FillColor',
           value: 'Transparent'

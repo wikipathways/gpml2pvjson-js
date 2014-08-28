@@ -232,21 +232,6 @@
       var edgesSelection = gpmlPathwaySelection.find(edgesSelector);
 
       if (edgesSelection.length > 0) {
-        edgesSelection.each(function(){
-          $(this).find('Graphics').attr('FillColor', 'Transparent');
-        });
-        edgesSelection.filter(function(){
-          var graphicsSelection = $(this).find('Graphics');
-          return (!graphicsSelection.attr('ConnectorType'));
-        }).each(function(d, i){
-          $(this).find('Graphics').attr('ConnectorType', 'Straight');
-        });
-        edgesSelection.filter(function(){
-          return (!$(this).find('Graphics').attr('Color'));
-        }).each(function(d, i){
-          $(this).find('Graphics').attr('Color', '000000');
-        });
-
         var anchorsSelection = gpmlPathwaySelection.find('Anchor');
         if (anchorsSelection.length > 0) {
            anchorsSelection.each(function(){

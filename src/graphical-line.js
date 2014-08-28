@@ -10,6 +10,22 @@ module.exports = {
     },
     Graphics: {
       attributes: {
+        Color: {
+          name: 'Color',
+          value: '000000'
+        },
+        ConnectorType: {
+          name: 'ConnectorType',
+          value: 'Straight'
+        },
+        FillColor: {
+          name: 'FillColor',
+          value: 'Transparent'
+        },
+        LineThickness: {
+          name: 'LineThickness',
+          value: 1
+        }
       }
     }
   },
