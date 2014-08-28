@@ -184,7 +184,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
       , 'Attribute'
     ];
     var currentTargetElement = {};
-    var consolidatedTargetElementStream = saxStreamFiltered.consume(function (err, x, push, next) {
+    var pathwayStream = saxStreamFiltered.consume(function (err, x, push, next) {
 
       if (err) {
         // pass errors along the stream and consume next value
