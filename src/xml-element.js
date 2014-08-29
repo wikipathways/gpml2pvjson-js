@@ -1,10 +1,11 @@
 'use strict';
 
 var _ = require('lodash')
-  , Anchor = require('./anchor.js')
+  //, Anchor = require('./anchor.js')
   , Attribute = require('./attribute.js')
   , GpmlUtilities = require('./gpml-utilities.js')
   , He = require('he')
+  , Point = require('./point.js')
   , Strcase = require('tower-strcase')
   , RGBColor = require('rgbcolor')
   , UnificationXref = require('./unification-xrefs.js')
@@ -19,6 +20,8 @@ module.exports = {
   Interaction: require('./interaction'),
   Label: require('./label'),
   Shape: require('./shape'),
+  State: require('./state'),
+
   defaults: {
     attributes: {
       FillColor: {
@@ -101,6 +104,7 @@ module.exports = {
       'RelY',
       'CenterX',
       'CenterY',
+      'ConnectorType',
       'Point',
       'Anchor',
       'Organism',
@@ -113,6 +117,7 @@ module.exports = {
         pvjsonTextAlign = Strcase.paramCase(gpmlAlignValue);
         pvjsonElement.textAlign = pvjsonTextAlign;
       },
+      /*
       Anchor: function(gpmlValue) {
         var that = this;
         gpmlValue.forEach(function(anchorElement) {
@@ -123,6 +128,7 @@ module.exports = {
           }));
         });
       },
+      //*/
       Attribute: function(gpmlValue) {
         // NOTE: in GPML, 'Attribute' is an XML _ELEMENT_ with the tagName "Attribute."
         // We push all the Attribute elements that are children of the current target
@@ -344,9 +350,28 @@ module.exports = {
         }
         pvjsonElement.padding = cssPadding;
       },
+      Point: function(gpmlValue) {
+        // Saving this to fully convert once pvjson.elements is filled up.
+        pvjsonElement['gpml:Point'] = gpmlValue;
+        /*
+        pvjsonElement = Point.toPvjson({
+          pvjson: pvjson
+          , pvjsonElement: pvjsonElement
+          , pointElements: gpmlValue
+        });
+        //*/
+      },
       Position: function(gpmlPositionValue) {
         var pvjsonPosition = parseFloat(gpmlPositionValue);
         pvjsonElement.position = pvjsonPosition;
+      },
+      RelX: function(gpmlValue) {
+        var pvjsonRelX = parseFloat(gpmlValue);
+        pvjsonElement.relX = pvjsonRelX;
+      },
+      RelY: function(gpmlValue) {
+        var pvjsonRelY = parseFloat(gpmlValue);
+        pvjsonElement.relY = pvjsonRelY;
       },
       /*
       RelX: function(gpmlRelXValue) {
@@ -399,12 +424,12 @@ module.exports = {
       },
       ShapeType: function(gpmlValue){
         gpmlShapeType = gpmlValue;
-        // most graphics libraries use 'ellipse', so we're converting
-        // the GPML's term 'Oval' to be consistent with them
-        if (gpmlValue !== 'Oval' || gpmlValue !== 'Circle') {
-          pvjsonShape = gpmlValue;
-        } else {
+        // most graphics libraries use the term 'ellipse', so we're converting
+        // the GPML terms 'Oval' and 'Circle' to match
+        if (gpmlValue === 'Oval' || gpmlValue === 'Circle') {
           pvjsonShape = 'Ellipse';
+        } else {
+          pvjsonShape = gpmlValue;
         }
 
         // Note: if the LineStyle is "Double," then "-double" will be
@@ -425,7 +450,7 @@ module.exports = {
           'gpml:Pathway': 'Pathway'
         };
         pvjsonElement['gpml:Style'] = 'gpml:' + gpmlValue;
-        var type = gpmlToSemanticMappings[ pvjsonElement['gpml:Type'] ] || 'gpml:Group';
+        var type = gpmlToSemanticMappings[ pvjsonElement['gpml:Style'] ] || 'gpml:Group';
         pvjsonElement.type = type;
       },
       TextLabel: function(gpmlTextLabelValue){

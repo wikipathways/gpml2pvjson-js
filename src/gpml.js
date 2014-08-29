@@ -284,7 +284,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
 
       return pvjson;
     })
-    .each(function() {
+    /* This is no longer needed now that we're using uuids for elements missing a GraphId
+    .map(function() {
       // determine initial value for maxId by filtering for elements that
       // have an id that starts with 'id' and for each one, convert the part of the id
       // after 'id' to a base32 integer. Find the maximum resulting integer.
@@ -308,8 +309,34 @@ var GpmlUtilities = require('./gpml-utilities.js')
       });
       return pvjson;
     });
+    //*/
+    .map(function() {
 
-    // TODO make sure to get anchors!
+      _(pvjson.elements).filter(function(element) {
+        return element['gpml:element'] === 'gpml:Group';
+      })
+      .map(function(group) {
+        group = Group.toPvjson(pvjson, group);
+        return group;
+      });
+
+      /*
+      _(pvjson.elements).filter(function(element) {
+        return element['gpml:element'] === 'gpml:Group';
+      })
+      .map(function(group) {
+        group = Group.toPvjson(pvjson, group);
+        return group;
+      });
+      //*/
+
+      return pvjson;
+    })
+    .each(function() {
+      return pvjson;
+    });
+
+    /* Can we delete this? It doesn't appear to be used anywhere.
     var graphicalElementTagNames = [
       'DataNode',
       'Label',
@@ -320,14 +347,14 @@ var GpmlUtilities = require('./gpml-utilities.js')
       'GraphicalLine',
       'Group'
     ];
+    //*/
 
     // TODO
     // MVP
     // * Anchors
+    //    Look at whether they should be included in pvjson.elements. It appears they may not be.
     // * Points
-    // * Change from GroupId/GroupRef to id and isAttachedTo
-    // * Update Groups so they have x, y, width, height
-    // * Interactions
+    // * Interactions - taking care of points might take care of interactions and graphical lines.
     // * GraphicalLines
     // * Convert Biopax
     // * Update BiopaxRefs

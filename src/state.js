@@ -28,10 +28,6 @@ module.exports = {
         name: 'LineThickness',
         value: 1
       },
-      ZOrder: {
-        name: 'ZOrder',
-        value: 0
-      },
       Align: {
         name: 'Align',
         value: 'Center'
@@ -39,14 +35,11 @@ module.exports = {
       Valign: {
         name: 'Valign',
         value: 'Middle'
-      },
+      }
     }
   },
   applyDefaults: function(gpmlElement, defaults) {
     gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
     return gpmlElement;
-  },
-  toPvjson: function(pvjson, gpmlSelection, shapeSelection, callback) {
-    var pvjsonPath = {};
   }
 };

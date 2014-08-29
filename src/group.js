@@ -6,14 +6,6 @@ var _ = require('lodash')
   , GpmlUtilities = require('./gpml-utilities.js')
   ;
 
-// Biopax when possible, otherwise GPML. Note that Biopax is the default namespace,
-// so if a namespace is not specified below, there is an implied "bp:"
-var gpmlToSemanticMappings = {
-  'gpml:Group': 'gpml:Group',
-  'gpml:Complex': 'Complex',
-  'gpml:Pathway': 'Pathway'
-};
-
 var Group = {
   defaults: {
     attributes: {
@@ -139,7 +131,7 @@ var Group = {
     gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [defaultsByStyle[groupStyle.value], this.defaults, defaults]);
     return gpmlElement;
   },
-  getGroupDimensions: function(group, callback) {
+  getGroupDimensions: function(group) {
     var dimensions = {};
     dimensions.topLeftCorner = {};
     dimensions.topLeftCorner.x = Infinity;
@@ -155,64 +147,78 @@ var Group = {
     groupContents = _.toArray(groupContents);
 
     dimensions.zIndex = Infinity;
-    Async.each(groupContents, function(groupContent, callbackInside) {
-      if (!groupContent.hasOwnProperty('points')) {
+
+    groupContents.forEach(function(groupContent) {
+      var points = groupContent['gpml:Point'];
+
+      if (!points) { // If groupContent is a node (notice the NOT)
         dimensions.topLeftCorner.x = Math.min(dimensions.topLeftCorner.x, groupContent.x);
         dimensions.topLeftCorner.y = Math.min(dimensions.topLeftCorner.y, groupContent.y);
         dimensions.bottomRightCorner.x = Math.max(dimensions.bottomRightCorner.x, groupContent.x + groupContent.width);
         dimensions.bottomRightCorner.y = Math.max(dimensions.bottomRightCorner.y, groupContent.y + groupContent.height);
-      } else {
-        dimensions.topLeftCorner.x = Math.min(dimensions.topLeftCorner.x, groupContent.points[0].x, groupContent.points[groupContent.points.length - 1].x);
-        dimensions.topLeftCorner.y = Math.min(dimensions.topLeftCorner.y, groupContent.points[0].y, groupContent.points[groupContent.points.length - 1].y);
-        dimensions.bottomRightCorner.x = Math.max(dimensions.bottomRightCorner.x, groupContent.points[0].x, groupContent.points[groupContent.points.length - 1].x);
-        dimensions.bottomRightCorner.y = Math.max(dimensions.bottomRightCorner.y, groupContent.points[0].y, groupContent.points[groupContent.points.length - 1].y);
+      } else { // If groupContent is an edge
+        var firstPoint = points[0];
+        var firstPointX = firstPoint.X.value;
+        var firstPointY = firstPoint.Y.value;
+        var lastPoint = points[points.length - 1];
+        var lastPointX = lastPoint.X.value;
+        var lastPointY = lastPoint.Y.value;
+        dimensions.topLeftCorner.x = Math.min(dimensions.topLeftCorner.x, firstPointX, lastPointX);
+        dimensions.topLeftCorner.y = Math.min(dimensions.topLeftCorner.y, firstPointY, lastPointY);
+        dimensions.bottomRightCorner.x = Math.max(dimensions.bottomRightCorner.x, firstPointX, lastPointX);
+        dimensions.bottomRightCorner.y = Math.max(dimensions.bottomRightCorner.y, firstPointY, lastPointY);
       }
       dimensions.x = dimensions.topLeftCorner.x - padding - borderWidth;
       dimensions.y = dimensions.topLeftCorner.y - padding - borderWidth;
       dimensions.width = (dimensions.bottomRightCorner.x - dimensions.topLeftCorner.x) + 2 * (padding + borderWidth);
       dimensions.height = (dimensions.bottomRightCorner.y - dimensions.topLeftCorner.y) + 2 * (padding + borderWidth);
       dimensions.zIndex = Math.min(dimensions.zIndex, groupContent.zIndex);
-      callbackInside(null);
-    },
-    function (err) {
-      dimensions.zIndex = dimensions.zIndex - 0.1;
-      callback(dimensions);
     });
+
+    // TODO refactor to avoid magic number. It's currently used as a hack to put the group behind its contents.
+    dimensions.zIndex = dimensions.zIndex - 0.1;
+
+    if (typeof dimensions.x === 'undefined' || isNaN(dimensions.x) || dimensions.x === null || typeof dimensions.y === 'undefined' || isNaN(dimensions.y) || dimensions.y === null || typeof dimensions.width === 'undefined' || isNaN(dimensions.width) || dimensions.width === null || typeof dimensions.height === 'undefined' || isNaN(dimensions.height) || dimensions.height === null) {
+      throw new Error('Error calculating group dimensions. Cannot calculate one or more of the following: x, y, width, height.');
+    }
+
+    return dimensions;
   },
 
-  toPvjsonOld: function(pvjson, elementsPossiblyInGroup, gpmlPathwaySelection, groupSelection, callback) {
-    var pvjsonPath = {},
-      pvjsonElements = []
-      ;
+  toPvjson: function(pvjson, group) {
 
-    //GpmlElement.toPvjson(pvjson, gpmlPathwaySelection, groupSelection, pvjsonPath, function(pvjsonPath) {
-      Graphics.toPvjson(pvjson, gpmlPathwaySelection, groupSelection, pvjsonPath, function(pvjsonPath) {
-        var contents = elementsPossiblyInGroup.filter(function(element){
-          return element.isPartOf === pvjsonPath.id;
-        });
-        if (contents.length > 0) {
+    // TODO once GPML supports it, we should create entityReferences for Groups of Type "Complex" and "Pathway"
 
-          var type = gpmlToSemanticMappings[ pvjsonPath['gpml:Type'] ] || 'gpml:Group';
-          pvjsonPath.type = type;
+    var contents = pvjson.elements.filter(function(element){
+      return element['gpml:GroupRef'] === group['gpml:GroupId'];
+    });
+    
+    
+    // GPML shouldn't have empty groups, but since PathVisio-Java has a bug that sometimes results in empty groups,
+    // we need to detect and delete them.
+    if (contents.length === 0) {
+      _.pull(pvjson.elements, group);
+      // TODO make sure group is deleted
+      return null;
+    }
 
-          // TODO once GPML supports it, we should create entityReferences for Groups of Type "Complex" and "Pathway"
+    delete group['gpml:GroupId'];
 
-          pvjsonPath.contains = contents;
-          Group.getGroupDimensions(pvjsonPath, function(dimensions){
-            pvjsonPath.x = dimensions.x || 0;
-            pvjsonPath.y = dimensions.y || 0;
-            if (pvjsonPath.x === 0 || pvjsonPath.y === 0) {
-              console.warn('Error in groups. cannot get x or y value.');
-            }
-            pvjsonPath.width = dimensions.width;
-            pvjsonPath.height = dimensions.height;
-            pvjsonPath.zIndex = dimensions.zIndex;
-          });
-          pvjsonElements.push(pvjsonPath);
-        }
-        callback(pvjsonElements);
-      });
-    //});
+    var id = group.id;
+    contents.forEach(function(content) {
+      delete content['gpml:GroupRef'];
+      content.isPartOf = id;
+    });
+
+    group.contains = contents;
+    var dimensions = Group.getGroupDimensions(group);
+    group.y = dimensions.y;
+    group.x = dimensions.x;
+    group.width = dimensions.width;
+    group.height = dimensions.height;
+    group.zIndex = dimensions.zIndex;
+
+    return group;
   }
 };
 
