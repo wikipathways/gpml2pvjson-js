@@ -1,12 +1,14 @@
 'use strict';
 
 var _ = require('lodash')
+  , Anchor = require('./anchor.js')
   , Attribute = require('./attribute.js')
   , GpmlUtilities = require('./gpml-utilities.js')
   , He = require('he')
   , Strcase = require('tower-strcase')
   , RGBColor = require('rgbcolor')
   , UnificationXref = require('./unification-xrefs.js')
+  , uuid = require('uuid')
   ;
 
 module.exports = {
@@ -22,6 +24,10 @@ module.exports = {
       FillColor: {
         name: 'FillColor',
         value: 'ffffff'
+      },
+      GraphId: {
+        name: 'GraphId',
+        value: 'id'
       }
     }
   },
@@ -95,114 +101,27 @@ module.exports = {
       'RelY',
       'CenterX',
       'CenterY',
+      'Point',
+      'Anchor',
       'Organism',
       'Database',
       'ID'
     ];
 
     var gpmlToPvjsonConverter = {
-      Author: function(gpmlValue){
-        pvjsonElement.author = gpmlValue;
-      },
-      BiopaxRef: function(gpmlValue){
-        pvjsonElement['gpml:BiopaxRef'] = gpmlValue;
-      },
-      Comment: function(gpmlValue){
-        pvjsonElement['gpml:Comment'] = gpmlValue;
-      },
-      Database: function(gpmlValue){
-        gpmlDatabase = gpmlValue;
-      },
-      'Data-Source': function(gpmlValue){
-        pvjsonElement.dataSource = gpmlValue;
-      },
-      Email: function(gpmlValue){
-        pvjsonElement.email = gpmlValue;
-      },
-      GraphId: function(gpmlValue){
-        /*
-        var uuid = require('uuid')
-        pvjsonElement.id = gpmlValue || uuid.v1();
-        //*/
-        pvjsonElement.id = gpmlValue;
-      },
-      GraphRef: function(gpmlValue){
-        pvjsonElement.isAttachedTo = gpmlValue;
-      },
-      GroupId: function(gpmlValue){
-        pvjsonElement['gpml:GroupId'] = gpmlValue;
-      },
-      GroupRef: function(gpmlValue){
-        pvjsonElement['gpml:GroupRef'] = gpmlValue;
-        //pvjsonElement.isPartOf = gpmlValue;
-      },
-      Href: function(gpmlHrefValue){
-        pvjsonHref = encodeURI(He.decode(gpmlHrefValue));
-        pvjsonElement.href = pvjsonHref;
-      },
-      ID: function(gpmlValue){
-        var result = UnificationXref.toPvjson({
-          pvjson: pvjson
-          , gpmlElement: gpmlElement
-          , pvjsonElement: pvjsonElement
-          , xref: {
-            Database: gpmlDatabase
-            , ID: gpmlValue
-          }
-        });
-
-        pvjson = result.pvjson;
-        pvjsonElement = result.pvjsonElement || pvjsonElement;
-      },
-      'Last-Modified': function(gpmlValue){
-        pvjsonElement.lastModified = gpmlValue;
-      },
-      License: function(gpmlValue){
-        pvjsonElement.license = gpmlValue;
-      },
-      Maintainer: function(gpmlValue){
-        pvjsonElement.maintainer = gpmlValue;
-      },
-      Name: function(nameValue){
-        var splitName = nameValue.split(' (');
-        if (!!splitName && splitName.length === 2 && !!nameValue.match(/\(/g) && nameValue.match(/\(/g).length === 1 && !!nameValue.match(/\)/g) && nameValue.match(/\)/g).length === 1) {
-          pvjsonElement.standardName = splitName[0];
-          pvjsonElement.displayName = splitName[1].replace(')', '');
-        } else {
-          pvjsonElement.standardName = nameValue;
-          pvjsonElement.displayName = nameValue;
-        }
-      },
-      Organism: function(gpmlValue){
-        pvjsonElement.organism = gpmlValue;
-      },
-      Style: function(gpmlValue){
-        // This code handles 'Style' attributes for GPML 'Group' elements
-        // It uses Biopax terms when possible, otherwise GPML.
-        // Note that Biopax is the default namespace in JSON-LD for jsonpv,
-        // so if a namespace is not specified below, there is an implied "bp:" preceding the term
-        var gpmlToSemanticMappings = {
-          'gpml:Group': 'gpml:Group',
-          'gpml:Complex': 'Complex',
-          'gpml:Pathway': 'Pathway'
-        };
-        pvjsonElement['gpml:Style'] = 'gpml:' + gpmlValue;
-        var type = gpmlToSemanticMappings[ pvjsonElement['gpml:Type'] ] || 'gpml:Group';
-        pvjsonElement.type = type;
-      },
-      TextLabel: function(gpmlTextLabelValue){
-        pvjsonTextContent = He.decode(gpmlTextLabelValue);
-        pvjsonElement.textContent = pvjsonTextContent;
-      },
-      Type: function(gpmlTypeValue){
-        pvjsonElement['gpml:Type'] = 'gpml:' + gpmlTypeValue;
-      },
-      Version: function(gpmlValue){
-        pvjsonElement.idVersion = gpmlValue;
-      },
       Align: function(gpmlAlignValue) {
         pvjsonTextAlign = Strcase.paramCase(gpmlAlignValue);
         pvjsonElement.textAlign = pvjsonTextAlign;
+      },
+      Anchor: function(gpmlValue) {
+        var that = this;
+        gpmlValue.forEach(function(anchorElement) {
+          pvjson.elements.push(Anchor.toPvjson({
+            pvjsonEdge: pvjsonElement
+            , anchorElement: anchorElement
+            , gpmlToPvjsonConverter: that
+          }));
+        });
       },
       Attribute: function(gpmlValue) {
         // NOTE: in GPML, 'Attribute' is an XML _ELEMENT_ with the tagName "Attribute."
@@ -215,6 +134,12 @@ module.exports = {
             , attributeElement: attributeElement
           });
         });
+      },
+      Author: function(gpmlValue){
+        pvjsonElement.author = gpmlValue;
+      },
+      BiopaxRef: function(gpmlValue){
+        pvjsonElement['gpml:BiopaxRef'] = gpmlValue;
       },
       BoardHeight: function(gpmlValue){
         pvjsonElement.image = pvjsonElement.image || {
@@ -272,10 +197,22 @@ module.exports = {
         var cssColor = this.gpmlColorToCssColor(gpmlColorValue);
         pvjsonElement.color = cssColor;
       },
+      Comment: function(gpmlValue){
+        pvjsonElement['gpml:Comment'] = gpmlValue;
+      },
       ConnectorType: function(gpmlConnectorTypeValue){
         var gpmlConnectorType = gpmlConnectorTypeValue;
         pvjsonShape = Strcase.paramCase('line-' + gpmlConnectorType);
         pvjsonElement.shape = pvjsonShape;
+      },
+      Database: function(gpmlValue){
+        gpmlDatabase = gpmlValue;
+      },
+      'Data-Source': function(gpmlValue){
+        pvjsonElement.dataSource = gpmlValue;
+      },
+      Email: function(gpmlValue){
+        pvjsonElement.email = gpmlValue;
       },
       FillColor: function(gpmlFillColorValue){
         var cssColor = this.gpmlColorToCssColor(gpmlFillColorValue);
@@ -310,6 +247,30 @@ module.exports = {
         var cssFontWeight = gpmlFontWeightValue.toLowerCase();
         pvjsonElement.fontWeight = cssFontWeight;
       },
+      GraphId: function(gpmlValue){
+        // Default GraphId is set to be just 'id'. If it is just 'id', we
+        // replace it with an actual value, because that means it wasn't set
+        // in PathVisio-Java. The reason for keeping the 'id' in front of
+        // the automatically generated uuid is that the uuid can start with
+        // a number, which might cause problems when used as an id attribute
+        // for an SVG document, so the 'id' ensure the id starts with a
+        // non-number character.
+        pvjsonElement.id = gpmlValue !== 'id' ? gpmlValue : 'id' + uuid.v1();
+        /*
+        var uuid = require('uuid')
+        pvjsonElement.id = gpmlValue || uuid.v1();
+        //*/
+      },
+      GraphRef: function(gpmlValue){
+        pvjsonElement.isAttachedTo = gpmlValue;
+      },
+      GroupId: function(gpmlValue){
+        pvjsonElement['gpml:GroupId'] = gpmlValue;
+      },
+      GroupRef: function(gpmlValue){
+        pvjsonElement['gpml:GroupRef'] = gpmlValue;
+        //pvjsonElement.isPartOf = gpmlValue;
+      },
       Height: function(gpmlValue) {
         gpmlHeight = parseFloat(gpmlValue);
         if (!correctionFactors) {
@@ -319,6 +280,30 @@ module.exports = {
         }
         pvjsonHeight = gpmlHeight + pvjsonBorderWidth;
         pvjsonElement.height = pvjsonHeight;
+      },
+      Href: function(gpmlHrefValue){
+        pvjsonHref = encodeURI(He.decode(gpmlHrefValue));
+        pvjsonElement.href = pvjsonHref;
+      },
+      ID: function(gpmlValue){
+        var result = UnificationXref.toPvjson({
+          pvjson: pvjson
+          , gpmlElement: gpmlElement
+          , pvjsonElement: pvjsonElement
+          , xref: {
+            Database: gpmlDatabase
+            , ID: gpmlValue
+          }
+        });
+
+        pvjson = result.pvjson;
+        pvjsonElement = result.pvjsonElement || pvjsonElement;
+      },
+      'Last-Modified': function(gpmlValue){
+        pvjsonElement.lastModified = gpmlValue;
+      },
+      License: function(gpmlValue){
+        pvjsonElement.license = gpmlValue;
       },
       LineStyle: function(gpmlLineStyleValue){
         var pvjsonStrokeDasharray;
@@ -334,6 +319,22 @@ module.exports = {
         pvjsonBorderWidth = parseFloat(gpmlLineThicknessValue);
         pvjsonElement.borderWidth = pvjsonBorderWidth;
       },
+      Maintainer: function(gpmlValue){
+        pvjsonElement.maintainer = gpmlValue;
+      },
+      Name: function(nameValue){
+        var splitName = nameValue.split(' (');
+        if (!!splitName && splitName.length === 2 && !!nameValue.match(/\(/g) && nameValue.match(/\(/g).length === 1 && !!nameValue.match(/\)/g) && nameValue.match(/\)/g).length === 1) {
+          pvjsonElement.standardName = splitName[0];
+          pvjsonElement.displayName = splitName[1].replace(')', '');
+        } else {
+          pvjsonElement.standardName = nameValue;
+          pvjsonElement.displayName = nameValue;
+        }
+      },
+      Organism: function(gpmlValue){
+        pvjsonElement.organism = gpmlValue;
+      },
       Padding: function(gpmlPaddingValue){
         var cssPadding;
         if (_.isNumber(gpmlPaddingValue)) {
@@ -346,55 +347,6 @@ module.exports = {
       Position: function(gpmlPositionValue) {
         var pvjsonPosition = parseFloat(gpmlPositionValue);
         pvjsonElement.position = pvjsonPosition;
-      },
-      ShapeType: function(gpmlValue){
-        gpmlShapeType = gpmlValue;
-        // most graphics libraries use 'ellipse', so we're converting
-        // the GPML's term 'Oval' to be consistent with them
-        if (gpmlValue !== 'Oval') {
-          pvjsonShape = gpmlValue;
-        } else {
-          pvjsonShape = 'Ellipse';
-        }
-
-        // Note: if the LineStyle is "Double," then "-double" will be
-        // appended to pvjsonElement.shape when "Attributes" are handled.
-
-        pvjsonShape = Strcase.paramCase(pvjsonShape);
-        pvjsonElement.shape = pvjsonShape;
-      },
-      Rotation: function(gpmlValue) {
-        // GPML can hold a rotation value for State elements in an element named "Attribute" like this:
-        // Key="org.pathvisio.core.StateRotation"
-        // From discussion with AP and KH, we've decided to ignore this value, because we don't actually want States to be rotated.
-
-        gpmlRotation = parseFloat(gpmlValue);
-
-        // GPML saves rotation in radians, even though PathVisio-Java displays rotation in degrees.
-        // converting from radians to degrees
-        pvjsonRotation = gpmlRotation * 180/Math.PI;
-        if (gpmlRotation !== 0) {
-          pvjsonElement.rotation = pvjsonRotation;
-        }
-
-        // This conversion changes the rotation to reflect the angle between the green rotation control dot in PathVisio-Java and the X-axis.
-        // The units are radians, unlike the units for pvjsonRotation.
-        var angleToControlPoint = 2 * Math.PI - gpmlRotation;
-      },
-      Valign: function(gpmlValignValue) {
-        pvjsonVerticalAlign = Strcase.paramCase(gpmlValignValue);
-        pvjsonElement.verticalAlign = pvjsonVerticalAlign;
-      },
-      Width: function(gpmlValue) {
-        gpmlWidth = parseFloat(gpmlValue);
-        correctionFactors = this.correctionFactors[gpmlShapeType];
-        if (!correctionFactors) {
-          pvjsonWidth = gpmlWidth;
-        } else {
-          pvjsonWidth = gpmlWidth * (correctionFactors.width);
-        }
-        pvjsonWidth = gpmlWidth + pvjsonBorderWidth;
-        pvjsonElement.width = pvjsonWidth;
       },
       /*
       RelX: function(gpmlRelXValue) {
@@ -427,6 +379,80 @@ module.exports = {
         return pvjsonY;
       },
       //*/
+      Rotation: function(gpmlValue) {
+        // GPML can hold a rotation value for State elements in an element named "Attribute" like this:
+        // Key="org.pathvisio.core.StateRotation"
+        // From discussion with AP and KH, we've decided to ignore this value, because we don't actually want States to be rotated.
+
+        gpmlRotation = parseFloat(gpmlValue);
+
+        // GPML saves rotation in radians, even though PathVisio-Java displays rotation in degrees.
+        // converting from radians to degrees
+        pvjsonRotation = gpmlRotation * 180/Math.PI;
+        if (gpmlRotation !== 0) {
+          pvjsonElement.rotation = pvjsonRotation;
+        }
+
+        // This conversion changes the rotation to reflect the angle between the green rotation control dot in PathVisio-Java and the X-axis.
+        // The units are radians, unlike the units for pvjsonRotation.
+        var angleToControlPoint = 2 * Math.PI - gpmlRotation;
+      },
+      ShapeType: function(gpmlValue){
+        gpmlShapeType = gpmlValue;
+        // most graphics libraries use 'ellipse', so we're converting
+        // the GPML's term 'Oval' to be consistent with them
+        if (gpmlValue !== 'Oval' || gpmlValue !== 'Circle') {
+          pvjsonShape = gpmlValue;
+        } else {
+          pvjsonShape = 'Ellipse';
+        }
+
+        // Note: if the LineStyle is "Double," then "-double" will be
+        // appended to pvjsonElement.shape when "Attributes" are handled.
+
+        pvjsonShape = Strcase.paramCase(pvjsonShape);
+        pvjsonElement.shape = pvjsonShape;
+      },
+      //Shape: this.ShapeType,
+      Style: function(gpmlValue){
+        // This code handles 'Style' attributes for GPML 'Group' elements
+        // It uses Biopax terms when possible, otherwise GPML.
+        // Note that Biopax is the default namespace in JSON-LD for jsonpv,
+        // so if a namespace is not specified below, there is an implied "bp:" preceding the term
+        var gpmlToSemanticMappings = {
+          'gpml:Group': 'gpml:Group',
+          'gpml:Complex': 'Complex',
+          'gpml:Pathway': 'Pathway'
+        };
+        pvjsonElement['gpml:Style'] = 'gpml:' + gpmlValue;
+        var type = gpmlToSemanticMappings[ pvjsonElement['gpml:Type'] ] || 'gpml:Group';
+        pvjsonElement.type = type;
+      },
+      TextLabel: function(gpmlTextLabelValue){
+        pvjsonTextContent = He.decode(gpmlTextLabelValue);
+        pvjsonElement.textContent = pvjsonTextContent;
+      },
+      Type: function(gpmlTypeValue){
+        pvjsonElement['gpml:Type'] = 'gpml:' + gpmlTypeValue;
+      },
+      Valign: function(gpmlValignValue) {
+        pvjsonVerticalAlign = Strcase.paramCase(gpmlValignValue);
+        pvjsonElement.verticalAlign = pvjsonVerticalAlign;
+      },
+      Version: function(gpmlValue){
+        pvjsonElement.idVersion = gpmlValue;
+      },
+      Width: function(gpmlValue) {
+        gpmlWidth = parseFloat(gpmlValue);
+        correctionFactors = this.correctionFactors[gpmlShapeType];
+        if (!correctionFactors) {
+          pvjsonWidth = gpmlWidth;
+        } else {
+          pvjsonWidth = gpmlWidth * (correctionFactors.width);
+        }
+        pvjsonWidth = gpmlWidth + pvjsonBorderWidth;
+        pvjsonElement.width = pvjsonWidth;
+      },
       ZOrder: function(gpmlZOrderValue) {
         pvjsonZIndex = parseFloat(gpmlZOrderValue);
         pvjsonElement.zIndex = pvjsonZIndex;
@@ -487,7 +513,10 @@ module.exports = {
       }
     };
 
+    gpmlToPvjsonConverter.Shape = gpmlToPvjsonConverter.ShapeType;
+
     pvjsonElement = GpmlUtilities.convertAttributesToJson(gpmlElement, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
+    pvjsonElement['gpml:element'] = 'gpml:' + gpmlElement.name;
 
     if (gpmlElement.name !== 'Pathway') {
       pvjson.elements.push(pvjsonElement);

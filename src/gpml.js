@@ -3,7 +3,6 @@
 var GpmlUtilities = require('./gpml-utilities.js')
   , Async = require('async')
   , Biopax = require('biopax2json')
-  //, Anchor = require('./anchor.js')
   // , Comment = require('./comment.js')
   , DataNode = require('./data-node.js')
   , XmlElement = require('./xml-element.js')
@@ -163,13 +162,17 @@ var GpmlUtilities = require('./gpml-utilities.js')
     //var saxStreamFiltered = highland.otherwise(openTagStream.fork(), textStream.fork(), closeTagStream.fork());
 
     var tagNamesForTargetElements = [
-      'Pathway'
       , 'DataNode'
-      , 'Shape'
       , 'Label'
       , 'Interaction'
       , 'GraphicalLine'
-      , 'Anchor'
+      , 'Group'
+      , 'Shape'
+      , 'State'
+      , 'Pathway'
+    ];
+    var tagNamesForNestedTargetElements = [
+      'Anchor'
     ];
     var tagNamesForSupplementalElementsWithAttributes = [
       'Graphics'
@@ -179,12 +182,12 @@ var GpmlUtilities = require('./gpml-utilities.js')
       'BiopaxRef'
       , 'Comment'
     ];
-    var tagNamesForNestedElements = [
+    var tagNamesForNestedSupplementalElements = [
       'Point'
       , 'Attribute'
     ];
     var currentTargetElement = {};
-    var pathwayStream = saxStreamFiltered.consume(function (err, x, push, next) {
+    var pvjsonStream = saxStreamFiltered.consume(function (err, x, push, next) {
 
       if (err) {
         // pass errors along the stream and consume next value
@@ -226,7 +229,29 @@ var GpmlUtilities = require('./gpml-utilities.js')
         currentTargetElement = x;
       } else if (tagNamesForSupplementalElementsWithAttributes.indexOf(x.name) > -1) {
         _.merge(currentTargetElement.attributes, x.attributes);
-      } else if (tagNamesForNestedElements.indexOf(x.name) > -1) {
+      } else if (tagNamesForNestedTargetElements.indexOf(x.name) > -1) {
+        var currentNestedTargetElement = x;
+
+        console.log('currentTargetElement');
+        console.log(currentTargetElement);
+
+        currentNestedTargetElement.attributes.Color = {};
+        currentNestedTargetElement.attributes.Color.name = 'Color';
+        currentNestedTargetElement.attributes.Color.value = currentTargetElement.attributes.Color.value;
+
+        currentNestedTargetElement.attributes.GraphRef = {};
+        currentNestedTargetElement.attributes.GraphRef.name = 'GraphRef';
+        currentNestedTargetElement.attributes.GraphRef.value = currentTargetElement.attributes.GraphId.value;
+
+        currentNestedTargetElement.attributes.ZOrder = {};
+        currentNestedTargetElement.attributes.ZOrder.name = 'ZOrder';
+        currentNestedTargetElement.attributes.ZOrder.value = currentTargetElement.attributes.ZOrder.value + 0.1;
+
+        console.log('currentNestedTargetElement');
+        console.log(currentNestedTargetElement);
+
+        push(null, currentNestedTargetElement);
+      } else if (tagNamesForNestedSupplementalElements.indexOf(x.name) > -1) {
         currentTargetElement.attributes[x.name] = currentTargetElement.attributes[x.name] || {};
         currentTargetElement.attributes[x.name].name = x.name;
         currentTargetElement.attributes[x.name].value = currentTargetElement.attributes[x.name].value || [];
@@ -249,20 +274,103 @@ var GpmlUtilities = require('./gpml-utilities.js')
 
       return XmlElement.applyDefaults(element);
     })
-    .reduce(pvjson, function(accumulator, consolidatedTargetElement) {
+    .scan(pvjson, function(accumulator, consolidatedTargetElement) {
       var pvjsonElement = (consolidatedTargetElement.name !== 'Pathway') ? {} : accumulator;
-      return XmlElement.toPvjson({
+      pvjson = XmlElement.toPvjson({
         pvjson: accumulator,
         pvjsonElement: pvjsonElement,
         gpmlElement: consolidatedTargetElement
       });
+
+      return pvjson;
     })
-    .each(function(pvjsonElement) {
-      pvjson.elements.push(pvjsonElement);
+    .each(function() {
+      // determine initial value for maxId by filtering for elements that
+      // have an id that starts with 'id' and for each one, convert the part of the id
+      // after 'id' to a base32 integer. Find the maximum resulting integer.
+      var idsAsIntegersArray = pvjson.elements.filter(function(element) {
+        return !!element.id && element.id.slice(0,2) === 'id';
+      })
+      .map(function(element) {
+        return parseInt(element.id.slice(2, element.id.length), 32);
+      });
+      idsAsIntegersArray.push(0);
+      var maxId = Math.max.apply(null, idsAsIntegersArray);
+
+      // Add an id to every element missing one. Generate id value by incrementing 'maxId',
+      // converting to base32 and appending it to the string 'id'.
+      pvjson.elements.filter(function(element) {
+        return !element.id;
+      })
+      .map(function(element) {
+        maxId = (parseInt(maxId, 32) + 1).toString(32);
+        element.id = 'id' + maxId;
+      });
+      return pvjson;
     });
 
+    // TODO make sure to get anchors!
+    var graphicalElementTagNames = [
+      'DataNode',
+      'Label',
+      'Shape',
+      'State',
+      'Anchor',
+      'Interaction',
+      'GraphicalLine',
+      'Group'
+    ];
 
-    // TODO handle things like Biopax conversion, updating Groups so they have x, y, width, height, etc.
+    // TODO
+    // MVP
+    // * Anchors
+    // * Points
+    // * Change from GroupId/GroupRef to id and isAttachedTo
+    // * Update Groups so they have x, y, width, height
+    // * Interactions
+    // * GraphicalLines
+    // * Convert Biopax
+    // * Update BiopaxRefs
+    // LATER
+    // * Comments
+    // * Better handling of x,y for anchors
+
+    /*
+    //pvjsonStream.fork().each(function() {
+    pvjsonStream.each(function() {
+      //*
+      // determine initial value for maxId by filtering for elements that
+      // have an id that starts with 'id' and for each one, convert the part of the id
+      // after 'id' to a base32 integer. Find the maximum resulting integer.
+      var idsAsIntegersArray = pvjson.elements.filter(function(element) {
+        return !!element.id && element.id.slice(0,2) === 'id';
+      })
+      .map(function(element) {
+        return parseInt(element.id.slice(2, element.id.length), 32);
+      });
+      var maxId = Math.max.apply(null, idsAsIntegersArray) || 0;
+      console.log('maxId');
+      console.log(maxId);
+
+      // Add an id to every element missing one. Generate id value by incrementing 'maxId',
+      // converting to base32 and appending it to the string 'id'.
+      var mytest = pvjson.elements.filter(function(element) {
+        return !element.id;
+      })
+      .map(function(element) {
+        maxId = (parseInt(maxId, 32) + 1).toString(32);
+        element.id = 'id' + maxId;
+      });
+      console.log('mytest');
+      console.log(mytest);
+      return pvjson;
+      //*/
+      //pvjsonStream.resume();
+    //});
+    //*/
+
+
+
 
     //*/
     /*
@@ -309,41 +417,6 @@ var GpmlUtilities = require('./gpml-utilities.js')
       })
       .pipe(fs.createWriteStream('../test/output/file-copy.xml'));
 
-    // TODO do these things once SAX ends
-
-    /*
-    // TODO make sure to get anchors!
-    var graphicalElementTagNames = [
-      'DataNode',
-      'Label',
-      'Shape',
-      'State',
-      'Anchor',
-      'Interaction',
-      'GraphicalLine',
-      'Group'
-    ];
-    // determine initial value for maxId by filtering for elements that
-    // have an id that starts with 'id' and for each one, convert the part of the id
-    // after 'id' to a base32 integer. Find the maximum resulting integer.
-    var idsAsIntegersArray = pvjson.elements.filter(function(element) {
-      return !!element.id && element.id.slice(0,2) === 'id';
-    })
-    .map(function(element) {
-      return parseInt(element.id.slice(2, element.id.length), 32);
-    });
-    var maxId = Math.max.apply(null, idsAsIntegersArray) || 0;
-
-    // Add an id to every element missing one. Generate id value by incrementing 'maxId',
-    // converting to base32 and appending it to the string 'id'.
-    pvjson.elements.filter(function(element) {
-      return !element.id;
-    })
-    .map(function(element) {
-      maxId = (parseInt(maxId, 32) + 1).toString(32);
-      element.id = 'id' + maxId;
-    });
-    //*/
 
   };
 

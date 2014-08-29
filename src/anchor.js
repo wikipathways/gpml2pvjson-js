@@ -1,5 +1,5 @@
-var Graphics = require('./graphics.js')
-  , XmlElement = require('./xml-element.js')
+var _ = require('lodash')
+  , GpmlUtilities = require('./gpml-utilities.js')
   ;
 
 module.exports = (function() {
@@ -19,7 +19,7 @@ module.exports = (function() {
   //    if the side specified is top or bottom, the starting point is the leftmost point on the side (smallest x or y value in SVG coordinate system).
   // }
 
-  var defaults = {
+  var thisdefaults = {
     attributes: {
       Shape: {
         name: 'Shape',
@@ -36,26 +36,9 @@ module.exports = (function() {
     }
   };
 
+  var attributeDependencyOrder = [];
 
-  function toPvjson(args, callbackInside) {
-    var currentClassLevelPvjsonAndGpmlElements = args.currentClassLevelPvjsonAndGpmlElements
-      , currentClassLevelPvjsonElement = currentClassLevelPvjsonAndGpmlElements.pvjsonElement
-      , currentClassLevelGpmlElement = currentClassLevelPvjsonAndGpmlElements.gpmlElement
-      , anchorElement = args.anchorElement
-      , pvjson = args.pvjson
-      , points = currentClassLevelPvjsonElement.points
-      , pointCount = points.length
-      , firstPoint = points[0]
-      , lastPoint = points[pointCount - 1]
-      , pvjsonAnchor = {}
-      ;
-
-    // TODO this might be better as 'gpml:Anchor'
-    pvjsonAnchor.gpmlType = 'Anchor';
-    pvjsonAnchor.references = currentClassLevelPvjsonElement.id;
-    pvjsonAnchor.zIndex = currentClassLevelPvjsonElement.zIndex + 0.1;
-    pvjsonAnchor.networkType = 'node';
-
+  function applyDefaults(gpmlElement, defaults) {
     var defaultsByShape = {
       Circle: {
         attributes: {
@@ -98,57 +81,57 @@ module.exports = (function() {
         }
       }
     };
-
-    var pvjsonAndGpmlElements = {};
-    pvjsonAndGpmlElements.pvjsonElement = pvjsonAnchor;
-    pvjsonAndGpmlElements.gpmlElement = anchorElement;
-    pvjsonAndGpmlElements = XmlElement.toPvjson(pvjsonAndGpmlElements);   
+    var shape = !!gpmlElement.attributes.Shape ? gpmlElement.attributes.Shape.value : 'None';
+    return GpmlUtilities.applyDefaults(gpmlElement, [defaultsByShape[shape], thisdefaults, defaults]);
   }
 
+  /*
+  function toPvjson(args) {
+    var pvjsonEdge = args.pvjsonEdge
+      , anchorElement = args.anchorElement
+      , gpmlToPvjsonConverter = args.gpmlToPvjsonConverter
+      // TODO update this to use the real points
+      //, points = pvjsonEdge.points
+      , points = pvjsonEdge.points || [{x:0,y:0}, {x:50,y:50}]
+      , pointCount = points.length
+      , firstPoint = points[0]
+      , lastPoint = points[pointCount - 1]
+      , pvjsonAnchor = {}
+      ;
 
+    // TODO this might be better as 'gpml:Anchor'
+    pvjsonAnchor.gpmlType = 'Anchor';
+    pvjsonAnchor.references = pvjsonEdge.id;
+    pvjsonAnchor.zIndex = pvjsonEdge.zIndex + 0.1;
+    pvjsonAnchor.networkType = 'node';
 
-  function toPvjsonOld(pvjs, gpmlSelection, gpmlEdgeSelection, pvjsonEdge, callback) {
-    var anchor, anchorSelection, pvjsonAnchor, pvjsonAnchors = [], pvjsonX, pvjsonY, parentElement, pvjsonMarker, attachedPoint, pvjsonAnchorPosition, pvjsonAnchorWidth, pvjsonAnchorHeight;
-    var points = pvjsonEdge.points;
-    var pointCount = points.length;
-    var firstPoint = points[0];
-    var lastPoint = points[pointCount - 1];
-
-    gpmlEdgeSelection.find('anchor').each(function() {
-      anchor = this;
-      anchorSelection = $(this);
-      pvjsonAnchor = {};
-      pvjsonAnchor.gpmlType = 'Anchor';
-      pvjsonAnchor.references = pvjsonEdge.id;
-      pvjsonAnchor.zIndex = pvjsonEdge.zIndex + 0.1;
-      pvjsonAnchor.networkType = 'node';
-
-      //GpmlElement.toPvjson(pvjs, gpmlSelection, anchorSelection, pvjsonAnchor, function(pvjsonAnchor) {
-        Graphics.toPvjson(pvjs, gpmlSelection, anchorSelection, pvjsonAnchor, function(pvjsonAnchor) {
-          attachedPoint = gpmlSelection('point[GraphRef=' + pvjsonAnchor.id + ']');
-          pvjsonAnchorWidth = pvjsonAnchor.width;
-          pvjsonAnchorHeight = pvjsonAnchor.height;
-          // TODO handle this after finishing first pass though gpml2jsonpv
-          if (attachedPoint.length > 0) {
-            pvjsonAnchor.x = parseFloat(attachedPoint.attr('X')) - pvjsonAnchorWidth/2;
-            pvjsonAnchor.y = parseFloat(attachedPoint.attr('Y')) - pvjsonAnchorHeight/2;
+    var defaults = {
+      attributes: {
+        Shape: {
+          name: 'Shape',
+          value: 'None'
+        }
+      },
+      Graphics: {
+        attributes: {
+          LineThickness: {
+            name: 'LineThickness',
+            value: 0
           }
-          else {
-            pvjsonAnchorPosition = pvjsonAnchor.position;
-            pvjsonAnchor.x = firstPoint.x + pvjsonAnchorPosition * (lastPoint.x - firstPoint.x) - pvjsonAnchorWidth/2;
-            pvjsonAnchor.y = firstPoint.y + pvjsonAnchorPosition * (lastPoint.y - firstPoint.y) - pvjsonAnchorHeight/2;
-            console.warn('No cached X and Y data available for the Anchor for the edge element below. Assuming LineType of Straight for anchor position calculation.');
-            console.log(gpmlEdgeSelection[0][0]);
-          }
+        }
+      }
+    };
 
-          pvjsonAnchors.push(pvjsonAnchor);
-          });
-        //});
-    });
-    callback(pvjsonAnchors);
+    var shape = !!anchorElement.Shape ? anchorElement.Shape.value : 'None';
+    anchorElement = GpmlUtilities.applyDefaults(anchorElement, [defaultsByShape[shape], defaults]);
+    // "this" is wrong here. It seems to be doing the edge, not the anchor here.
+    pvjsonAnchor = GpmlUtilities.convertAttributesToJson(anchorElement, pvjsonAnchor, gpmlToPvjsonConverter, attributeDependencyOrder);
+    pvjsonAnchor.backgroundColor = pvjsonEdge.backgroundColor;
+    return pvjsonAnchor;
   }
+  //*/
 
-  function getAllFromNode(jsonNode, callback) {
+  function getAllFromNode(jsonNode) {
     self.jsonNode = jsonNode;
     var jsonAnchors = [];
     var parentId, renderableType, id, position, x, y, sideOffsetX, sideOffsetY, positionOffsetX, positionOffsetY;
@@ -193,13 +176,12 @@ module.exports = (function() {
         });
       });
     });
-    //callback(jsonAnchors);
     return jsonAnchors;
   }
 
   return {
-    defaults:defaults,
-    toPvjson:toPvjson,
+    thisdefaults:thisdefaults,
+    applyDefaults:applyDefaults,
     getAllFromNode:getAllFromNode
   };
 }());
