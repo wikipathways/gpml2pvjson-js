@@ -103,7 +103,6 @@ module.exports = {
       'CenterY',
       'ConnectorType',
       'Point',
-      'Anchor',
       'Organism',
       'Database',
       'ID'
@@ -113,20 +112,6 @@ module.exports = {
       Align: function(gpmlAlignValue) {
         pvjsonTextAlign = Strcase.paramCase(gpmlAlignValue);
         pvjsonElement.textAlign = pvjsonTextAlign;
-      },
-      Anchor: function(gpmlValue) {
-        // Saving this to fully convert once pvjson.elements is filled up.
-        pvjsonElement['gpml:Anchor'] = gpmlValue;
-      /*
-        var that = this;
-        gpmlValue.forEach(function(anchorElement) {
-          pvjson.elements.push(Anchor.toPvjson({
-            pvjsonEdge: pvjsonElement
-            , anchorElement: anchorElement
-            , gpmlToPvjsonConverter: that
-          }));
-        });
-      //*/
       },
       Attribute: function(gpmlValue) {
         // NOTE: in GPML, 'Attribute' is an XML _ELEMENT_ with the tagName "Attribute."
