@@ -1,9 +1,10 @@
 var _ = require('lodash')
   , GpmlUtilities = require('./gpml-utilities.js')
+  //, XmlElement = require('./xml-element.js')
   ;
 
-module.exports = (function() {
-  'use strict';
+'use strict';
+module.exports = {
 
   // anchors
   // see jsPlumb anchor model: http://jsplumbtoolkit.com/doc/anchors
@@ -19,7 +20,7 @@ module.exports = (function() {
   //    if the side specified is top or bottom, the starting point is the leftmost point on the side (smallest x or y value in SVG coordinate system).
   // }
 
-  var thisdefaults = {
+  defaults: {
     attributes: {
       Shape: {
         name: 'Shape',
@@ -34,11 +35,9 @@ module.exports = (function() {
         }
       }
     }
-  };
+  },
 
-  var attributeDependencyOrder = [];
-
-  function applyDefaults(gpmlElement, defaults) {
+  applyDefaults: function(gpmlElement, defaults) {
     var defaultsByShape = {
       Circle: {
         attributes: {
@@ -82,56 +81,45 @@ module.exports = (function() {
       }
     };
     var shape = !!gpmlElement.attributes.Shape ? gpmlElement.attributes.Shape.value : 'None';
-    return GpmlUtilities.applyDefaults(gpmlElement, [defaultsByShape[shape], thisdefaults, defaults]);
-  }
+    return GpmlUtilities.applyDefaults(gpmlElement, [defaultsByShape[shape], this.defaults, defaults]);
+  },
 
   /*
-  function toPvjson(args) {
-    var pvjsonEdge = args.pvjsonEdge
-      , anchorElement = args.anchorElement
-      , gpmlToPvjsonConverter = args.gpmlToPvjsonConverter
+  toPvjson: function (args) {
+    var pvjsonEdge = args.pvjsonElement
+      , pvjson = args.pvjson
+      , anchorElements = pvjsonEdge['gpml:Anchor']
       // TODO update this to use the real points
       //, points = pvjsonEdge.points
       , points = pvjsonEdge.points || [{x:0,y:0}, {x:50,y:50}]
       , pointCount = points.length
       , firstPoint = points[0]
       , lastPoint = points[pointCount - 1]
-      , pvjsonAnchor = {}
       ;
 
-    // TODO this might be better as 'gpml:Anchor'
-    pvjsonAnchor.gpmlType = 'Anchor';
-    pvjsonAnchor.references = pvjsonEdge.id;
-    pvjsonAnchor.zIndex = pvjsonEdge.zIndex + 0.1;
-    pvjsonAnchor.networkType = 'node';
+    anchorElements.forEach(function(anchorElement) {
+      console.log('anchorElement');
+      console.log(anchorElement);
+      var pvjsonAnchor = {};
+      pvjsonAnchor.zIndex = pvjsonEdge.zIndex + 0.1;
+      pvjsonAnchor.backgroundColor = pvjsonEdge.backgroundColor;
 
-    var defaults = {
-      attributes: {
-        Shape: {
-          name: 'Shape',
-          value: 'None'
-        }
-      },
-      Graphics: {
-        attributes: {
-          LineThickness: {
-            name: 'LineThickness',
-            value: 0
-          }
-        }
-      }
-    };
+      var shape = !!anchorElement.Shape ? anchorElement.Shape.value : 'None';
+      //anchorElement = GpmlUtilities.applyDefaults(anchorElement, [defaultsByShape[shape], defaults]);
+      // "this" is wrong here. It seems to be doing the edge, not the anchor here.
+      //pvjsonAnchor = GpmlUtilities.convertAttributesToJson(anchorElement, pvjsonAnchor, gpmlToPvjsonConverter, attributeDependencyOrder);
 
-    var shape = !!anchorElement.Shape ? anchorElement.Shape.value : 'None';
-    anchorElement = GpmlUtilities.applyDefaults(anchorElement, [defaultsByShape[shape], defaults]);
-    // "this" is wrong here. It seems to be doing the edge, not the anchor here.
-    pvjsonAnchor = GpmlUtilities.convertAttributesToJson(anchorElement, pvjsonAnchor, gpmlToPvjsonConverter, attributeDependencyOrder);
-    pvjsonAnchor.backgroundColor = pvjsonEdge.backgroundColor;
-    return pvjsonAnchor;
-  }
+      pvjson = XmlElement.toPvjson({
+        pvjson: pvjson,
+        pvjsonElement: pvjsonAnchor,
+        gpmlElement: {attributes: anchorElement}
+      });
+    });
+    return pvjson;
+  },
   //*/
 
-  function getAllFromNode(jsonNode) {
+  getAllFromNode: function (jsonNode) {
     self.jsonNode = jsonNode;
     var jsonAnchors = [];
     var parentId, renderableType, id, position, x, y, sideOffsetX, sideOffsetY, positionOffsetX, positionOffsetY;
@@ -177,11 +165,5 @@ module.exports = (function() {
       });
     });
     return jsonAnchors;
-  }
-
-  return {
-    thisdefaults:thisdefaults,
-    applyDefaults:applyDefaults,
-    getAllFromNode:getAllFromNode
-  };
-}());
+  },
+};

@@ -48,6 +48,7 @@ module.exports = (function(){
     return result;
   };
 
+  /*
   //function toPvjson(pvjson, gpmlPathwaySelection, gpmlEdgeSelection, pvjsonEdge, callback) {
   function toPvjson(args) {
     var pvjson = args.pvjson
@@ -221,14 +222,15 @@ module.exports = (function(){
     result.referencedElementTags;
     return result;
   }
+  //*/
 
-  /*
-  function toPvjsonSecondPass(args) {
+  //*
+  function toPvjson(args) {
     var pvjson = args.pvjson
-      , pointElements = args.pointElements
       , pvjsonEdge = args.pvjsonElement
+      , pointElements = pvjsonEdge['gpml:Point']
       , point
-      , gpmlPointSelection
+      , gpmlPoint
       , explicitPoint
       , pvjsonPoint
       , pvjsonPoints
@@ -243,8 +245,7 @@ module.exports = (function(){
       , referencedElementTags = []
       ;
 
-    pointElements.forEach(function(point, index, array) {
-      gpmlPointSelection = $( this );
+    pointElements.forEach(function(gpmlPoint, index, array) {
       explicitPoint = {};
 
       var attributeDependencyOrder = [
@@ -331,10 +332,12 @@ module.exports = (function(){
           }
         },
         GraphRef: function(gpmlGraphRefValue){
-          // this is the actual XML of the element
-          var referencedNodeSelection = gpmlPathwaySelection.find('*[GraphId=' + gpmlGraphRefValue + ']').eq(0);
-          var referencedNode = referencedNodeSelection[0];
-          var referencedNodeTag = referencedNode.tagName || referencedNode.name;
+          //var referencedNodeSelection = gpmlPathwaySelection.find('*[GraphId=' + gpmlGraphRefValue + ']').eq(0);
+          var referencedNode = pvjson.filter(function(node) {
+            return node.id === gpmlGraphRefValue;
+          })[0];
+          var referencedNodeTag = referencedNode['gpml:element'];
+
           // GPML and jsplumb/pvjson use different meaning and architecture for the term "anchor."
           // GPML uses anchor to refer to an actual element that specifies a position along an edge.
           // pvjson copies jsplumb in using anchor to refer to the location of the point in terms of another element.
@@ -342,7 +345,7 @@ module.exports = (function(){
           // unlike GPML which refers to an element located at a position along the edge.
           // 
           // here we are referring to GPML Anchor, not jsplumb anchor.
-          if (referencedNodeTag.toLowerCase() !== 'anchor') {
+          if (referencedNodeTag.toLowerCase() !== 'gpml:anchor') {
             referencedElement = referencedNode;
             referencedElementTag = referencedNodeTag;
             // the id of the element this point is attached to (references)
@@ -382,7 +385,7 @@ module.exports = (function(){
           return pvjsonMarker;
         }
       };
-      explicitPoint = GpmlUtilities.convertAttributesToJson(gpmlPointSelection, explicitPoint, gpmlToPvjsonConverter, attributeDependencyOrder);
+      explicitPoint = GpmlUtilities.convertAttributesToJson(gpmlPoint, explicitPoint, gpmlToPvjsonConverter, attributeDependencyOrder);
       explicitPoints.push(explicitPoint);
     });
 

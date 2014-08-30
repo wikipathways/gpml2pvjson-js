@@ -13,6 +13,7 @@ var _ = require('lodash')
   ;
 
 module.exports = {
+  Anchor: require('./anchor'),
   Pathway: require('./pathway'),
   Group: require('./group'),
   DataNode: require('./data-node'),
@@ -27,10 +28,6 @@ module.exports = {
       FillColor: {
         name: 'FillColor',
         value: 'ffffff'
-      },
-      GraphId: {
-        name: 'GraphId',
-        value: 'id'
       }
     }
   },
@@ -117,8 +114,10 @@ module.exports = {
         pvjsonTextAlign = Strcase.paramCase(gpmlAlignValue);
         pvjsonElement.textAlign = pvjsonTextAlign;
       },
-      /*
       Anchor: function(gpmlValue) {
+        // Saving this to fully convert once pvjson.elements is filled up.
+        pvjsonElement['gpml:Anchor'] = gpmlValue;
+      /*
         var that = this;
         gpmlValue.forEach(function(anchorElement) {
           pvjson.elements.push(Anchor.toPvjson({
@@ -127,8 +126,8 @@ module.exports = {
             , gpmlToPvjsonConverter: that
           }));
         });
-      },
       //*/
+      },
       Attribute: function(gpmlValue) {
         // NOTE: in GPML, 'Attribute' is an XML _ELEMENT_ with the tagName "Attribute."
         // We push all the Attribute elements that are children of the current target
@@ -254,18 +253,7 @@ module.exports = {
         pvjsonElement.fontWeight = cssFontWeight;
       },
       GraphId: function(gpmlValue){
-        // Default GraphId is set to be just 'id'. If it is just 'id', we
-        // replace it with an actual value, because that means it wasn't set
-        // in PathVisio-Java. The reason for keeping the 'id' in front of
-        // the automatically generated uuid is that the uuid can start with
-        // a number, which might cause problems when used as an id attribute
-        // for an SVG document, so the 'id' ensure the id starts with a
-        // non-number character.
-        pvjsonElement.id = gpmlValue !== 'id' ? gpmlValue : 'id' + uuid.v1();
-        /*
-        var uuid = require('uuid')
-        pvjsonElement.id = gpmlValue || uuid.v1();
-        //*/
+        pvjsonElement.id = gpmlValue;
       },
       GraphRef: function(gpmlValue){
         pvjsonElement.isAttachedTo = gpmlValue;
@@ -353,13 +341,6 @@ module.exports = {
       Point: function(gpmlValue) {
         // Saving this to fully convert once pvjson.elements is filled up.
         pvjsonElement['gpml:Point'] = gpmlValue;
-        /*
-        pvjsonElement = Point.toPvjson({
-          pvjson: pvjson
-          , pvjsonElement: pvjsonElement
-          , pointElements: gpmlValue
-        });
-        //*/
       },
       Position: function(gpmlPositionValue) {
         var pvjsonPosition = parseFloat(gpmlPositionValue);
@@ -539,6 +520,13 @@ module.exports = {
     };
 
     gpmlToPvjsonConverter.Shape = gpmlToPvjsonConverter.ShapeType;
+
+    // PathVisio-Java does not always require a GraphId for each element, but pvjs does, so we add one here if it is not present.
+    // The reason for putting the string 'id' in front of the automatically generated uuid is that the uuid can start with a number,
+    // which might cause problems when used as an id attribute for an SVG document, so the 'id' ensure the id starts with a non-number character.
+    if (!gpmlElement.attributes.GraphId) {
+      gpmlElement.attributes.GraphId = {name: 'GraphId', value: 'id' + uuid.v1()};
+    }
 
     pvjsonElement = GpmlUtilities.convertAttributesToJson(gpmlElement, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
     pvjsonElement['gpml:element'] = 'gpml:' + gpmlElement.name;

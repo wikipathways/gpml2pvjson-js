@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 var GpmlUtilities = require('./gpml-utilities.js')
+  , Anchor = require('./anchor.js')
   , Async = require('async')
   , Biopax = require('biopax2json')
   // , Comment = require('./comment.js')
@@ -16,7 +17,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
   , Group = require('./group.js')
   , Interaction = require('./interaction.js')
   , Label = require('./label.js')
-  // , Point = require('./point.js')
+  , Point = require('./point.js')
   , Shape = require('./shape.js')
   , State = require('./state.js')
   , _ = require('lodash')
@@ -171,9 +172,11 @@ var GpmlUtilities = require('./gpml-utilities.js')
       , 'State'
       , 'Pathway'
     ];
+    //*
     var tagNamesForNestedTargetElements = [
       'Anchor'
     ];
+    //*/
     var tagNamesForSupplementalElementsWithAttributes = [
       'Graphics'
       , 'Xref'
@@ -184,9 +187,13 @@ var GpmlUtilities = require('./gpml-utilities.js')
     ];
     var tagNamesForNestedSupplementalElements = [
       'Point'
+      //, 'Anchor'
       , 'Attribute'
     ];
     var currentTargetElement = {};
+    // TODO figure out why currentTargetElement doesn't have its defaults when it is an edge with default color and we are handling an anchor.
+    // currentTargetElementWithDefaults does have the defaults.
+    var currentTargetElementWithDefaults = {};
     var pvjsonStream = saxStreamFiltered.consume(function (err, x, push, next) {
 
       if (err) {
@@ -206,7 +213,6 @@ var GpmlUtilities = require('./gpml-utilities.js')
         push(null, currentTargetElement);
         currentTargetElement = {};
       }
-
 
       if (tagNamesForTargetElements.indexOf(x.name) > -1) {
 
@@ -229,28 +235,25 @@ var GpmlUtilities = require('./gpml-utilities.js')
         currentTargetElement = x;
       } else if (tagNamesForSupplementalElementsWithAttributes.indexOf(x.name) > -1) {
         _.merge(currentTargetElement.attributes, x.attributes);
+        //*
       } else if (tagNamesForNestedTargetElements.indexOf(x.name) > -1) {
+        //saxStreamFiltered.pause();
         var currentNestedTargetElement = x;
-
-        console.log('currentTargetElement');
-        console.log(currentTargetElement);
 
         currentNestedTargetElement.attributes.Color = {};
         currentNestedTargetElement.attributes.Color.name = 'Color';
-        currentNestedTargetElement.attributes.Color.value = currentTargetElement.attributes.Color.value;
+        currentNestedTargetElement.attributes.Color.value = currentTargetElementWithDefaults.attributes.Color.value;
 
         currentNestedTargetElement.attributes.GraphRef = {};
         currentNestedTargetElement.attributes.GraphRef.name = 'GraphRef';
-        currentNestedTargetElement.attributes.GraphRef.value = currentTargetElement.attributes.GraphId.value;
+        currentNestedTargetElement.attributes.GraphRef.value = currentTargetElementWithDefaults.attributes.GraphId.value;
 
         currentNestedTargetElement.attributes.ZOrder = {};
         currentNestedTargetElement.attributes.ZOrder.name = 'ZOrder';
-        currentNestedTargetElement.attributes.ZOrder.value = currentTargetElement.attributes.ZOrder.value + 0.1;
-
-        console.log('currentNestedTargetElement');
-        console.log(currentNestedTargetElement);
+        currentNestedTargetElement.attributes.ZOrder.value = currentTargetElementWithDefaults.attributes.ZOrder.value + 0.1;
 
         push(null, currentNestedTargetElement);
+        //*/
       } else if (tagNamesForNestedSupplementalElements.indexOf(x.name) > -1) {
         currentTargetElement.attributes[x.name] = currentTargetElement.attributes[x.name] || {};
         currentTargetElement.attributes[x.name].name = x.name;
@@ -272,7 +275,9 @@ var GpmlUtilities = require('./gpml-utilities.js')
       console.log(generateKString() + ' ' + element.name);
       console.log('CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS');
 
-      return XmlElement.applyDefaults(element);
+      currentTargetElement = XmlElement.applyDefaults(element);
+      //saxStreamFiltered.resume();
+      return currentTargetElement;
     })
     .scan(pvjson, function(accumulator, consolidatedTargetElement) {
       var pvjsonElement = (consolidatedTargetElement.name !== 'Pathway') ? {} : accumulator;
@@ -281,6 +286,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
         pvjsonElement: pvjsonElement,
         gpmlElement: consolidatedTargetElement
       });
+
+      currentTargetElementWithDefaults = consolidatedTargetElement;
 
       return pvjson;
     })
@@ -320,13 +327,29 @@ var GpmlUtilities = require('./gpml-utilities.js')
         return group;
       });
 
-      /*
-      _(pvjson.elements).filter(function(element) {
-        return element['gpml:element'] === 'gpml:Group';
+      var edges = _(pvjson.elements).filter(function(element) {
+        return element['gpml:element'] === 'gpml:Interaction' || element['gpml:element'] === 'gpml:GraphicalLine';
       })
-      .map(function(group) {
-        group = Group.toPvjson(pvjson, group);
-        return group;
+      .map(function(edge) {
+      /*
+        edge = Point.toPvjson({
+          pvjson: pvjson
+          , pvjsonElement: edge
+        });
+      //*/
+        return edge;
+      });
+
+      /*
+      _(edges).filter(function(element) {
+        return element.hasOwnProperty('gpml:Anchor');
+      })
+      .map(function(edge) {
+        pvjson = Anchor.toPvjson({
+          pvjson: pvjson
+          , pvjsonElement: edge
+        });
+        return edge;
       });
       //*/
 
