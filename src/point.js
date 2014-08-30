@@ -48,182 +48,6 @@ module.exports = (function(){
     return result;
   };
 
-  /*
-  //function toPvjson(pvjson, gpmlPathwaySelection, gpmlEdgeSelection, pvjsonEdge, callback) {
-  function toPvjson(args) {
-    var pvjson = args.pvjson
-      , pointElements = args.pointElements
-      , pvjsonEdge = args.pvjsonElement
-      , point
-      , gpmlPointSelection
-      , explicitPoint
-      , pvjsonPoint
-      , pvjsonPoints
-      , explicitPoints = []
-      , pvjsonX
-      , pvjsonY
-      , parentElement
-      , pvjsonMarker
-      , referencedElement
-      , referencedElementTag
-      , referencedElements = []
-      , referencedElementTags = []
-      ;
-
-    pointElements.forEach(function(point, index, array) {
-      gpmlPointSelection = $( this );
-      explicitPoint = {};
-
-      var attributeDependencyOrder = [
-        'GraphRef',
-        'RelX',
-        'RelY',
-        'X',
-        'Y'
-      ];
-
-      var gpmlToPvjsonConverter = {
-        X: function(gpmlXValue) {
-          pvjsonX = parseFloat(gpmlXValue);
-          explicitPoint.x = pvjsonX;
-          return pvjsonX;
-        },
-        Y: function(gpmlYValue) {
-          pvjsonY = parseFloat(gpmlYValue);
-          explicitPoint.y = pvjsonY;
-          return pvjsonY;
-        },
-        RelX: function(gpmlRelXValue) {
-          // see jsPlumb anchor model: http://jsplumbtoolkit.com/doc/anchors
-          // anchor: [ x, y, dx, dy ]
-          // where x: distance from left side along width axis as a percentage of the total width
-          //       y: distance from top side along height axis as a percentage of the total height
-          //       dx, dy: coordinates of a point that specifies how the edge emanates from the node 
-          // example: below is an anchor specifying an edge that emanates downward (0, 1) from the center (0.5) of the bottom side (1) of the node
-          // anchor: [ 0.5, 1, 0, 1 ]
-          //
-          // this code only runs for points not attached to edges
-          if (referencedElementTag.toLowerCase() !== 'interaction' && referencedElementTag.toLowerCase() !== 'graphicalline') {
-            var gpmlRelXValueString = gpmlRelXValue.toString();
-            var gpmlRelXValueInteger = parseFloat(gpmlRelXValue);
-            var argsX = {};
-            argsX.relValue = gpmlRelXValueInteger;
-            argsX.identifier = 'RelX';
-            argsX.referencedElement = referencedElement;
-            argsX.gpmlPathwaySelection = gpmlPathwaySelection;
-            var pvjsonPositionAndOrientationX = getPvjsonPositionAndOrientationMapping(argsX);
-            explicitPoint.anchor = explicitPoint.anchor || [];
-            if (!!pvjsonPositionAndOrientationX && _.isNumber(pvjsonPositionAndOrientationX.position)) {
-              explicitPoint.anchor[0] = pvjsonPositionAndOrientationX.position;
-              if (pvjsonPositionAndOrientationX.hasOwnProperty('orientation') && _.isNumber(pvjsonPositionAndOrientationX.orientation)) {
-                explicitPoint.anchor[2] = pvjsonPositionAndOrientationX.orientation;
-              } else {
-              }
-              if (pvjsonPositionAndOrientationX.hasOwnProperty('offset')) {
-                // TODO in the case of a group as the referenced element, we don't have the group width and height yet to properly calculate this
-                explicitPoint.anchor[4] = pvjsonPositionAndOrientationX.offset || 20;
-              }
-            }
-            return gpmlRelXValueInteger;
-          }
-        },
-        RelY: function(gpmlRelYValue) {
-          // see note at RelX
-          // this code only runs for points not attached to edges
-          if (referencedElementTag.toLowerCase() !== 'interaction' && referencedElementTag.toLowerCase() !== 'graphicalline') {
-            var gpmlRelYValueString = gpmlRelYValue.toString();
-            var gpmlRelYValueInteger = parseFloat(gpmlRelYValue);
-            var argsY = {};
-            argsY.relValue = gpmlRelYValueInteger;
-            argsY.identifier = 'RelY';
-            argsY.referencedElement = referencedElement;
-            argsY.gpmlPathwaySelection = gpmlPathwaySelection;
-            var pvjsonPositionAndOrientationY = getPvjsonPositionAndOrientationMapping(argsY);
-            // here we are referring to jsplumb anchor, not GPML Anchor
-            explicitPoint.anchor = explicitPoint.anchor || [];
-            if (!!pvjsonPositionAndOrientationY && _.isNumber(pvjsonPositionAndOrientationY.position)) {
-              explicitPoint.anchor[1] = pvjsonPositionAndOrientationY.position;
-              if (pvjsonPositionAndOrientationY.hasOwnProperty('orientation') && _.isNumber(pvjsonPositionAndOrientationY.orientation)) {
-                explicitPoint.anchor[3] = pvjsonPositionAndOrientationY.orientation;
-              } else {
-              }
-              if (pvjsonPositionAndOrientationY.hasOwnProperty('offset')) {
-                // need to set the X offset to zero if it doesn't exist so that we don't have null values in the array.
-                explicitPoint.anchor[4] = explicitPoint.anchor[4] || 0;
-                // TODO in the case of a group as the referenced element, we don't have the group width and height yet to properly calculate this
-                explicitPoint.anchor[5] = pvjsonPositionAndOrientationY.offset || 15;
-              }
-            }
-            return gpmlRelYValueInteger;
-          }
-        },
-        GraphRef: function(gpmlGraphRefValue){
-          // this is the actual XML of the element
-          var referencedNodeSelection = gpmlPathwaySelection.find('*[GraphId=' + gpmlGraphRefValue + ']').eq(0);
-          var referencedNode = referencedNodeSelection[0];
-          var referencedNodeTag = referencedNode.tagName || referencedNode.name;
-          // GPML and jsplumb/pvjson use different meaning and architecture for the term "anchor."
-          // GPML uses anchor to refer to an actual element that specifies a position along an edge.
-          // pvjson copies jsplumb in using anchor to refer to the location of the point in terms of another element.
-          // When that other element is an edge, pvjson refers directly to the edge,
-          // unlike GPML which refers to an element located at a position along the edge.
-          // 
-          // here we are referring to GPML Anchor, not jsplumb anchor.
-          if (referencedNodeTag.toLowerCase() !== 'anchor') {
-            referencedElement = referencedNode;
-            referencedElementTag = referencedNodeTag;
-            // the id of the element this point is attached to (references)
-            explicitPoint.isAttachedTo = gpmlGraphRefValue;
-          } else {
-            // here we are converting from GPML Anchor (an element representing a node on an edge) to jsplumb anchor (just a reference to a position along an edge)
-            // since this jsplumb-anchor is specified relative to an edge, it only has one dimension (position along the edge),
-            // unlike nodes, which can have two dimensions (along x dimension of node, along y dimension of node).
-            // So for edges, anchor[0] refers to position along the edge and anchor[1] is a dummy value that is always 0.
-            explicitPoint.anchor = explicitPoint.anchor || [];
-            explicitPoint.anchor[0] = referencedNodeSelection.find('Graphics').attr('Position');
-            explicitPoint.anchor[1] = 0;  
-
-            //var referencedEdge = referencedNode.parent.parent;
-            var referencedEdgeSelection = referencedNodeSelection.parent().parent();
-            var referencedEdge = referencedEdgeSelection[0];
-            referencedElement = referencedEdge;
-            var referencedEdgeTag = referencedEdge.tagName || referencedEdge.name;
-            referencedElementTag = referencedEdgeTag;
-            var referencedEdgeId = referencedEdgeSelection.attr('GraphId');
-            // the id of the edge (IMPORTANT NOTE: NOT the GPML Anchor!) that this pvjson point is attached to (references)
-            explicitPoint.isAttachedTo = referencedEdgeId;
-          }
-          referencedElements.push(referencedElement);
-          referencedElementTags.push(referencedElementTag);
-          return gpmlGraphRefValue;
-        },
-        ArrowHead: function(gpmlArrowHeadValue) {
-          // TODO the marker names are currently camelCase and the other shape names are param-case, because I think that's how the xp-shapes library calls them.
-          // It would be less confusing if they were the same case.
-          pvjsonMarker = Strcase.camelCase(gpmlArrowHeadValue);
-          if (index === 0) {
-            pvjsonEdge.markerStart = pvjsonMarker;
-          } else {
-            pvjsonEdge.markerEnd = pvjsonMarker;
-          }
-          return pvjsonMarker;
-        }
-      };
-
-      explicitPoint = GpmlUtilities.convertAttributesToJson(gpmlPointSelection, explicitPoint, gpmlToPvjsonConverter, attributeDependencyOrder);
-      explicitPoints.push(explicitPoint);
-    });
-
-    pvjsonPoints = explicitPoints;
-
-    pvjsonEdge.points = pvjsonPoints;
-    var result = {};
-    result.pvjsonEdge;
-    result.referencedElementTags;
-    return result;
-  }
-  //*/
-
   //*
   function toPvjson(args) {
     var pvjson = args.pvjson
@@ -277,14 +101,14 @@ module.exports = (function(){
           // anchor: [ 0.5, 1, 0, 1 ]
           //
           // this code only runs for points not attached to edges
-          if (referencedElementTag.toLowerCase() !== 'interaction' && referencedElementTag.toLowerCase() !== 'graphicalline') {
+          if (referencedElementTag.toLowerCase() !== 'gpml:interaction' && referencedElementTag.toLowerCase() !== 'gpml:graphicalline') {
             var gpmlRelXValueString = gpmlRelXValue.toString();
             var gpmlRelXValueInteger = parseFloat(gpmlRelXValue);
             var argsX = {};
             argsX.relValue = gpmlRelXValueInteger;
             argsX.identifier = 'RelX';
             argsX.referencedElement = referencedElement;
-            argsX.gpmlPathwaySelection = gpmlPathwaySelection;
+            argsX.pvjson = pvjson;
             var pvjsonPositionAndOrientationX = getPvjsonPositionAndOrientationMapping(argsX);
             explicitPoint.anchor = explicitPoint.anchor || [];
             if (!!pvjsonPositionAndOrientationX && _.isNumber(pvjsonPositionAndOrientationX.position)) {
@@ -304,14 +128,14 @@ module.exports = (function(){
         RelY: function(gpmlRelYValue) {
           // see note at RelX
           // this code only runs for points not attached to edges
-          if (referencedElementTag.toLowerCase() !== 'interaction' && referencedElementTag.toLowerCase() !== 'graphicalline') {
+          if (referencedElementTag.toLowerCase() !== 'gpml:interaction' && referencedElementTag.toLowerCase() !== 'gpml:graphicalline') {
             var gpmlRelYValueString = gpmlRelYValue.toString();
             var gpmlRelYValueInteger = parseFloat(gpmlRelYValue);
             var argsY = {};
             argsY.relValue = gpmlRelYValueInteger;
             argsY.identifier = 'RelY';
             argsY.referencedElement = referencedElement;
-            argsY.gpmlPathwaySelection = gpmlPathwaySelection;
+            argsY.pvjson = pvjson;
             var pvjsonPositionAndOrientationY = getPvjsonPositionAndOrientationMapping(argsY);
             // here we are referring to jsplumb anchor, not GPML Anchor
             explicitPoint.anchor = explicitPoint.anchor || [];
@@ -332,10 +156,13 @@ module.exports = (function(){
           }
         },
         GraphRef: function(gpmlGraphRefValue){
-          //var referencedNodeSelection = gpmlPathwaySelection.find('*[GraphId=' + gpmlGraphRefValue + ']').eq(0);
-          var referencedNode = pvjson.filter(function(node) {
-            return node.id === gpmlGraphRefValue;
+          console.log('gpmlGraphRefValue');
+          console.log(gpmlGraphRefValue);
+          var referencedNode = pvjson.elements.filter(function(element) {
+            return element.id === gpmlGraphRefValue;
           })[0];
+          console.log('referencedNode');
+          console.log(referencedNode);
           var referencedNodeTag = referencedNode['gpml:element'];
 
           // GPML and jsplumb/pvjson use different meaning and architecture for the term "anchor."
@@ -356,17 +183,17 @@ module.exports = (function(){
             // unlike nodes, which can have two dimensions (along x dimension of node, along y dimension of node).
             // So for edges, anchor[0] refers to position along the edge and anchor[1] is a dummy value that is always 0.
             explicitPoint.anchor = explicitPoint.anchor || [];
-            explicitPoint.anchor[0] = referencedNodeSelection.find('Graphics').attr('Position');
+            explicitPoint.anchor[0] = referencedNode.position;
             explicitPoint.anchor[1] = 0;  
 
-            //var referencedEdge = referencedNode.parent.parent;
-            var referencedEdgeSelection = referencedNodeSelection.parent().parent();
-            var referencedEdge = referencedEdgeSelection[0];
-            referencedElement = referencedEdge;
-            var referencedEdgeTag = referencedEdge.tagName || referencedEdge.name;
-            referencedElementTag = referencedEdgeTag;
-            var referencedEdgeId = referencedEdgeSelection.attr('GraphId');
             // the id of the edge (IMPORTANT NOTE: NOT the GPML Anchor!) that this pvjson point is attached to (references)
+            var referencedEdgeId = referencedNode.isAttachedTo;
+            var referencedEdge = pvjson.elements.filter(function(element) {
+              return element.id === referencedEdgeId;
+            })[0];
+            referencedElement = referencedEdge;
+            var referencedEdgeTag = referencedEdge['gpml:element'];
+            referencedElementTag = referencedEdgeTag;
             explicitPoint.isAttachedTo = referencedEdgeId;
           }
           referencedElements.push(referencedElement);
@@ -389,6 +216,7 @@ module.exports = (function(){
       explicitPoints.push(explicitPoint);
     });
 
+
     var type = pvjsonEdge.shape;
 
     if (type === 'line-straight'){
@@ -399,32 +227,29 @@ module.exports = (function(){
     } else if (type === 'line-segmented'){
       pvjsonPoints = explicitPoints;
     } else if (type === 'line-elbow'){
-      pvjsonPoints = calculatePvjsonPoints(gpmlPathwaySelection, type, explicitPoints, referencedElements, referencedElementTags);
+      pvjsonPoints = calculatePvjsonPoints(pvjson, type, explicitPoints, referencedElements, referencedElementTags);
     } else if (type === 'line-curved'){
-      pvjsonPoints = calculatePvjsonPoints(gpmlPathwaySelection, type, explicitPoints, referencedElements, referencedElementTags);
+      pvjsonPoints = calculatePvjsonPoints(pvjson, type, explicitPoints, referencedElements, referencedElementTags);
     } else {
       console.warn('Unknown connector type: ' + type);
     }
 
     pvjsonEdge.points = pvjsonPoints;
-    var result = {};
-    result.pvjsonEdge;
-    result.referencedElementTags;
-    return result;
+    return pvjsonEdge;
   }
   //*/
 
   /**
    * calculatePvjsonPoints
    *
-   * @param gpmlPathwaySelection {Object}
+   * @param pvjson {Object}
    * @param edgeType {String}
    * @param explicitPoints {Array}
    * @param referencedElements {Array}
    * @param referencedElementTags {Array}
    * @return {Array} Set of points required to render the edge. Additional points are added if required to unambiguously specify an edge (implicit points are made explicit).
    */
-  function calculatePvjsonPoints(gpmlPathwaySelection, edgeType, explicitPoints, referencedElements, referencedElementTags) {
+  function calculatePvjsonPoints(pvjson, edgeType, explicitPoints, referencedElements, referencedElementTags) {
     var firstPoint = explicitPoints[0]
       , lastPoint = explicitPoints[explicitPoints.length - 1]
       , sideCombination
@@ -438,16 +263,16 @@ module.exports = (function(){
       sideCombination = getSideCombination(firstPoint, lastPoint);
     // if first point is attached to a shape and last point is attached to an anchor (not a group)
     } else if (firstPoint.hasOwnProperty('anchor') && _.isNumber(firstPoint.anchor[2]) && _.isNumber(firstPoint.anchor[3]) && lastPoint.hasOwnProperty('anchor')) {
-      lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], gpmlPathwaySelection);
+      lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], pvjson);
       sideCombination = getSideCombination(firstPoint, lastPoint);
     // if last point is attached to a shape and first point is attached to an anchor (not a group)
     } else if (lastPoint.hasOwnProperty('anchor') && _.isNumber(lastPoint.anchor[2]) && _.isNumber(lastPoint.anchor[3]) && firstPoint.hasOwnProperty('anchor')) {
-      firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], gpmlPathwaySelection);
+      firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], pvjson);
       sideCombination = getSideCombination(firstPoint, lastPoint);
     // if first and last points are attached to anchors
     } else if (firstPoint.hasOwnProperty('anchor') && lastPoint.hasOwnProperty('anchor')) {
-      firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], gpmlPathwaySelection);
-      lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], gpmlPathwaySelection);
+      firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], pvjson);
+      lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], pvjson);
       sideCombination = getSideCombination(firstPoint, lastPoint);
       /*
       // TODO change this to actually calculate the number
@@ -674,28 +499,28 @@ module.exports = (function(){
     return result;
   }
 
-  var getSideEquivalentForLine = function (pointOnShape, pointOnEdge, referencedEdgeSelection, gpmlPathwaySelection) {
+  var getSideEquivalentForLine = function (pointOnShape, pointOnEdge, referencedEdge, pvjson) {
     var riseFromPointOnEdgeToPointOnShape = pointOnShape.y - pointOnEdge.y;
     var runFromPointOnEdgeToPointOnShape = pointOnShape.x - pointOnEdge.x;
     var angleFromPointOnEdgeToPointOnShape = Math.atan2(riseFromPointOnEdgeToPointOnShape, runFromPointOnEdgeToPointOnShape);
 
     var angleOfReferencedEdge, referencedEdgePoints, firstPointOfReferencedEdge, lastPointOfReferencedEdge;
 
-    if (!!referencedEdgeSelection) {
+    if (!!referencedEdge) {
       // TODO handle case where referenced edge is not straight.
       // currently, the code below assumes the referenced edge is always straight, never elbowed or curved.
       // This would require being able to calculate a point at a distance along an elbow or curve.
-      referencedEdgePoints = $(referencedEdgeSelection).find('Point');
+      referencedEdgePoints = referencedEdge['gpml:Point'] || referencedEdge.points;
 
-      var firstPointOfReferencedEdgeSelection = $(referencedEdgePoints[0]);
+      firstPointOfReferencedEdge = referencedEdgePoints[0];
       firstPointOfReferencedEdge = {};
-      firstPointOfReferencedEdge.x = parseFloat(firstPointOfReferencedEdgeSelection.attr('X'));
-      firstPointOfReferencedEdge.y = parseFloat(firstPointOfReferencedEdgeSelection.attr('Y'));
+      firstPointOfReferencedEdge.x = parseFloat(firstPointOfReferencedEdge.x || firstPointOfReferencedEdge.attributes.X.value);
+      firstPointOfReferencedEdge.y = parseFloat(firstPointOfReferencedEdge.y || firstPointOfReferencedEdge.attributes.Y.value);
 
-      var lastPointOfReferencedEdgeSelection = $(referencedEdgePoints[referencedEdgePoints.length - 1]);
+      lastPointOfReferencedEdge = referencedEdgePoints[referencedEdgePoints.length - 1];
       lastPointOfReferencedEdge = {};
-      lastPointOfReferencedEdge.x = parseFloat(lastPointOfReferencedEdgeSelection.attr('X'));
-      lastPointOfReferencedEdge.y = parseFloat(lastPointOfReferencedEdgeSelection.attr('Y'));
+      lastPointOfReferencedEdge.x = parseFloat(lastPointOfReferencedEdge.x || lastPointOfReferencedEdge.attributes.X.value);
+      lastPointOfReferencedEdge.y = parseFloat(lastPointOfReferencedEdge.y || lastPointOfReferencedEdge.attributes.Y.value);
 
       var riseOfReferencedEdge = lastPointOfReferencedEdge.y - firstPointOfReferencedEdge.y;
       var runOfReferencedEdge = lastPointOfReferencedEdge.x - firstPointOfReferencedEdge.x;
@@ -745,7 +570,7 @@ module.exports = (function(){
       var firstSegmentEndPoint = {};
       firstSegmentEndPoint.x = pointOnEdge.x + defaultStubLength * firstSegmentOption.orientationX;
       firstSegmentEndPoint.y = pointOnEdge.y + defaultStubLength * firstSegmentOption.orientationY;
-      if (!!referencedEdgeSelection && sameSide(firstPointOfReferencedEdge, lastPointOfReferencedEdge, firstSegmentEndPoint, pointOnShape)) {
+      if (!!referencedEdge && sameSide(firstPointOfReferencedEdge, lastPointOfReferencedEdge, firstSegmentEndPoint, pointOnShape)) {
         angleBetweenFirstSegmentOptionAndAnchoredEdge = Math.abs(angleOption - angleFromPointOnEdgeToPointOnShape);
         if (angleBetweenFirstSegmentOptionAndAnchoredEdge > Math.PI) {
           angleBetweenFirstSegmentOptionAndAnchoredEdge = 2 * Math.PI - angleBetweenFirstSegmentOptionAndAnchoredEdge;
@@ -766,7 +591,7 @@ module.exports = (function(){
     });
 
     if (!!firstSegmentCalculations && firstSegmentCalculations.length > 0) {
-      if (!!referencedEdgeSelection) {
+      if (!!referencedEdge) {
         // note we don't currently have logic to correctly determine the angle of the referenced edge if it's not straight.
         // sort so that first segment option closest to perpendicular to referenced edge is first
         firstSegmentCalculations.sort(function(a, b) {

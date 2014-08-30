@@ -16,8 +16,11 @@ module.exports = {
       throw new Error('Missing input element(s) in attribute.toPvjson()');
     }
 
-    var attributeKey = attributeElement.Key.value
-      , attributeValue = attributeElement.Value.value
+    // NOTE: Yes, 'attributeElementAttributes' is confusing, but that's just the
+    // way it needs to be when GPML has an element named 'Attribute'.
+    var attributeElementAttributes = attributeElement.attributes
+      , attributeKey = attributeElementAttributes.Key.value
+      , attributeValue = attributeElementAttributes.Value.value
       ;
 
     if (attributeKey === 'org.pathvisio.DoubleLineProperty') {

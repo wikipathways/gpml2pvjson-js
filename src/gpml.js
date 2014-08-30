@@ -141,15 +141,14 @@ var GpmlUtilities = require('./gpml-utilities.js')
       this._parser.resume();
     });
 
-    var classLevelGpmlElementTagNames = _.keys(XmlElement.classLevelElements);
-
-
     var openTagStream = highland('opentag', saxStream);
     var currentTagName;
+    /*
     openTagStream.fork().each(function(element) {
       currentTagName = element.name;
       openTagStream.resume();
     });
+    //*/
     var textStream = highland('text', saxStream);
     var closeTagStreamEvents = new EventEmitter();
     var closeTagStreamEvents2 = new EventEmitter();
@@ -159,8 +158,11 @@ var GpmlUtilities = require('./gpml-utilities.js')
     });
     var closeTagStream = highland('closetag', saxStream);
 
+
+    var tagNamesForNestedTargetElementStreamEvents = new EventEmitter();
+    var tagNamesForNestedTargetElementStream = highland('element', tagNamesForNestedTargetElementStreamEvents);
+
     var saxStreamFiltered = highland.merge([openTagStream.fork(), textStream.fork(), closeTagStream.fork()]);
-    //var saxStreamFiltered = highland.otherwise(openTagStream.fork(), textStream.fork(), closeTagStream.fork());
 
     var tagNamesForTargetElements = [
       , 'DataNode'
@@ -187,14 +189,19 @@ var GpmlUtilities = require('./gpml-utilities.js')
     ];
     var tagNamesForNestedSupplementalElements = [
       'Point'
-      //, 'Anchor'
       , 'Attribute'
     ];
+
     var currentTargetElement = {};
-    // TODO figure out why currentTargetElement doesn't have its defaults when it is an edge with default color and we are handling an anchor.
-    // currentTargetElementWithDefaults does have the defaults.
-    var currentTargetElementWithDefaults = {};
+    var lastTargetElement = {};
+    var currentNestedTargetElements = [];
+
     var pvjsonStream = saxStreamFiltered.consume(function (err, x, push, next) {
+      /*
+      //console.log('x');
+      console.log(x.name || x);
+      console.log(currentTargetElement.name);
+      //*/
 
       if (err) {
         // pass errors along the stream and consume next value
@@ -212,6 +219,30 @@ var GpmlUtilities = require('./gpml-utilities.js')
       if ((tagNamesForTargetElements.indexOf(x) > -1 || tagNamesForTargetElements.indexOf(x.name) > -1) && tagNamesForTargetElements.indexOf(currentTargetElement.name) > -1) {
         push(null, currentTargetElement);
         currentTargetElement = {};
+
+        currentNestedTargetElements.forEach(function(currentNestedTargetElement) {
+          /*
+          console.log('lastTargetElement');
+          console.log(lastTargetElement);
+          console.log('currentNestedTargetElement');
+          console.log(currentNestedTargetElement);
+          //*/
+
+          currentNestedTargetElement.attributes.Color = {};
+          currentNestedTargetElement.attributes.Color.name = 'Color';
+          currentNestedTargetElement.attributes.Color.value = lastTargetElement.attributes.Color.value;
+
+          currentNestedTargetElement.attributes.GraphRef = {};
+          currentNestedTargetElement.attributes.GraphRef.name = 'GraphRef';
+          currentNestedTargetElement.attributes.GraphRef.value = lastTargetElement.attributes.GraphId.value;
+
+          currentNestedTargetElement.attributes.ZOrder = {};
+          currentNestedTargetElement.attributes.ZOrder.name = 'ZOrder';
+          currentNestedTargetElement.attributes.ZOrder.value = lastTargetElement.attributes.ZOrder.value + 0.1;
+
+          push(null, currentNestedTargetElement);
+        });
+        currentNestedTargetElements = [];
       }
 
       if (tagNamesForTargetElements.indexOf(x.name) > -1) {
@@ -233,32 +264,18 @@ var GpmlUtilities = require('./gpml-utilities.js')
         }
 
         currentTargetElement = x;
+        //saxStreamFiltered.pause();
       } else if (tagNamesForSupplementalElementsWithAttributes.indexOf(x.name) > -1) {
         _.merge(currentTargetElement.attributes, x.attributes);
-        //*
       } else if (tagNamesForNestedTargetElements.indexOf(x.name) > -1) {
-        //saxStreamFiltered.pause();
-        var currentNestedTargetElement = x;
 
-        currentNestedTargetElement.attributes.Color = {};
-        currentNestedTargetElement.attributes.Color.name = 'Color';
-        currentNestedTargetElement.attributes.Color.value = currentTargetElementWithDefaults.attributes.Color.value;
-
-        currentNestedTargetElement.attributes.GraphRef = {};
-        currentNestedTargetElement.attributes.GraphRef.name = 'GraphRef';
-        currentNestedTargetElement.attributes.GraphRef.value = currentTargetElementWithDefaults.attributes.GraphId.value;
-
-        currentNestedTargetElement.attributes.ZOrder = {};
-        currentNestedTargetElement.attributes.ZOrder.name = 'ZOrder';
-        currentNestedTargetElement.attributes.ZOrder.value = currentTargetElementWithDefaults.attributes.ZOrder.value + 0.1;
-
-        push(null, currentNestedTargetElement);
-        //*/
+        //tagNamesForNestedTargetElementStreamEvents.emit('element', x);
+        currentNestedTargetElements.push(x);
       } else if (tagNamesForNestedSupplementalElements.indexOf(x.name) > -1) {
         currentTargetElement.attributes[x.name] = currentTargetElement.attributes[x.name] || {};
         currentTargetElement.attributes[x.name].name = x.name;
         currentTargetElement.attributes[x.name].value = currentTargetElement.attributes[x.name].value || [];
-        currentTargetElement.attributes[x.name].value.push(x.attributes);
+        currentTargetElement.attributes[x.name].value.push(x);
       } else if (tagNamesForSupplementalElementsWithText.indexOf(currentTagName) > -1) {
         currentTargetElement.attributes[currentTagName] = currentTargetElement.attributes[currentTagName] || [];
         currentTargetElement.attributes[currentTagName].push(x);
@@ -275,10 +292,14 @@ var GpmlUtilities = require('./gpml-utilities.js')
       console.log(generateKString() + ' ' + element.name);
       console.log('CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS');
 
-      currentTargetElement = XmlElement.applyDefaults(element);
-      //saxStreamFiltered.resume();
-      return currentTargetElement;
+      lastTargetElement = XmlElement.applyDefaults(element);
+      return lastTargetElement;
     })
+    /*
+    .map(function(element) {
+      return XmlElement.applyDefaults(element);
+    })
+    //*/
     .scan(pvjson, function(accumulator, consolidatedTargetElement) {
       var pvjsonElement = (consolidatedTargetElement.name !== 'Pathway') ? {} : accumulator;
       pvjson = XmlElement.toPvjson({
@@ -286,8 +307,6 @@ var GpmlUtilities = require('./gpml-utilities.js')
         pvjsonElement: pvjsonElement,
         gpmlElement: consolidatedTargetElement
       });
-
-      currentTargetElementWithDefaults = consolidatedTargetElement;
 
       return pvjson;
     })
@@ -317,6 +336,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
       return pvjson;
     });
     //*/
+    .last()
     .map(function() {
 
       _(pvjson.elements).filter(function(element) {
@@ -328,30 +348,33 @@ var GpmlUtilities = require('./gpml-utilities.js')
       });
 
       var edges = _(pvjson.elements).filter(function(element) {
-        return element['gpml:element'] === 'gpml:Interaction' || element['gpml:element'] === 'gpml:GraphicalLine';
+        // TODO figure out why this seems to run more times than it should.
+        // It might have something to do with using highland.scan() and passing the anchor through.
+        // The check for gpml:Point is a hack so we don't get an error for not having it
+        // because we've already deleted it when it runs more than once for the same edge.
+        return (element['gpml:element'] === 'gpml:Interaction' || element['gpml:element'] === 'gpml:GraphicalLine') && element.hasOwnProperty('gpml:Point');
       })
       .map(function(edge) {
-      /*
         edge = Point.toPvjson({
           pvjson: pvjson
           , pvjsonElement: edge
         });
-      //*/
+
+        delete edge['gpml:Point'];
         return edge;
       });
 
-      /*
       _(edges).filter(function(element) {
-        return element.hasOwnProperty('gpml:Anchor');
+        return element['gpml:element'] === 'gpml:Interaction';
       })
       .map(function(edge) {
-        pvjson = Anchor.toPvjson({
+        edge = Interaction.toPvjson({
           pvjson: pvjson
           , pvjsonElement: edge
         });
+
         return edge;
       });
-      //*/
 
       return pvjson;
     })
@@ -359,83 +382,14 @@ var GpmlUtilities = require('./gpml-utilities.js')
       return pvjson;
     });
 
-    /* Can we delete this? It doesn't appear to be used anywhere.
-    var graphicalElementTagNames = [
-      'DataNode',
-      'Label',
-      'Shape',
-      'State',
-      'Anchor',
-      'Interaction',
-      'GraphicalLine',
-      'Group'
-    ];
-    //*/
-
     // TODO
     // MVP
-    // * Anchors
-    //    Look at whether they should be included in pvjson.elements. It appears they may not be.
-    // * Points
-    // * Interactions - taking care of points might take care of interactions and graphical lines.
-    // * GraphicalLines
     // * Convert Biopax
     // * Update BiopaxRefs
     // LATER
     // * Comments
     // * Better handling of x,y for anchors
 
-    /*
-    //pvjsonStream.fork().each(function() {
-    pvjsonStream.each(function() {
-      //*
-      // determine initial value for maxId by filtering for elements that
-      // have an id that starts with 'id' and for each one, convert the part of the id
-      // after 'id' to a base32 integer. Find the maximum resulting integer.
-      var idsAsIntegersArray = pvjson.elements.filter(function(element) {
-        return !!element.id && element.id.slice(0,2) === 'id';
-      })
-      .map(function(element) {
-        return parseInt(element.id.slice(2, element.id.length), 32);
-      });
-      var maxId = Math.max.apply(null, idsAsIntegersArray) || 0;
-      console.log('maxId');
-      console.log(maxId);
-
-      // Add an id to every element missing one. Generate id value by incrementing 'maxId',
-      // converting to base32 and appending it to the string 'id'.
-      var mytest = pvjson.elements.filter(function(element) {
-        return !element.id;
-      })
-      .map(function(element) {
-        maxId = (parseInt(maxId, 32) + 1).toString(32);
-        element.id = 'id' + maxId;
-      });
-      console.log('mytest');
-      console.log(mytest);
-      return pvjson;
-      //*/
-      //pvjsonStream.resume();
-    //});
-    //*/
-
-
-
-
-    //*/
-    /*
-    .apply(function(pvjsonElement, entityReference) {
-      console.log('pvjsonElement');
-      console.log(pvjsonElement);
-      console.log('entityReference');
-      console.log(entityReference);
-      currentClassLevelPvjsonAndGpmlElements.pvjsonElement = pvjsonElement;
-      if (!!entityReference) {
-        pvjson.elements.push(entityReference);
-      }
-      //classLevelGpmlElementStream.resume();
-    });
-    //*/
 
     /*
     var anchorStream = highland('Anchor', openTagStreamEvents)
@@ -455,14 +409,14 @@ var GpmlUtilities = require('./gpml-utilities.js')
     });
     //*/
 
-    highland(fs.createReadStream(input))
-    //request('http://www.wikipathways.org/wpi/wpi.php?action=downloadFile&type=gpml&pwTitle=Pathway:WP525')
+    //highland(fs.createReadStream(input))
+    request('http://www.wikipathways.org/wpi/wpi.php?action=downloadFile&type=gpml&pwTitle=Pathway:WP1266')
       .pipe(saxStream)
       .pipe(through)
       .last()
       .map(function(array) {
         console.log('pvjson');
-        console.log(pvjson);
+        console.log(JSON.stringify(pvjson, null, '  '));
         return array.toString();
       })
       .pipe(fs.createWriteStream('../test/output/file-copy.xml'));

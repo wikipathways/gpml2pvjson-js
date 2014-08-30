@@ -125,105 +125,89 @@ module.exports = {
     gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
     return gpmlElement;
   },
-  toPvjson: function(gpmlElement) {
-    var pvjsonElement = {};
-    gpmlElement = GpmlUtilities.extendDefaults(gpmlElement, this.defaults);
-    return {pvjsonElement:pvjsonElement, gpmlElement:gpmlElement};
-  },
 
-  toPvjsonOld: function(pvjson, gpmlSelection, interactionSelection, callback) {
-    var jsonAnchorInteraction
+  toPvjson: function(args) {
+    var pvjson = args.pvjson
+      , pvjsonInteraction = args.pvjsonElement
       , anchor
-      , jsonAnchor
       , points
-      , jsonPoints
       , relationType
       , target
       , targetId
       , groupRef
       , source
       , sourceId
-      , pvjsonElements
-      , pvjsonPath = {}
       ;
 
-    //GpmlElement.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath) {
-      Graphics.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath) {
-        Point.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonPath, referencedElementTags) {
-          Anchor.toPvjson(pvjson, gpmlSelection, interactionSelection, pvjsonPath, function(pvjsonAnchor) {
-            var sourceNode, targetNode, marker;
-            if (!!pvjsonPath.markerStart) {
-              marker = pvjsonPath.markerStart;
-              // sometimes the graphical terminology (startMarker, endMarker) won't line up with the graph terminology.
-              sourceNode = pvjsonPath.points[pvjsonPath.points.length - 1].isAttachedTo;
-              targetNode = pvjsonPath.points[0].isAttachedTo;
-            } else if (!!pvjsonPath.markerEnd) {
-              marker = pvjsonPath.markerEnd;
-              sourceNode = pvjsonPath.points[0].isAttachedTo;
-              targetNode = pvjsonPath.points[pvjsonPath.points.length - 1].isAttachedTo;
-            }
+    var sourceNode, targetNode, marker;
+    if (!!pvjsonInteraction.markerStart) {
+      marker = pvjsonInteraction.markerStart;
+      // sometimes the graphical terminology (startMarker, endMarker) won't line up with the graph terminology.
+      sourceNode = pvjsonInteraction.points[pvjsonInteraction.points.length - 1].isAttachedTo;
+      targetNode = pvjsonInteraction.points[0].isAttachedTo;
+    } else if (!!pvjsonInteraction.markerEnd) {
+      marker = pvjsonInteraction.markerEnd;
+      sourceNode = pvjsonInteraction.points[0].isAttachedTo;
+      targetNode = pvjsonInteraction.points[pvjsonInteraction.points.length - 1].isAttachedTo;
+    }
 
-            // this can be overridden with a more specific term below
-            var biopaxType = 'Interaction';
-            if (!!sourceNode && !!targetNode) {
-              var markerInStringCase = strcase.paramCase(marker);
-              var identifierMappings = markerNameToIdentifierMappings[markerInStringCase];
-              if (!!identifierMappings && !!identifierMappings.biopax && !!identifierMappings.biopax.name) {
-                biopaxType = identifierMappings.biopax.name;
-              }
+    // this can be overridden with a more specific term below
+    var biopaxType = 'Interaction';
+    if (!!sourceNode && !!targetNode) {
+      var markerInStringCase = strcase.paramCase(marker);
+      var identifierMappings = markerNameToIdentifierMappings[markerInStringCase];
+      if (!!identifierMappings && !!identifierMappings.biopax && !!identifierMappings.biopax.name) {
+        biopaxType = identifierMappings.biopax.name;
+      }
 
-              /* this below is an attempt to model interactions using named graphs
-              pvjsonPath.relationGraph = [{
-                id: sourceNode,
-                relation: targetNode
-              }];
-              //*/
-              
-              // and this is an attempt to model interactions using Biopax
-              // TODO still need to consider things like CovalentBindingFeature, etc.
-              if (biopaxType === 'Interaction' && !!identifierMappings && !!identifierMappings.controlType) {
-                pvjsonPath.participants = [];
-                pvjsonPath.participants.push(sourceNode);
-                pvjsonPath.participants.push(targetNode);
-              } else if (biopaxType === 'Control' || biopaxType === 'Catalysis') {
-                if (!!identifierMappings && !!identifierMappings.controlType) {
-                  pvjsonPath.controlType = identifierMappings.controlType;
-                }
-                pvjsonPath.controller = sourceNode;
-                pvjsonPath.controlled = targetNode;
-              } else if (biopaxType === 'Conversion' || biopaxType === 'BiochemicalReaction') {
-                if (!!pvjsonPath.markerStart && !!pvjsonPath.markerEnd) { // TODO this isn't actually checking the other marker to make sure it also indicates conversion
-                  pvjsonPath.conversionDirection = 'REVERSIBLE';
-                } else {
-                  pvjsonPath.conversionDirection = 'LEFT-TO-RIGHT';
-                }
-                pvjsonPath.left = sourceNode;
-                pvjsonPath.right = targetNode;
-              } else {
-                pvjsonPath.participants = [];
-                pvjsonPath.participants.push(sourceNode);
-                pvjsonPath.participants.push(targetNode);
-              }
+      /* this below is an attempt to model interactions using named graphs
+      pvjsonInteraction.relationGraph = [{
+        id: sourceNode,
+        relation: targetNode
+      }];
+      //*/
+      
+      // and this is an attempt to model interactions using Biopax
+      // TODO still need to consider things like CovalentBindingFeature, etc.
+      if (biopaxType === 'Interaction' && !!identifierMappings && !!identifierMappings.controlType) {
+        pvjsonInteraction.participants = [];
+        pvjsonInteraction.participants.push(sourceNode);
+        pvjsonInteraction.participants.push(targetNode);
+      } else if (biopaxType === 'Control' || biopaxType === 'Catalysis') {
+        if (!!identifierMappings && !!identifierMappings.controlType) {
+          pvjsonInteraction.controlType = identifierMappings.controlType;
+        }
+        pvjsonInteraction.controller = sourceNode;
+        pvjsonInteraction.controlled = targetNode;
+      } else if (biopaxType === 'Conversion' || biopaxType === 'BiochemicalReaction') {
+        if (!!pvjsonInteraction.markerStart && !!pvjsonInteraction.markerEnd) { // TODO this isn't actually checking the other marker to make sure it also indicates conversion
+          pvjsonInteraction.conversionDirection = 'REVERSIBLE';
+        } else {
+          pvjsonInteraction.conversionDirection = 'LEFT-TO-RIGHT';
+        }
+        pvjsonInteraction.left = sourceNode;
+        pvjsonInteraction.right = targetNode;
+      } else {
+        pvjsonInteraction.participants = [];
+        pvjsonInteraction.participants.push(sourceNode);
+        pvjsonInteraction.participants.push(targetNode);
+      }
 
-              /*
-              if (markerInStringCase === 'mim-binding' || markerInStringCase === 'mim-covalent-bond') {
-                // TODO something with entityFeature, BindingFeature, CovalentBindingFeature, bindsTo...
-              }
-              //*/
+      /*
+      if (markerInStringCase === 'mim-binding' || markerInStringCase === 'mim-covalent-bond') {
+        // TODO something with entityFeature, BindingFeature, CovalentBindingFeature, bindsTo...
+      }
+      //*/
 
-              if (!!identifierMappings && !!identifierMappings.sbo && identifierMappings.sbo.length > 0) {
-                pvjsonPath.interactionType = identifierMappings.sbo;
-              }
-            } else {
-              console.warn('Unconnected Interaction(s) present in this pathway.');
-            }
-            pvjsonPath.type = biopaxType;
+      if (!!identifierMappings && !!identifierMappings.sbo && identifierMappings.sbo.length > 0) {
+        pvjsonInteraction.interactionType = identifierMappings.sbo;
+      }
+    } else {
+      console.warn('Unconnected Interaction(s) present in this pathway.');
+    }
+    pvjsonInteraction.type = biopaxType;
 
-            pvjsonElements = [pvjsonPath].concat(pvjsonAnchor);
-            callback(pvjsonElements);
-          });
-        });
-      });
-    //});
+    return pvjsonInteraction;
+
   }
 };

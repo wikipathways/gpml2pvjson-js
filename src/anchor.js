@@ -1,6 +1,5 @@
 var _ = require('lodash')
   , GpmlUtilities = require('./gpml-utilities.js')
-  //, XmlElement = require('./xml-element.js')
   ;
 
 'use strict';
@@ -83,41 +82,6 @@ module.exports = {
     var shape = !!gpmlElement.attributes.Shape ? gpmlElement.attributes.Shape.value : 'None';
     return GpmlUtilities.applyDefaults(gpmlElement, [defaultsByShape[shape], this.defaults, defaults]);
   },
-
-  /*
-  toPvjson: function (args) {
-    var pvjsonEdge = args.pvjsonElement
-      , pvjson = args.pvjson
-      , anchorElements = pvjsonEdge['gpml:Anchor']
-      // TODO update this to use the real points
-      //, points = pvjsonEdge.points
-      , points = pvjsonEdge.points || [{x:0,y:0}, {x:50,y:50}]
-      , pointCount = points.length
-      , firstPoint = points[0]
-      , lastPoint = points[pointCount - 1]
-      ;
-
-    anchorElements.forEach(function(anchorElement) {
-      console.log('anchorElement');
-      console.log(anchorElement);
-      var pvjsonAnchor = {};
-      pvjsonAnchor.zIndex = pvjsonEdge.zIndex + 0.1;
-      pvjsonAnchor.backgroundColor = pvjsonEdge.backgroundColor;
-
-      var shape = !!anchorElement.Shape ? anchorElement.Shape.value : 'None';
-      //anchorElement = GpmlUtilities.applyDefaults(anchorElement, [defaultsByShape[shape], defaults]);
-      // "this" is wrong here. It seems to be doing the edge, not the anchor here.
-      //pvjsonAnchor = GpmlUtilities.convertAttributesToJson(anchorElement, pvjsonAnchor, gpmlToPvjsonConverter, attributeDependencyOrder);
-
-      pvjson = XmlElement.toPvjson({
-        pvjson: pvjson,
-        pvjsonElement: pvjsonAnchor,
-        gpmlElement: {attributes: anchorElement}
-      });
-    });
-    return pvjson;
-  },
-  //*/
 
   getAllFromNode: function (jsonNode) {
     self.jsonNode = jsonNode;
