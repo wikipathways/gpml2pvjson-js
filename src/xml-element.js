@@ -128,8 +128,9 @@ module.exports = {
       Author: function(gpmlValue){
         pvjsonElement.author = gpmlValue;
       },
-      BiopaxRef: function(gpmlValue){
-        pvjsonElement['gpml:BiopaxRef'] = gpmlValue;
+      'gpml:BiopaxRef': function(gpmlValue){
+        pvjsonElement.xrefs = pvjsonElement.xrefs || [];
+        pvjsonElement.xrefs = pvjsonElement.xrefs.concat(gpmlValue);
       },
       BoardHeight: function(gpmlValue){
         pvjsonElement.image = pvjsonElement.image || {

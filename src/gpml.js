@@ -110,7 +110,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
     // using full IRI, because otherwise I would have to indicate the id as something like "/", which is ugly.
     pvjson.id = pathwayIri;
     pvjson.idVersion = pathwayMetadata.idVersion;
-    pvjson.xrefs = [];
+    //pvjson.xrefs = [];
 
     pvjson.elements = [];
 
@@ -162,6 +162,11 @@ var GpmlUtilities = require('./gpml-utilities.js')
     var tagNamesForNestedTargetElementStreamEvents = new EventEmitter();
     var tagNamesForNestedTargetElementStream = highland('element', tagNamesForNestedTargetElementStreamEvents);
 
+    /*
+    var tagNamesForNestedTargetElementStreamEvents = new EventEmitter();
+    var tagNamesForNestedTargetElementStream = highland('element', tagNamesForNestedTargetElementStreamEvents);
+    //*/
+
     var saxStreamFiltered = highland.merge([openTagStream.fork(), textStream.fork(), closeTagStream.fork()]);
 
     var tagNamesForTargetElements = [
@@ -195,6 +200,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
     var currentTargetElement = {};
     var lastTargetElement = {};
     var currentNestedTargetElements = [];
+    var currentPublicationXrefDisplayName = 1;
+    var publicationXrefs = [];
 
     var pvjsonStream = saxStreamFiltered.consume(function (err, x, push, next) {
       /*
@@ -214,6 +221,10 @@ var GpmlUtilities = require('./gpml-utilities.js')
         // pass nil (end event) along the stream
         push(null, x);
         return;
+      }
+
+      if (!!x.name) {
+        currentTagName = x.name;
       }
 
       if ((tagNamesForTargetElements.indexOf(x) > -1 || tagNamesForTargetElements.indexOf(x.name) > -1) && tagNamesForTargetElements.indexOf(currentTargetElement.name) > -1) {
@@ -276,9 +287,22 @@ var GpmlUtilities = require('./gpml-utilities.js')
         currentTargetElement.attributes[x.name].name = x.name;
         currentTargetElement.attributes[x.name].value = currentTargetElement.attributes[x.name].value || [];
         currentTargetElement.attributes[x.name].value.push(x);
-      } else if (tagNamesForSupplementalElementsWithText.indexOf(currentTagName) > -1) {
-        currentTargetElement.attributes[currentTagName] = currentTargetElement.attributes[currentTagName] || [];
-        currentTargetElement.attributes[currentTagName].push(x);
+      } else if (tagNamesForSupplementalElementsWithText.indexOf(currentTagName) > -1 && !!x.name && currentTagName !== x.name) {
+        currentTargetElement.attributes['gpml:' + currentTagName] = currentTargetElement.attributes['gpml:' + currentTagName] || {};
+        currentTargetElement.attributes['gpml:' + currentTagName].name = 'gpml:' + currentTagName;
+        currentTargetElement.attributes['gpml:' + currentTagName].value = currentTargetElement.attributes['gpml:' + currentTagName].value || [];
+        currentTargetElement.attributes['gpml:' + currentTagName].value.push(x);
+      } else if (x.name === 'Biopax' || currentTargetElement.name === 'Biopax') {
+        currentTargetElement = currentTargetElement || {};
+        currentTargetElement.name = 'Biopax';
+        if (!!x.name && x.name.toLowerCase() === 'bp:PublicationXref'.toLowerCase()) {
+          var currentPublicationXref = {};
+          currentPublicationXref.id = x.attributes['rdf:id'].value;
+          currentPublicationXref.displayName = currentPublicationXrefDisplayName;
+          currentPublicationXref.type = 'PublicationXref';
+          pvjson.elements.push(currentPublicationXref);
+          currentPublicationXrefDisplayName += 1;
+        }
       }
 
       openTagStream.resume();
@@ -288,9 +312,11 @@ var GpmlUtilities = require('./gpml-utilities.js')
       next();
     })
     .map(function(element) {
+      /*
       console.log('CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS');
       console.log(generateKString() + ' ' + element.name);
       console.log('CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS CLASS');
+      //*/
 
       lastTargetElement = XmlElement.applyDefaults(element);
       return lastTargetElement;
@@ -386,6 +412,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
     // MVP
     // * Convert Biopax
     // * Update BiopaxRefs
+    // * Verify JSON produced by new algo matches what was produced by old one
+    // * Clean up logs and unused code.
     // LATER
     // * Comments
     // * Better handling of x,y for anchors
@@ -409,8 +437,8 @@ var GpmlUtilities = require('./gpml-utilities.js')
     });
     //*/
 
-    //highland(fs.createReadStream(input))
-    request('http://www.wikipathways.org/wpi/wpi.php?action=downloadFile&type=gpml&pwTitle=Pathway:WP1266')
+    highland(fs.createReadStream(input))
+    //request('http://www.wikipathways.org/wpi/wpi.php?action=downloadFile&type=gpml&pwTitle=Pathway:WP525')
       .pipe(saxStream)
       .pipe(through)
       .last()
