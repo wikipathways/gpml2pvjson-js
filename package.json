@@ -29,7 +29,8 @@
     "sax": "~0.6.0",
     "node-xml-lite": "0.0.3",
     "request": "~2.40.0",
-    "request-enhanced": "~0.1.1"
+    "request-enhanced": "~0.1.1",
+    "csv": "~0.2.9"
   },
   "devDependencies": {
     "pretty-data": "~0.40.0",
