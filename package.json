@@ -21,10 +21,10 @@
     "csv": "~0.3.7",
     "rgbcolor": "0.0.3",
     "he": "~0.4.1",
-    "biopax2json": "wikipathways/biopax2json",
     "bridgedb": "~4.0.0",
-    "tower-strcase": "ariutta/strcase",
-    "uuid": "~1.4.1"
+    "tower-strcase": "git://github.com/tower/strcase.git",
+    "uuid": "~1.4.1",
+    "biopax2json": "git://github.com/wikipathways/biopax2json.git"
   },
   "devDependencies": {
     "pretty-data": "~0.40.0",
