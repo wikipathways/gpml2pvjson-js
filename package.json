@@ -22,7 +22,7 @@
     "rgbcolor": "0.0.3",
     "he": "~0.4.1",
     "biopax2json": "wikipathways/biopax2json",
-    "bridgedb": "bridgedb/bridgedbjs",
+    "bridgedb": "bridgedb",
     "tower-strcase": "ariutta/strcase",
     "uuid": "~1.4.1"
   },
