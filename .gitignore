@@ -1,3 +1,5 @@
+test/output
+test/pathways-completed.json
 data-input
 data-output
 node_modules

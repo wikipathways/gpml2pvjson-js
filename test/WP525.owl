@@ -1,0 +1,582 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+	xmlns:owl="http://www.w3.org/2002/07/owl#"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:biopax="http://www.biopax.org/release/biopax-level3.owl#"
+	xmlns:dcterms="http://purl.org/dc/terms/"
+>
+<owl:Ontology rdf:about="">
+ <owl:imports rdf:resource="http://www.biopax.org/release/biopax-level3.owl#" />
+</owl:Ontology>
+  <biopax:PublicationXref rdf:about="http://identifiers.org/wikipathways/WP525/a26">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">3</biopax:displayName>
+  </biopax:PublicationXref>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/idpvjs55498">
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/e5b5b"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/ae8d8"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/e5e16"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/de1c8"/>
+  </biopax:PhysicalEntity>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/idpvjs55456">
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/dad"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/df8"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/b27"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/b0a"/>
+  </biopax:PhysicalEntity>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/c2106">
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/c1590"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/a2d69"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/c445d"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/a938e"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/b2cb6"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/be14e"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/c8544"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/c6446"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/f1167"/>
+  </biopax:PhysicalEntity>
+  <biopax:Pathway rdf:about="http://identifiers.org/wikipathways/WP525">
+    <biopax:standardName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Mitochondrial Unfolded-Protein Response</biopax:standardName>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/idc5bdf17d">
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/cc60b"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/ac8"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/a23"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000170"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Catalysis rdf:about="http://identifiers.org/wikipathways/WP525/idb1d74a40">
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/a3b8f"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000172"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/id482a1806"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/b35"/>
+      </biopax:Catalysis>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/ida3abac28"/>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:GeneticInteraction rdf:about="http://identifiers.org/wikipathways/WP525/idc9ad097">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000183"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/c6a6c"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000184"/>
+      </biopax:GeneticInteraction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/ida90cc3b4">
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/dbab1"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/e3f56"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/b35"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id4ff173f9">
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/a67c9"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/dd906"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/id5081356c">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000169"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/a67c9"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/ac8"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/c7c03"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id756140b4">
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/adc80"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/e3f56"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Catalysis rdf:about="http://identifiers.org/wikipathways/WP525/id2ce27145">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000172"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/f4283"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/f3b"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/id7dc4acf4"/>
+      </biopax:Catalysis>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/idcc616bcc">
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/b35"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/c6a6c"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000170"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/adc80"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/id1978e1e1">
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/cb4"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/cb05a"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000170"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/ab4ad"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Catalysis rdf:about="http://identifiers.org/wikipathways/WP525/ida851659f">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000172"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/id4ff173f9"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/db0"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/c22"/>
+      </biopax:Catalysis>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id96190f32"/>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id482a1806">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/dbab1"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/b35"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/a1652"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:GeneticInteraction rdf:about="http://identifiers.org/wikipathways/WP525/ida435914a">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000184"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/eb5"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000183"/>
+      </biopax:GeneticInteraction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/idc1ee3682">
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/ab4ad"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/f3b"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/a7d42"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000170"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Catalysis rdf:about="http://identifiers.org/wikipathways/WP525/idaaff883">
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/db832"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000172"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/id4ff173f9"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/f3b"/>
+      </biopax:Catalysis>
+    </biopax:pathwayComponent>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">UPRmt</biopax:displayName>
+    <biopax:pathwayComponent>
+      <biopax:Catalysis rdf:about="http://identifiers.org/wikipathways/WP525/id693789d7">
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/cb05a"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000172"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/cb4"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/id468d5052"/>
+      </biopax:Catalysis>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/idd9dd9146">
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/b35"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/f3790"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/adc80"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000170"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:organism rdf:resource="http://identifiers.org/wikipathways/WP525/Caenorhabditis elegans"/>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/id1af9b5c6">
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/a67c9"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/ac8"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/c93bd"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000169"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id1a7b5539">
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/c22"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/fde"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/d9a63"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id63deac2b">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/fcc93"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/ed00e"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id5d87cbcd">
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/b2d52"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/d1b"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/d96"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Catalysis rdf:about="http://identifiers.org/wikipathways/WP525/id2a13e278">
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/id9fa977d2"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000172"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/f6117"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/cb4"/>
+      </biopax:Catalysis>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id7dc4acf4">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/dd906"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/ab4ad"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/ed8dc">
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/faa04"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000170"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/c22"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/f3790"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wormbase/WBInteraction000520482"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Catalysis rdf:about="http://identifiers.org/wikipathways/WP525/id5c5e4f04">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000172"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/ffdce"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/b35"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/ida90cc3b4"/>
+      </biopax:Catalysis>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id9fa977d2">
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/cee06"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/fafac"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id82dd8a07"/>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/idb8a520d6">
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/caa4a"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/cee06"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000169"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/idcf94101c">
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/f8b84"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/fcc93"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Catalysis rdf:about="http://identifiers.org/wikipathways/WP525/id52299414">
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/f1fc4"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000172"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/id4ff173f9"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/f3b"/>
+      </biopax:Catalysis>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id81422e78"/>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/id87cffd7c">
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/ac8"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/bb481"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000169"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/a67c9"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Catalysis rdf:about="http://identifiers.org/wikipathways/WP525/id438a8c9f">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000172"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/a7261"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/ida90cc3b4"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/b35"/>
+      </biopax:Catalysis>
+    </biopax:pathwayComponent>
+    <biopax:idVersion rdf:datatype="http://www.w3.org/2001/XMLSchema#string">74871</biopax:idVersion>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/id457a1d82">
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/ac8"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000170"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/f3790"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/c0fa2"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Catalysis rdf:about="http://identifiers.org/wikipathways/WP525/id195dea3d">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000172"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/ab4ad"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/f3b"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/id756140b4"/>
+      </biopax:Catalysis>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Control rdf:about="http://identifiers.org/wikipathways/WP525/id4ef39cae">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000169"/>
+        <biopax:controller rdf:resource="http://identifiers.org/wikipathways/WP525/ab4ad"/>
+        <biopax:xref rdf:resource="http://identifiers.org/wikipathways/WP525/b35"/>
+        <biopax:controlled rdf:resource="http://identifiers.org/wikipathways/WP525/ida90cc3b4"/>
+      </biopax:Control>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id468d5052">
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000393"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/cee06"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000167"/>
+        <biopax:participant rdf:resource="http://identifiers.org/wikipathways/WP525/fafac"/>
+        <biopax:interactionType rdf:resource="http://identifiers.org/biomodels.sbo/SBO:0000394"/>
+      </biopax:Interaction>
+    </biopax:pathwayComponent>
+    <biopax:xref>
+      <biopax:PublicationXref rdf:about="http://identifiers.org/wikipathways/WP525/b31">
+        <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">2</biopax:displayName>
+      </biopax:PublicationXref>
+    </biopax:xref>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id5123d0a5"/>
+    </biopax:pathwayComponent>
+    <biopax:pathwayComponent>
+      <biopax:Interaction rdf:about="http://identifiers.org/wikipathways/WP525/id7f2b40a9"/>
+    </biopax:pathwayComponent>
+  </biopax:Pathway>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/Y81G3A.3">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">GCN-2</biopax:displayName>
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/Y81G3A.3"/>
+  </biopax:ProteinReference>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/ec15e">
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/d7ea5"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/aa85c"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/bdc05"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/eeddf"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/c80e9"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/b0280"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/d96b5"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/e9b31"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/bf6d8"/>
+  </biopax:PhysicalEntity>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/idpvjs55540">
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/e6473"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/fc60e"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/d1550"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/dc781"/>
+  </biopax:PhysicalEntity>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/Y37E3.10">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/Y37E3.10"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">eIF2-alpha
+(Y37E3.10)</biopax:displayName>
+  </biopax:ProteinReference>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/idpvjs53520">
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/d552f"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/e569b"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/e45f6"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/a3e3a"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/bd6b4"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/d63bb"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/fd25e"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/a7a91"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/e3c6d"/>
+  </biopax:PhysicalEntity>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/Y47G6A.10">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/Y47G6A.10"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">SPG-7</biopax:displayName>
+  </biopax:ProteinReference>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/C30H6.6">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/C30H6.6"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">HAF-1</biopax:displayName>
+  </biopax:ProteinReference>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/ZK970.2">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">CLPP-1</biopax:displayName>
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/ZK970.2"/>
+  </biopax:ProteinReference>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/ensembl/D2030.2">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/En/D2030.2"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">ClpX-like
+Protease/
+(D2030.2)</biopax:displayName>
+  </biopax:ProteinReference>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/F46F11.4">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">UBL-5</biopax:displayName>
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/F46F11.4"/>
+  </biopax:ProteinReference>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/ZC376.7">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/ZC376.7"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">ATFS-1</biopax:displayName>
+  </biopax:ProteinReference>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/T24H7.1">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/T24H7.1"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">PHB-2</biopax:displayName>
+  </biopax:ProteinReference>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/C18E9.6">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/C18E9.6"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">TOMM-40</biopax:displayName>
+  </biopax:ProteinReference>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/idpvjs55356">
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/id5123d0a5"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/id96190f32"/>
+  </biopax:PhysicalEntity>
+  <biopax:PublicationXref rdf:about="http://identifiers.org/wikipathways/WP525/a47">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">4</biopax:displayName>
+  </biopax:PublicationXref>
+  <biopax:SmallMolecule rdf:about="http://identifiers.org/wikipathways/WP525/a1652">
+    <biopax:entityReference>
+      <biopax:SmallMoleculeReference rdf:about="http://identifiers.org/chebi/CHEBI:16670">
+        <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/Ce/CHEBI:16670"/>
+        <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Protein Fragments</biopax:displayName>
+      </biopax:SmallMoleculeReference>
+    </biopax:entityReference>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">ATFS-1 
+Fragments</biopax:displayName>
+  </biopax:SmallMolecule>
+  <biopax:Dna rdf:about="http://identifiers.org/wikipathways/WP525/f6117">
+    <biopax:entityReference>
+      <biopax:DnaReference rdf:about="http://identifiers.org/wormbase/F29F11.6">
+        <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/F29F11.6"/>
+        <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">GSP-1</biopax:displayName>
+      </biopax:DnaReference>
+    </biopax:entityReference>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">GSP-1</biopax:displayName>
+  </biopax:Dna>
+  <biopax:DnaReference rdf:about="http://identifiers.org/ensembl/K07A3.3">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/En/K07A3.3"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">ClpX-like
+Protease/
+(K07A3.3)</biopax:displayName>
+  </biopax:DnaReference>
+  <biopax:Dna rdf:about="http://identifiers.org/wikipathways/WP525/d9a63">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">DVE-1</biopax:displayName>
+    <biopax:entityReference>
+      <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/ZK1193.5">
+        <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/ZK1193.5"/>
+        <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">DVE-1</biopax:displayName>
+      </biopax:ProteinReference>
+    </biopax:entityReference>
+  </biopax:Dna>
+  <biopax:PublicationXref rdf:about="http://identifiers.org/wikipathways/WP525/cb4">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">8</biopax:displayName>
+  </biopax:PublicationXref>
+  <biopax:Dna rdf:about="http://identifiers.org/wikipathways/WP525/eb5">
+    <biopax:entityReference>
+      <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/C37H5.8">
+        <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">HSP-6</biopax:displayName>
+        <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/C37H5.8"/>
+      </biopax:ProteinReference>
+    </biopax:entityReference>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">hsp-6</biopax:displayName>
+  </biopax:Dna>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/a7d42">
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/fde"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/d1b"/>
+  </biopax:PhysicalEntity>
+  <biopax:SmallMoleculeReference rdf:about="http://identifiers.org/chebi/CHEBI:4883">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/Ce/CHEBI:4883"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Ethidium Bromide</biopax:displayName>
+  </biopax:SmallMoleculeReference>
+  <biopax:DnaReference rdf:about="http://identifiers.org/wormbase/F22B7.5">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">dnj-10</biopax:displayName>
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/F22B7.5"/>
+  </biopax:DnaReference>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/fcc93">
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/b6b"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/ff2"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/d25e1"/>
+  </biopax:PhysicalEntity>
+  <biopax:PublicationXref rdf:about="http://identifiers.org/wikipathways/WP525/b35">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">9</biopax:displayName>
+  </biopax:PublicationXref>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/f3790">
+    <biopax:component>
+      <biopax:Dna rdf:about="http://identifiers.org/wikipathways/WP525/a23">
+        <biopax:entityReference rdf:resource="http://identifiers.org/wormbase/Y22D7AL.5"/>
+        <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">hsp-60</biopax:displayName>
+      </biopax:Dna>
+    </biopax:component>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/eb5"/>
+  </biopax:PhysicalEntity>
+  <biopax:PublicationXref rdf:about="http://identifiers.org/wikipathways/WP525/c22">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">1</biopax:displayName>
+  </biopax:PublicationXref>
+  <biopax:Dna rdf:about="http://identifiers.org/wikipathways/WP525/db832">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">ClpX-like
+Protease/
+(K07A3.3)</biopax:displayName>
+    <biopax:entityReference rdf:resource="http://identifiers.org/ensembl/K07A3.3"/>
+  </biopax:Dna>
+  <biopax:DnaReference rdf:about="http://identifiers.org/ncbigene/173041">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">TIMM-23</biopax:displayName>
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/L/173041"/>
+  </biopax:DnaReference>
+  <biopax:DnaReference rdf:about="http://identifiers.org/wormbase/C34B2.6">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/C34B2.6"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Lon Protease/
+C34B2.6</biopax:displayName>
+  </biopax:DnaReference>
+  <biopax:Dna rdf:about="http://identifiers.org/wikipathways/WP525/ffdce">
+    <biopax:entityReference rdf:resource="http://identifiers.org/ncbigene/173041"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">TIMM-23</biopax:displayName>
+  </biopax:Dna>
+  <biopax:PhysicalEntity rdf:about="http://identifiers.org/wikipathways/WP525/f8b84">
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/c93bd"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/b040d"/>
+    <biopax:component rdf:resource="http://identifiers.org/wikipathways/WP525/dc1ed"/>
+  </biopax:PhysicalEntity>
+  <biopax:Dna rdf:about="http://identifiers.org/wikipathways/WP525/c6a6c">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">dnj-10</biopax:displayName>
+    <biopax:entityReference rdf:resource="http://identifiers.org/wormbase/F22B7.5"/>
+  </biopax:Dna>
+  <biopax:SmallMolecule rdf:about="http://identifiers.org/wikipathways/WP525/ab4ad">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Protein Fragments</biopax:displayName>
+    <biopax:entityReference rdf:resource="http://identifiers.org/chebi/CHEBI:16670"/>
+  </biopax:SmallMolecule>
+  <biopax:PublicationXref rdf:about="http://identifiers.org/wikipathways/WP525/ac8">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">7</biopax:displayName>
+  </biopax:PublicationXref>
+  <biopax:Dna rdf:about="http://identifiers.org/wikipathways/WP525/a3b8f">
+    <biopax:entityReference rdf:resource="http://identifiers.org/wormbase/C34B2.6"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Lon Protease/
+C34B2.6</biopax:displayName>
+  </biopax:Dna>
+  <biopax:SmallMolecule rdf:about="http://identifiers.org/wikipathways/WP525/dd906">
+    <biopax:entityReference rdf:resource="http://identifiers.org/chebi/CHEBI:16670"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Protein Fragments</biopax:displayName>
+  </biopax:SmallMolecule>
+  <biopax:SmallMoleculeReference rdf:about="http://identifiers.org/chebi/CHEBI:34905">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/Ce/CHEBI:34905"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Paraquat</biopax:displayName>
+  </biopax:SmallMoleculeReference>
+  <biopax:SmallMolecule rdf:about="http://identifiers.org/wikipathways/WP525/c0fa2">
+    <biopax:entityReference rdf:resource="http://identifiers.org/chebi/CHEBI:4883"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Ethidium Bromide</biopax:displayName>
+  </biopax:SmallMolecule>
+  <biopax:PublicationXref rdf:about="http://identifiers.org/wikipathways/WP525/f3b">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">5</biopax:displayName>
+  </biopax:PublicationXref>
+  <biopax:PublicationXref rdf:about="http://identifiers.org/wikipathways/WP525/d96">
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">6</biopax:displayName>
+  </biopax:PublicationXref>
+  <biopax:ProteinReference rdf:about="http://identifiers.org/wormbase/Y22D7AL.5">
+    <biopax:xref rdf:resource="http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/Y22D7AL.5"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">HSP-60</biopax:displayName>
+  </biopax:ProteinReference>
+  <biopax:SmallMolecule rdf:about="http://identifiers.org/wikipathways/WP525/cc60b">
+    <biopax:entityReference rdf:resource="http://identifiers.org/chebi/CHEBI:34905"/>
+    <biopax:displayName rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Paraquat</biopax:displayName>
+  </biopax:SmallMolecule>
+</rdf:RDF>
