@@ -55,8 +55,42 @@ highland([pathwayMetadata])
   .each(function(result) {
     function convertToBiopaxjson(pvjson) {
       var biopaxJson = {};
-      biopaxJson['@context'] = pvjson['@context'];
+      var biopaxJsonContext = biopaxJson['@context'] = pvjson['@context'];
+          /*
+          pvjson['@context'].filter(function(context) {
+            return _.isPlainObject(context) ||
+                context.indexOf('organism.jsonld') === -1;
+          });
+          //*/
+      var lastContextElement;
+      if (_.isArray(biopaxJsonContext)) {
+        lastContextElement = biopaxJsonContext[biopaxJsonContext.length - 1];
+      } else {
+        lastContextElement = biopaxJsonContext;
+      }
+
+      var owlContext = {
+        'xsd': 'http://www.w3.org/2001/XMLSchema#',
+        'biopax': 'http://www.biopax.org/release/biopax-level3.owl#',
+        'owl': 'http://www.w3.org/2002/07/owl#',
+        'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+      };
+
+      lastContextElement = _.assign(lastContextElement, owlContext);
+
+      var base = lastContextElement['@base'];
+
       biopaxJson['@graph'] = [];
+
+      var owlElement = {
+        '@id': base,
+        '@type': 'owl:Ontology',
+        'owl:imports': {
+          '@id': 'biopax:'
+        }
+      };
+
+      biopaxJson['@graph'].push(owlElement);
 
       var pathway = {};
       pathway.id = pvjson.id;
@@ -68,10 +102,10 @@ highland([pathwayMetadata])
         //delete pathway.xrefs;
       }
       if (!!pvjson.standardName) {
-        pathway.standardName = pvjson.standardName;
+        pathway.name = pvjson.standardName;
       }
       if (!!pvjson.displayName) {
-        pathway.displayName = pvjson.displayName;
+        delete pathway.displayName;
       }
       if (!!pvjson.organism) {
         pathway.organism = pvjson.organism;
@@ -193,6 +227,146 @@ highland([pathwayMetadata])
       pathway.pathwayComponent = pathwayComponent;
       biopaxJson['@graph'].push(pathway);
 
+      biopaxJson['@graph'].filter(function(entity) {
+        return !!entity.type;
+      })
+      .map(function(entity) {
+        entity.type = _.isArray(entity.type) ?
+            entity.type : [entity.type];
+        return entity;
+      })
+      .filter(function(entity) {
+        return entity.type.indexOf('PublicationXref') > -1;
+      })
+      .forEach(function(entity) {
+        // TODO update the generation of these in the gpml2pvjson converter
+        // so that we get this data.
+        entity.dbName = 'Unknown';
+        entity.dbId = 'Unknown';
+        delete entity.displayName;
+        console.log('PublicationXref entity');
+        console.log(entity);
+      });
+
+      var referenceTypes = [
+        'ProteinReference',
+        'SmallMoleculeReference',
+        'DnaReference',
+        'RnaReference',
+        'GeneReference'
+      ];
+
+      var gpmlDataNodeTypeToBiopaxEntityTypeMappings = {
+        'gpml:Metabolite':'SmallMolecule',
+        'gpml:GeneProduct':'Dna',
+        // TODO is this wrong? Biopax documentation says, "A physical entity in BioPAX never represents a specific molecular instance."
+        'gpml:Unknown':'PhysicalEntity',
+      };
+
+      biopaxJson['@graph'].filter(function(entity) {
+        return !!entity.type;
+      })
+      .map(function(entity) {
+        entity.type = _.isArray(entity.type) ?
+            entity.type : [entity.type];
+        return entity;
+      })
+      .filter(function(entity) {
+        var matchingReferenceTypes = _.intersection(
+            entity.type, _.keys(gpmlDataNodeTypeToBiopaxEntityTypeMappings));
+        return matchingReferenceTypes.length > 0;
+      })
+      .forEach(function(entity) {
+        entity.type = gpmlDataNodeTypeToBiopaxEntityTypeMappings[entity.type];
+      });
+
+      var references = biopaxJson['@graph'].filter(function(entity) {
+        return !!entity.type;
+      })
+      .map(function(entity) {
+        entity.type = _.isArray(entity.type) ?
+            entity.type : [entity.type];
+        return entity;
+      })
+      .filter(function(entity) {
+        var matchingReferenceTypes = _.intersection(
+            entity.type, referenceTypes);
+        return matchingReferenceTypes.length > 0;
+      });
+
+      references.forEach(function(entity) {
+        entity.organism = pathway.organism;
+      });
+
+      var unificationXrefs = references.map(function(entity) {
+        var iri = entity.id;
+        var iriComponents = iri.split('identifiers.org');
+        var iriPath = iriComponents[iriComponents.length - 1];
+        var iriPathComponents = iriPath.split('/');
+        var preferredPrefix = iriPathComponents[1];
+        var identifier = iriPathComponents[2];
+        return {
+          id: entity.xrefs,
+          type: 'UnificationXref',
+          dbId: identifier,
+          dbName: preferredPrefix
+        };
+      });
+
+      var bioSourceUnificationXref = {
+        // TODO generate an actual UUID
+        '@id': 'vn3w8uew8bgv38b4gvniawu4iubg3y4bt3',
+        '@type': 'biopax:UnificationXref',
+        'dbId': '9606',
+        'dbName': 'taxonomy'
+      };
+      biopaxJson['@graph'].push(bioSourceUnificationXref);
+
+      // TODO this is kludgy. Can we set up the JSON-LD contexts
+      // such that we don't need this to specify the IRI for
+      // the @id in the BioSource?
+      var organismNameToIriMappings = {
+        'Anopheles gambiae': 'http://identifiers.org/taxonomy/7165',
+        'Arabidopsis thaliana': 'http://identifiers.org/taxonomy/3702',
+        'Bacillus subtilis': 'http://identifiers.org/taxonomy/1423',
+        'Bos taurus': 'http://identifiers.org/taxonomy/9913',
+        'Caenorhabditis elegans': 'http://identifiers.org/taxonomy/6239',
+        'Canis familiaris': 'http://identifiers.org/taxonomy/9615',
+        'Danio rerio': 'http://identifiers.org/taxonomy/7955',
+        'Drosophila melanogaster': 'http://identifiers.org/taxonomy/7227',
+        'Escherichia coli': 'http://identifiers.org/taxonomy/562',
+        'Equus caballus': 'http://identifiers.org/taxonomy/9796',
+        'Gallus gallus': 'http://identifiers.org/taxonomy/9031',
+        'Gibberella zeae': 'http://identifiers.org/taxonomy/5518',
+        'Homo sapiens': 'http://identifiers.org/taxonomy/9606',
+        'Hordeum vulgare': 'http://identifiers.org/taxonomy/4513',
+        'Mus musculus': 'http://identifiers.org/taxonomy/10090',
+        'Mycobacterium tuberculosis': 'http://identifiers.org/taxonomy/1773',
+        'Oryza sativa': 'http://identifiers.org/taxonomy/4530',
+        'Pan troglodytes': 'http://identifiers.org/taxonomy/9598',
+        'Rattus norvegicus': 'http://identifiers.org/taxonomy/10116',
+        'Saccharomyces cerevisiae': 'http://identifiers.org/taxonomy/4932',
+        'Solanum lycopersicum': 'http://identifiers.org/taxonomy/4081',
+        'Sus scrofa': 'http://identifiers.org/taxonomy/9823',
+        'Zea mays': 'http://identifiers.org/taxonomy/4577'
+      };
+
+      var bioSource = {
+        '@id': organismNameToIriMappings[pathway.organism],
+        '@type': 'biopax:BioSource',
+        'xref': 'vn3w8uew8bgv38b4gvniawu4iubg3y4bt3',
+        'biopax:standardName': {
+          '@value': pathway.organism,
+          '@type': 'xsd:string'
+        }
+      };
+      biopaxJson['@graph'].push(bioSource);
+
+      biopaxJson['@graph'] = biopaxJson['@graph'].concat(unificationXrefs);
+
+      console.log('unificationXrefs');
+      console.log(unificationXrefs);
+
       //*
       console.log('BioPAX in compacted JSON-LD format');
       console.log(JSON.stringify(biopaxJson, null, '  '));
@@ -202,14 +376,18 @@ highland([pathwayMetadata])
       jsonld.expand(biopaxJson, function(err, expanded) {
         console.log('BioPAX in expanded JSON-LD format');
         console.log(JSON.stringify(expanded, null, '  '));
+        console.log(err);
       });
       //*/
 
       //*
-      jsonld.toRDF(biopaxJson, {format: 'application/nquads'}, function(err, biopaxNquads) {
-        console.log('BioPAX in N-QUADS RDF format');
-        console.log(biopaxNquads);
-      });
+      jsonld.toRDF(biopaxJson,
+          {format: 'application/nquads'},
+          function(err, biopaxNquads) {
+            console.log('BioPAX in N-QUADS RDF format');
+            console.log(biopaxNquads);
+            console.log(err);
+          });
       //*/
     };
 
