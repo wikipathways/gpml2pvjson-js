@@ -69,14 +69,11 @@ highland([pathwayMetadata])
         lastContextElement = biopaxJsonContext;
       }
 
-      var owlContext = {
-        'xsd': 'http://www.w3.org/2001/XMLSchema#',
-        'biopax': 'http://www.biopax.org/release/biopax-level3.owl#',
-        'owl': 'http://www.w3.org/2002/07/owl#',
-        'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
-      };
+      biopaxJson['@context'].unshift(
+          'https://wikipathwayscontexts.firebaseio.com/owlPrerequisites.json');
 
-      lastContextElement = _.assign(lastContextElement, owlContext);
+      lastContextElement.biopax =
+          'http://www.biopax.org/release/biopax-level3.owl#';
 
       var base = lastContextElement['@base'];
 
@@ -369,18 +366,22 @@ highland([pathwayMetadata])
 
       //*
       console.log('BioPAX in compacted JSON-LD format');
-      console.log(JSON.stringify(biopaxJson, null, '  '));
+      console.log(JSON.stringify(biopaxJson));
+      //console.log(JSON.stringify(biopaxJson, null, '  '));
       //*/
 
-      //*
+      /*
       jsonld.expand(biopaxJson, function(err, expanded) {
+        if (err) {
+          throw err;
+        }
         console.log('BioPAX in expanded JSON-LD format');
-        console.log(JSON.stringify(expanded, null, '  '));
-        console.log(err);
+        console.log(JSON.stringify(expanded));
+        //console.log(JSON.stringify(expanded, null, '  '));
       });
       //*/
 
-      //*
+      /*
       jsonld.toRDF(biopaxJson,
           {format: 'application/nquads'},
           function(err, biopaxNquads) {
