@@ -1,14 +1,16 @@
 {
-  "name": "gpml2json",
+  "name": "gpml2pvjson",
   "version": "0.0.6",
-  "description": "convert GPML (XML) to pvjson (json)",
-  "main": "src/gpml.js",
+  "description": "Convert GPML (XML) to and from pvjson (JSON)",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "gpml",
-    "pathway"
+    "pathway",
+    "biology",
+    "bioinformatics"
   ],
   "author": "Anders Riutta",
   "license": "Apache 2",
@@ -35,10 +37,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/wikipathways/gpml2json.git"
+    "url": "https://github.com/wikipathways/gpml2pvjson-js.git"
   },
   "bugs": {
-    "url": "https://github.com/wikipathways/gpml2json/issues"
+    "url": "https://github.com/wikipathways/gpml2pvjson-js/issues"
   },
-  "homepage": "https://github.com/wikipathways/gpml2json"
+  "homepage": "https://github.com/wikipathways/gpml2pvjson-js"
 }
