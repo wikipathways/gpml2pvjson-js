@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+//#!/usr/bin/env node
 
 var GpmlUtilities = require('./gpml-utilities.js')
   , Async = require('async')
@@ -51,7 +51,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
     }
   };
 
-  Gpml2Json.toPvjson = function(gpmlPathwaySelection, pathwayMetadata, callbackOutside){
+  Gpml2Json.toPvjson = function(gpmlPathwaySelection, pathwayMetadata, callbackOutside) {
     var xmlns = gpmlPathwaySelection.attr('xmlns');
     gpmlPathwaySelection = this.fixBiopax(this.addIsPartOfAttribute(this.makeExplicit(gpmlPathwaySelection)));
     var pvjson = {};
@@ -61,10 +61,10 @@ var GpmlUtilities = require('./gpml-utilities.js')
     var globalContext = [];
     // TODO update this to remove test2.
     //globalContext.push('http://test2.wikipathways.org/v2/contexts/pathway.jsonld');
-    globalContext.push('http://test2.wikipathways.org/v2/contexts/biopax.jsonld');
-    globalContext.push('http://test2.wikipathways.org/v2/contexts/organism.jsonld');
-    globalContext.push('http://test2.wikipathways.org/v2/contexts/cellular-location.jsonld');
-    globalContext.push('http://test2.wikipathways.org/v2/contexts/display.jsonld');
+    globalContext.push('https://wikipathwayscontexts.firebaseio.com/biopax/.json');
+    globalContext.push('https://wikipathwayscontexts.firebaseio.com/organism/.json');
+    globalContext.push('https://wikipathwayscontexts.firebaseio.com/cellularLocation/.json');
+    globalContext.push('https://wikipathwayscontexts.firebaseio.com/display/.json');
     //globalContext.push('http://test2.wikipathways.org/v2/contexts/interaction-type.jsonld');
     pvjson['@context'] = globalContext;
     var localContext = {};
@@ -137,7 +137,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
           },
           function(jsonBiopax, callbackWaterfall) {
             Async.parallel({
-              BiopaxRef: function(callback){
+              BiopaxRef: function(callback) {
                 var biopaxRefsSelection = gpmlPathwaySelection.find('Pathway > BiopaxRef');
                 // TODO don't repeat this code with the same code in element.js
                 if (biopaxRefsSelection.length > 0 && !!jsonBiopax && !!jsonBiopax.entities) {
@@ -159,7 +159,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No biopaxRefs to convert.');
                 }
               },
-              dataSource: function(callback){
+              dataSource: function(callback) {
                 var jsonDataSource = gpmlPathwaySelection.attr('Data-Source');
                 if (!!jsonDataSource) {
                   pvjson.dataSource = jsonDataSource;
@@ -169,7 +169,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No DataSource to convert.');
                 }
               },
-              version: function(callback){
+              version: function(callback) {
                 var jsonVersion = gpmlPathwaySelection.attr('Version');
                 if (!!jsonVersion) {
                   pvjson.idVersion = jsonVersion;
@@ -179,7 +179,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No Version to convert.');
                 }
               },
-              author: function(callback){
+              author: function(callback) {
                 var jsonAuthor = gpmlPathwaySelection.attr('Author');
                 if (!!jsonAuthor) {
                   pvjson.author = jsonAuthor;
@@ -189,7 +189,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No Author to convert.');
                 }
               },
-              maintainer: function(callback){
+              maintainer: function(callback) {
                 var jsonMaintainer = gpmlPathwaySelection.attr('Maintainer');
                 if (!!jsonMaintainer) {
                   pvjson.maintainer = jsonMaintainer;
@@ -199,7 +199,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No Maintainer to convert.');
                 }
               },
-              email: function(callback){
+              email: function(callback) {
                 var jsonEmail = gpmlPathwaySelection.attr('Email');
                 if (!!jsonEmail) {
                   pvjson.email = jsonEmail;
@@ -209,7 +209,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No Email to convert.');
                 }
               },
-              lastModified: function(callback){
+              lastModified: function(callback) {
                 var jsonLastModified = gpmlPathwaySelection.attr('Last-Modified');
                 if (!!jsonLastModified) {
                   pvjson.lastModified = jsonLastModified;
@@ -219,7 +219,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No LastModified to convert.');
                 }
               },
-              license: function(callback){
+              license: function(callback) {
                 var jsonLicense = gpmlPathwaySelection.attr('License');
                 if (!!jsonLicense) {
                   pvjson.license = jsonLicense;
@@ -229,7 +229,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No License to convert.');
                 }
               },
-              name: function(callback){
+              name: function(callback) {
                 var jsonName = gpmlPathwaySelection.attr('Name');
                 if (!!jsonName) {
                   var splitName = jsonName.split(' (');
@@ -246,7 +246,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No Name to convert.');
                 }
               },
-              organism: function(callback){
+              organism: function(callback) {
                 var jsonOrganism = gpmlPathwaySelection.attr('Organism');
                 if (!!jsonOrganism) {
                   pvjson.organism = jsonOrganism;
@@ -256,7 +256,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No Organism to convert.');
                 }
               },
-              image: function(callback){
+              image: function(callback) {
                 pvjson.image = {
                   '@context': {
                     '@vocab': 'http://schema.org/'
@@ -266,7 +266,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                 };
                 callback(null, pvjson.image);
               },
-              dataNode: function(callback){
+              dataNode: function(callback) {
                 gpmlPathwaySelection.find('DataNode').each(function() {
                   var dataNodeSelection = $( this );
                   //var dataNodeSelection = this;
@@ -276,7 +276,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                 });
                 callback(null, 'DataNodes are all converted.');
               },
-              label: function(callback){
+              label: function(callback) {
                 gpmlPathwaySelection.find('Label').each(function() {
                   var labelSelection = $( this );
                   //var dataNodeSelection = this;
@@ -286,7 +286,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                 });
                 callback(null, 'Labels are all converted.');
               },
-              shape: function(callback){
+              shape: function(callback) {
                 var shapeSelection, shapesSelection = gpmlPathwaySelection.find('Shape');
                 if (shapesSelection.length > 0) {
                   gpmlPathwaySelection.find('Shape').each(function() {
@@ -302,7 +302,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                 }
               },
               /*
-              Anchor: function(callback){
+              Anchor: function(callback) {
                 var anchorSelection, anchorsSelection = gpmlPathwaySelection.selectAll('Anchor');
                 if (anchorsSelection[0].length > 0) {
                   pvjson.anchors = [];
@@ -320,7 +320,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                 }
               },
               //*/
-              state: function(callback){
+              state: function(callback) {
                 var stateSelection, statesSelection = gpmlPathwaySelection.find('State');
                 if (statesSelection.length > 0) {
                   statesSelection.each(function() {
@@ -335,7 +335,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No states to convert.');
                 }
               },
-              graphicalLine: function(callback){
+              graphicalLine: function(callback) {
                 var graphicalLineSelection, graphicalLinesSelection = gpmlPathwaySelection.find('GraphicalLine');
                 if (graphicalLinesSelection.length > 0) {
                   gpmlPathwaySelection.find('GraphicalLine').each(function() {
@@ -350,7 +350,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
                   callback(null, 'No graphicalLines to convert.');
                 }
               },
-              interaction: function(callback){
+              interaction: function(callback) {
                 var interactionSelection, interactionsSelection = gpmlPathwaySelection.find('Interaction');
                 if (interactionsSelection.length > 0) {
                   gpmlPathwaySelection.find('Interaction').each(function() {
@@ -436,7 +436,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
       var groupId = groupSelection.attr('GroupId');
       groupSelection.attr('GroupId', null);
       var graphId = groupSelection.attr('GraphId');
-      var groupedElementsSelection = gpmlPathwaySelection.find('[GroupRef=' + groupId + ']').each(function(groupedElementSelection){
+      var groupedElementsSelection = gpmlPathwaySelection.find('[GroupRef=' + groupId + ']').each(function(groupedElementSelection) {
         groupedElementSelection = $( this );
         groupedElementSelection.attr('IsPartOf', graphId);
         groupedElementSelection.attr('GroupRef', null);
@@ -445,12 +445,12 @@ var GpmlUtilities = require('./gpml-utilities.js')
     return gpmlPathwaySelection;
   };
 
-  Gpml2Json.selectByMultipleTagNames = function(args){
+  Gpml2Json.selectByMultipleTagNames = function(args) {
     var gpmlPathwaySelection = args.gpmlPathwaySelection;
     var elementTags = args.elementTags;
     var elementsSelection;
     var newElementsSelection;
-    elementTags.forEach(function(elementTag){
+    elementTags.forEach(function(elementTag) {
       newElementsSelection = gpmlPathwaySelection.find(elementTag);
       if (!!newElementsSelection[0][0]) {
         if (!!elementsSelection) {
@@ -486,10 +486,10 @@ var GpmlUtilities = require('./gpml-utilities.js')
     var graphicalElementsSelection = gpmlPathwaySelection.find(selector);
     // graphIdStub is whatever follows 'id' at the beginning of the GraphId string
     if (graphicalElementsSelection.length > 0) {
-      graphicalElementsSelection.filter(function(){
+      graphicalElementsSelection.filter(function() {
         var graphicalElementSelection = $( this );
         return (!!graphicalElementSelection.attr('GraphId'));
-      }).each(function(){
+      }).each(function() {
         var filteredResult = $( this );
         graphId = filteredResult.attr('GraphId');
         if (graphId.slice(0,2) === 'id') {
@@ -497,17 +497,17 @@ var GpmlUtilities = require('./gpml-utilities.js')
           graphIdStubs.push(graphIdStub);
         }
       });
-      graphIdStubs.sort(function(a,b){
+      graphIdStubs.sort(function(a,b) {
         return parseInt(a, 32) - parseInt(b, 32);
       });
       var largestGraphIdStub = graphIdStubs[graphIdStubs.length - 1] || 0;
 
       // Add a GraphId to every element missing a GraphId by converting the largest graphIdStub to int, incrementing,
       // converting back to base32 and appending it to the string 'id'.
-      graphicalElementsSelection.filter(function(){
+      graphicalElementsSelection.filter(function() {
         var graphicalElementSelection = $( this );
         return (!graphicalElementSelection.attr('GraphId'));
-      }).each(function(){
+      }).each(function() {
         var filteredResult = $( this );
         largestGraphIdStub = (parseInt(largestGraphIdStub, 32) + 1).toString(32);
         filteredResult.attr('GraphId', 'id' + largestGraphIdStub);
@@ -603,7 +603,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
       };
       groupGraphicsElements.Pathway = createGraphicsElementForGroup(groupTypePathwayGraphicsElementAttributes);
 
-      var groupCollectionSelection = gpmlPathwaySelection.find('Group').each(function(){
+      var groupCollectionSelection = gpmlPathwaySelection.find('Group').each(function() {
         var groupSelection = $( this );
 
         // TODO in GPML now, groups of type "None" appear to always lack the Style attribute,
@@ -629,18 +629,18 @@ var GpmlUtilities = require('./gpml-utilities.js')
       if (nodesSelection.length > 0) {
         var labelsSelection = gpmlPathwaySelection.find('Label');
         if (labelsSelection.length > 0) {
-          labelsSelection.filter(function(){
+          labelsSelection.filter(function() {
             var labelSelection = $( this );
             var graphicsSelection = labelSelection.find('Graphics');
             return (!graphicsSelection.attr('ShapeType'));
-          }).each(function(){
+          }).each(function() {
             var graphicsSelection = $( this ).find('Graphics');
             graphicsSelection.attr('ShapeType', 'None');
           });
-          labelsSelection.filter(function(){
+          labelsSelection.filter(function() {
             var graphicsSelection = $( this ).find('Graphics');
             return (!graphicsSelection.attr('FillColor'));
-          }).each(function(){
+          }).each(function() {
             var graphicsSelection = $( this ).find('Graphics');
             graphicsSelection.attr('FillColor', 'Transparent');
           });
@@ -648,26 +648,26 @@ var GpmlUtilities = require('./gpml-utilities.js')
 
         var statesSelection = gpmlPathwaySelection.find('State');
         if (statesSelection.length > 0) {
-          statesSelection.filter(function(){
+          statesSelection.filter(function() {
             var graphicsSelection = $( this ).find('Graphics');
             return (!graphicsSelection.attr('FillColor'));
-          }).each(function(){
+          }).each(function() {
             var graphicsSelection = $( this ).find('Graphics');
             graphicsSelection.attr('FillColor', 'ffffff');
           });
 
-          statesSelection.filter(function(){
+          statesSelection.filter(function() {
             var graphicsSelection = $( this ).find('Graphics');
             return (!graphicsSelection.attr('FontSize'));
-          }).each(function(){
+          }).each(function() {
             var graphicsSelection = $( this ).find('Graphics');
             graphicsSelection.attr('FontSize', 10);
           });
 
-          statesSelection.filter(function(){
+          statesSelection.filter(function() {
             var graphicsSelection = $( this ).find('Graphics');
             return (!graphicsSelection.attr('Valign'));
-          }).each(function(){
+          }).each(function() {
             var graphicsSelection = $( this ).find('Graphics');
             graphicsSelection.attr('Valign', 'Middle');
           });
@@ -675,23 +675,23 @@ var GpmlUtilities = require('./gpml-utilities.js')
 
         var shapesSelection = gpmlPathwaySelection.find('Shape');
         if (shapesSelection.length > 0) {
-          shapesSelection.filter(function(){
+          shapesSelection.filter(function() {
             var graphicsSelection = $( this ).find('Graphics');
             return (!graphicsSelection.attr('FillColor'));
-          }).each(function(){
+          }).each(function() {
             var graphicsSelection = $( this ).find('Graphics');
             graphicsSelection.attr('FillColor', 'Transparent');
           });
 
-          shapesSelection.filter(function(){
+          shapesSelection.filter(function() {
             var graphicsSelection = $( this ).find('Graphics');
             return (graphicsSelection.attr('Rotation') === '0.0');
-          }).each(function(){
+          }).each(function() {
             var graphicsSelection = $( this ).find('Graphics');
             graphicsSelection.attr('Rotation', null);
           });
 
-          var cellularComponentsSelection = shapesSelection.find('[Key="org.pathvisio.CellularComponentProperty"]').each(function(){
+          var cellularComponentsSelection = shapesSelection.find('[Key="org.pathvisio.CellularComponentProperty"]').each(function() {
             var cellularComponentSelection = $(this);
             cellularComponentValue = cellularComponentSelection.attr('Value');
             cellularComponentSelection.parent().attr('CellularComponent', cellularComponentValue);
@@ -699,66 +699,66 @@ var GpmlUtilities = require('./gpml-utilities.js')
         }
 
         // "Ellipse" is the word that other graphics libraries seem to have standardized on.
-        nodesSelection.filter(function(){
+        nodesSelection.filter(function() {
           var graphicsSelection = $( this ).find('Graphics');
           return (graphicsSelection.attr('ShapeType') === 'Oval');
-        }).each(function(){
+        }).each(function() {
           var graphicsSelection = $( this ).find('Graphics');
           graphicsSelection.attr('ShapeType', 'Ellipse');
         });
 
-        nodesSelection.filter(function(){
+        nodesSelection.filter(function() {
           var graphicsSelection = $( this ).find('Graphics');
           return (!graphicsSelection.attr('Padding'));
-        }).each(function(){
+        }).each(function() {
           var graphicsSelection = $( this ).find('Graphics');
           graphicsSelection.attr('Padding', '0.5em');
         });
 
-        nodesSelection.filter(function(){
+        nodesSelection.filter(function() {
           var graphicsSelection = $( this ).find('Graphics');
           return (!graphicsSelection.attr('ShapeType'));
-        }).each(function(){
+        }).each(function() {
           var graphicsSelection = $( this ).find('Graphics');
           graphicsSelection.attr('ShapeType', 'Rectangle');
         });
 
-        nodesSelection.filter(function(){
+        nodesSelection.filter(function() {
           var graphicsSelection = $( this ).find('Graphics');
           return (!graphicsSelection.attr('Color'));
-        }).each(function(){
+        }).each(function() {
           var graphicsSelection = $( this ).find('Graphics');
           graphicsSelection.attr('Color', '000000');
         });
 
-        nodesSelection.filter(function(){
+        nodesSelection.filter(function() {
           var graphicsSelection = $( this ).find('Graphics');
           return (!graphicsSelection.attr('LineThickness'));
-        }).each(function(){
+        }).each(function() {
           var graphicsSelection = $( this ).find('Graphics');
           graphicsSelection.attr('LineThickness', 1);
         });
 
-        nodesSelection.filter(function(){
+        nodesSelection.filter(function() {
           var graphicsSelection = $( this ).find('Graphics');
           return (!graphicsSelection.attr('ZOrder'));
-        }).each(function(){
+        }).each(function() {
           var graphicsSelection = $( this ).find('Graphics');
           graphicsSelection.attr('ZOrder', 0);
         });
 
-        nodesSelection.filter(function(){
+        nodesSelection.filter(function() {
           var graphicsSelection = $( this ).find('Graphics');
           return (!graphicsSelection.attr('Align'));
-        }).each(function(){
+        }).each(function() {
           var graphicsSelection = $( this ).find('Graphics');
           graphicsSelection.attr('Align', 'Center');
         });
 
-        nodesSelection.filter(function(){
+        nodesSelection.filter(function() {
           var graphicsSelection = $( this ).find('Graphics');
           return (!graphicsSelection.attr('Valign'));
-        }).each(function(){
+        }).each(function() {
           var graphicsSelection = $( this ).find('Graphics');
           graphicsSelection.attr('Valign', 'Top');
         });
@@ -772,7 +772,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
           triangleWidthCorrectionFactor = 0.938,
           triangleHeightCorrectionFactor = 0.868;
         var trianglesSelection = shapesSelection.find('[ShapeType="Triangle"]');
-        trianglesSelection.each(function(){
+        trianglesSelection.each(function() {
           triangleSelection = $(this);
 
           // TODO check whether this should be .attr or .find('graphics').attr
@@ -805,7 +805,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
           .attr('Width', correctedWidth);
         });
         var arcSelection;
-        var arcsSelection = shapesSelection.find('[ShapeType="Arc"]').each(function(){
+        var arcsSelection = shapesSelection.find('[ShapeType="Arc"]').each(function() {
           arcSelection = $( this );
 
           var gpmlHeight = parseFloat(arcSelection.attr('Height'));
@@ -834,7 +834,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
         var pentagonSelection,
           pentagonXScaleFactor = 0.904,
           pentagonYScaleFactor = 0.95;
-        var pentagonsSelection = shapesSelection.find('[ShapeType="Pentagon"]').each(function(){
+        var pentagonsSelection = shapesSelection.find('[ShapeType="Pentagon"]').each(function() {
           pentagonSelection = $(this);
           gpmlWidth = parseFloat(pentagonSelection.attr('Width'));
           gpmlHeight = parseFloat(pentagonSelection.attr('Height'));
@@ -845,7 +845,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
         });
         var hexagonSelection,
           hexagonYScaleFactor = 0.88;
-        var hexagonsSelection = shapesSelection.find('[ShapeType="Hexagon"]').each(function(){
+        var hexagonsSelection = shapesSelection.find('[ShapeType="Hexagon"]').each(function() {
           hexagonSelection = $(this);
           gpmlHeight = parseFloat(hexagonSelection.attr('Height'));
           hexagonSelection.attr('Height', gpmlHeight * hexagonYScaleFactor);
@@ -854,9 +854,9 @@ var GpmlUtilities = require('./gpml-utilities.js')
         var dataNodeSelection, dataNodeType;
         var dataNodesSelection = gpmlPathwaySelection.find('DataNode');
         if (dataNodesSelection.length > 0) {
-          dataNodesSelection.filter(function(){
+          dataNodesSelection.filter(function() {
             return (!$(this).find('Graphics').attr('FillColor'));
-          }).each(function(){
+          }).each(function() {
             $(this).find('Graphics').attr('FillColor', 'ffffff');
           });
         }
@@ -864,7 +864,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
       }
 
       // This applies to both nodes and edges
-      var doubleLinesSelection = gpmlPathwaySelection.find('[Key="org.pathvisio.DoubleLineProperty"]').each(function(){
+      var doubleLinesSelection = gpmlPathwaySelection.find('[Key="org.pathvisio.DoubleLineProperty"]').each(function() {
         $( this ).parent().find('Graphics').attr('LineStyle', 'Double');
       });
 
@@ -878,24 +878,24 @@ var GpmlUtilities = require('./gpml-utilities.js')
       var edgesSelection = gpmlPathwaySelection.find(edgesSelector);
 
       if (edgesSelection.length > 0) {
-        edgesSelection.each(function(){
+        edgesSelection.each(function() {
           $(this).find('Graphics').attr('FillColor', 'Transparent');
         });
-        edgesSelection.filter(function(){
+        edgesSelection.filter(function() {
           var graphicsSelection = $(this).find('Graphics');
           return (!graphicsSelection.attr('ConnectorType'));
-        }).each(function(d, i){
+        }).each(function(d, i) {
           $(this).find('Graphics').attr('ConnectorType', 'Straight');
         });
-        edgesSelection.filter(function(){
+        edgesSelection.filter(function() {
           return (!$(this).find('Graphics').attr('Color'));
-        }).each(function(d, i){
+        }).each(function(d, i) {
           $(this).find('Graphics').attr('Color', '000000');
         });
 
         var anchorsSelection = gpmlPathwaySelection.find('Anchor');
         if (anchorsSelection.length > 0) {
-           anchorsSelection.each(function(){
+           anchorsSelection.each(function() {
             var anchorSelection = $(this);
             var parentGraphicsSelection = anchorSelection.parent();
             var shapeTypeValue = anchorSelection.attr('Shape') || 'None';
@@ -918,27 +918,27 @@ var GpmlUtilities = require('./gpml-utilities.js')
             anchorSelection.attr('Shape', null);
             // In a future version of GPML, we could improve rendering speed if we included the cached X and Y values for Anchors, just like we currently do for Points.
           });
-          anchorsSelection.filter(function(){
+          anchorsSelection.filter(function() {
             var graphicsSelection = $(this).find('Graphics');
             var result = false;
             if (graphicsSelection.length > 0) {
               result = graphicsSelection.attr('ShapeType') === 'Circle';
             }
             return result;
-          }).each(function(d, i){
+          }).each(function(d, i) {
             var graphicsSelection = $(this).find('Graphics');
             graphicsSelection.attr('ShapeType', 'Ellipse');
             graphicsSelection.attr('Width', 8);
             graphicsSelection.attr('Height', 8);
           });
-          anchorsSelection.filter(function(){
+          anchorsSelection.filter(function() {
             var graphicsSelection = $(this).find('Graphics');
             var result = false;
             if (graphicsSelection.length > 0) {
               result = graphicsSelection.attr('ShapeType') === 'None';
             }
             return result;
-          }).each(function(d, i){
+          }).each(function(d, i) {
             var graphicsSelection = $(this).find('Graphics');
             graphicsSelection.attr('Width', 4);
             graphicsSelection.attr('Height', 4);
@@ -950,13 +950,12 @@ var GpmlUtilities = require('./gpml-utilities.js')
     return gpmlPathwaySelection;
   };
 
-
-  Gpml2Json.toBiopaxjson = function(gpmlPathwaySelection, pathwayMetadata, callback){
+  Gpml2Json.toBiopaxjson = function(gpmlPathwaySelection, pathwayMetadata, callback) {
+    // TODO convert Metabolite to SmallMolecule
     this.toPvjson(gpmlPathwaySelection, pathwayMetadata, function(err, pvjson) {
       var biopaxjson = {};
       biopaxjson['@context'] = pvjson['@context'];
       biopaxjson['@graph'] = [];
-
 
       var pathway = {};
       pathway.id = pvjson.id;
@@ -1084,7 +1083,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
      program
        .command('convert-to-json <wikpathways-id>')
        .description('Convert GPML to JSON.')
-       .action(function(gpml){
+       .action(function(gpml) {
 
          // haven't figured out how to go from command line to input args
           var gpmlPathwaySelection = gpml
@@ -1104,7 +1103,7 @@ var GpmlUtilities = require('./gpml-utilities.js')
      program
        .command('*')
        .description('deploy the given env')
-       .action(function(env){
+       .action(function(env) {
          console.log('deploying "%s"', env);
        });
 

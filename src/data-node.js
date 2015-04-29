@@ -10,15 +10,15 @@ var BridgeDbDataSources = require('./data-sources.json');
 
 module.exports = {
   // Use closest Biopax term.
-  gpmlToBiopaxMappings: {
-    'Metabolite':'SmallMolecule',
-    'Protein':'Protein',
-    'RNA':'Rna',
+  gpmlToNormalizedMappings: {
+    'Metabolite':'gpml:Metabolite',
+    'Protein':'biopax:Protein',
+    'RNA':'biopax:Rna',
     'Unknown':'PhysicalEntity',
-    'GeneProduct':'Dna',
+    'GeneProduct':'gpml:GeneProduct',
     //'GeneProduct':['Dna','Gene','Rna','Protein'],
-    'Pathway':'Pathway',
-    'Complex':'Complex'
+    'Pathway':'biopax:Pathway',
+    'Complex':'biopax:Complex'
   },
   generateEntityReference: function(
       displayName, dataSourceName, dbId, organism, entityType, callback) {
@@ -28,8 +28,13 @@ module.exports = {
     var entityReferenceType;
 
     entityReference.displayName = displayName;
-    entityReference.type = entityType + 'Reference';
-    // get external database namespace (as specified at identifiers.org) from GPML Xref Database attribute value.
+    if (entityType.indexOf('biopax') > -1) {
+      entityReference.type = entityType + 'Reference';
+    } else {
+      entityReference.type = entityType;
+    }
+    // get external database namespace (as specified at identifiers.org)
+    // from GPML Xref Database attribute value.
     bridgeDbDataSourcesRow = BridgeDbDataSources.filter(function(dataSource) {
       return dataSource.dataSourceName.toLowerCase()
       .replace(/[^a-z0-9]/gi, '') ===
@@ -45,12 +50,14 @@ module.exports = {
 
       if (!!organism && !!bridgeDbDbNameCode && !!dbName && !!dbId) {
         // This URL is what BridgeDB currently uses. Note it currently returns TSV.
-        // It would be nice to change the URL to something like the second version below. It would also be nice to return JSON-LD.
+        // It would be nice to change the URL to something like the second version below.
+        // It would also be nice to return JSON-LD.
         entityReference.xrefs = [encodeURI('http://webservice.bridgedb.org/' +
             organism + '/xrefs/' + bridgeDbDbNameCode + '/' + dbId)];
 
         /*
-           entityReference.xrefs = encodeURI('http://bridgedb.org/' + dbName + '/' + dbId + '/xref');
+           entityReference.xrefs = encodeURI(
+              'http://bridgedb.org/' + dbName + '/' + dbId + '/xref');
         //*/
 
         if (dbName === 'ensembl' || dbName === 'ncbigene') {
@@ -79,7 +86,7 @@ module.exports = {
     }
 
     // this is a Biopax class, like Protein or SmallMolecule
-    var entityType = this.gpmlToBiopaxMappings[gpmlDataNodeType];
+    var entityType = this.gpmlToNormalizedMappings[gpmlDataNodeType];
     if (!!entityType) {
       entity.type = entityType;
     }
