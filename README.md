@@ -1,4 +1,4 @@
-gpml2json
+gpml2pvjson
 =========
 
 Convert GPML, WikiPathways XML format, to JSON-LD
