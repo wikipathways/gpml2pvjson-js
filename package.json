@@ -15,18 +15,18 @@
   "author": "Anders Riutta",
   "license": "Apache 2",
   "dependencies": {
-    "d3": "~3.4.6",
-    "xmlhttprequest": "~1.6.0",
     "async": "~0.7.0",
-    "cheerio": "~0.16.0",
-    "lodash": "~2.4.1",
-    "csv": "~0.3.7",
-    "rgbcolor": "0.0.3",
-    "he": "~0.4.1",
+    "biopax2json": "git://github.com/wikipathways/biopax2json.git",
     "bridgedb": "~4.0.0",
+    "cheerio": "^0.16.0",
+    "csv": "~0.3.7",
+    "d3": "~3.4.6",
+    "he": "~0.4.1",
+    "lodash": "~2.4.1",
+    "rgbcolor": "0.0.3",
     "tower-strcase": "git://github.com/tower/strcase.git",
     "uuid": "~1.4.1",
-    "biopax2json": "git://github.com/wikipathways/biopax2json.git"
+    "xmlhttprequest": "~1.6.0"
   },
   "devDependencies": {
     "pretty-data": "~0.40.0",
