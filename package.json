@@ -22,18 +22,23 @@
     "csv": "~0.3.7",
     "d3": "~3.4.6",
     "he": "~0.4.1",
-    "lodash": "~2.4.1",
+    "jsonld": "^0.3.22",
+    "jsonld-rx": "git://github.com/ariutta/jsonld-rx.git",
+    "lodash": "^2.4.1",
     "rgbcolor": "0.0.3",
+    "rx": "^2.5.3",
+    "rx-node": "^1.0.1",
     "tower-strcase": "git://github.com/tower/strcase.git",
     "uuid": "~1.4.1",
     "xmlhttprequest": "~1.6.0"
   },
   "devDependencies": {
-    "pretty-data": "~0.40.0",
     "colors": "~0.6.2",
     "figlet": "~1.0.8",
+    "gulp": "~3.8.1",
     "gulp-browserify": "~0.5.0",
-    "gulp": "~3.8.1"
+    "hyperquest": "^1.2.0",
+    "pretty-data": "~0.40.0"
   },
   "repository": {
     "type": "git",
