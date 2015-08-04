@@ -22,7 +22,6 @@
     "csv": "~0.3.7",
     "d3": "~3.4.6",
     "he": "~0.4.1",
-    "jsonld": "^0.3.22",
     "jsonld-rx": "git://github.com/ariutta/jsonld-rx.git",
     "lodash": "^2.4.1",
     "rgbcolor": "0.0.3",
