@@ -1,14 +1,32 @@
+// this works. output is json-ld
+
 var _ = require('lodash');
 var Gpml2PvjsonConverter = require('../lib/index');
 var highland = require('highland');
-var jsonld = require('jsonld');
+//var jsonld = require('jsonld');
 var pd = require('pretty-data').pd;
 var request = require('request');
+var uuid = require('uuid');
 
 var pathwayMetadata = {};
 pathwayMetadata.dbName = 'wikipathways';
 pathwayMetadata.identifier = 'WP525';
 pathwayMetadata.version = '74871';
+
+function dereferenceElement(elements, id) {
+  return _.find(elements, function(element) {
+    return element.id === id;
+  });
+}
+
+function duplicateElement(elements, id) {
+  var originalElement = dereferenceElement(elements, id);
+  var newElement = _.clone(originalElement);
+  var newId = uuid.v4();
+  newElement.id = newId;
+  elements.push(newElement);
+  return newElement;
+}
 
 highland([pathwayMetadata])
   .flatMap(function(pathway) {
@@ -51,6 +69,36 @@ highland([pathwayMetadata])
         });
       }
     ));
+  })
+  .map(function(pvjson) {
+    pvjson.elements
+      .filter(function(element) {
+        return element.type === 'GeneticInteraction';
+      })
+      .map(function(element) {
+        var participants = element.participants;
+        if (participants.length === 2) {
+          var firstId = participants[0];
+          var secondId = participants[1];
+          if (firstId === secondId) {
+            var newElement = duplicateElement(pvjson.elements, firstId);
+            var newElementId = newElement.id;
+            participants[1] = newElementId;
+            var points = element.points;
+            var pointCount = points.length;
+            var lastPoint = points[pointCount - 1];
+            lastPoint.isAttachedTo = newElementId;
+          }
+        }
+        return element;
+      });
+
+    return pvjson;
+  })
+  .map(function(pvjson) {
+    console.log('pvjson94');
+    console.log(JSON.stringify(pvjson, null, '  '));
+    return pvjson;
   })
   .each(function(result) {
     function convertToBiopaxjson(pvjson) {
@@ -201,7 +249,7 @@ highland([pathwayMetadata])
             delete entity.markerEnd;
             if (!!entity.contains) {
               var containedElements = entity.contains;
-              delete entity.contains
+              delete entity.contains;
               if (!_.isArray(containedElements)) {
                 containedElements = [containedElements];
               }
@@ -256,7 +304,8 @@ highland([pathwayMetadata])
       var gpmlDataNodeTypeToBiopaxEntityTypeMappings = {
         'gpml:Metabolite':'SmallMolecule',
         'gpml:GeneProduct':'Dna',
-        // TODO is this wrong? Biopax documentation says, "A physical entity in BioPAX never represents a specific molecular instance."
+        // TODO is this wrong? Biopax documentation says,
+        // "A physical entity in BioPAX never represents a specific molecular instance."
         'gpml:Unknown':'PhysicalEntity',
       };
 
@@ -364,10 +413,10 @@ highland([pathwayMetadata])
       console.log('unificationXrefs');
       console.log(unificationXrefs);
 
-      //*
+      /*
       console.log('BioPAX in compacted JSON-LD format');
-      console.log(JSON.stringify(biopaxJson));
-      //console.log(JSON.stringify(biopaxJson, null, '  '));
+      //console.log(JSON.stringify(biopaxJson));
+      console.log(JSON.stringify(biopaxJson, null, '  '));
       //*/
 
       /*
@@ -390,7 +439,7 @@ highland([pathwayMetadata])
             console.log(err);
           });
       //*/
-    };
+    }
 
     convertToBiopaxjson(result);
 
