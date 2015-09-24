@@ -9,6 +9,20 @@ node gpml2biopaxrdfxml-streaming.js
 
 ## Validate generated BioPAX
 
+View options for local validator:
+
+```
+java -jar biopax-validator.jar
+
+```
+View options for web-client validator.
+
+
+```
+java -jar biopax-validator-client.jar
+
+```
+
 1. Download paxtools version 4.2.2 from <http://sourceforge.net/projects/biopax/files/validator/>
 2. Extract and put it into the /Applications directory
 3. Download paxtools version 3.2.2 from <http://sourceforge.net/projects/biopax/files/validator/>,
