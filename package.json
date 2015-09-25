@@ -1,5 +1,5 @@
 {
-  "name": "gpml2json",
+  "name": "gpml2pvjson",
   "version": "1.0.0",
   "description": "convert GPML (XML) to pvjson (json)",
   "main": "./lib/.index.js",
@@ -11,7 +11,7 @@
     "pathway"
   ],
   "author": "Anders Riutta",
-  "license": "Apache 2",
+  "license": "Apache-2.0",
   "dependencies": {
     "async": "~0.7.0",
     "biopax2json": "wikipathways/biopax2json",
@@ -31,7 +31,7 @@
     "rx": "^3.1.2",
     "rx-node": "^1.0.1",
     "sax": "~0.6.0",
-    "tower-strcase": "tower-strcase",
+    "tower-strcase": "~0.5.0",
     "uuid": "~1.4.1",
     "verror": "^1.6.0",
     "xmlhttprequest": "~1.6.0"
@@ -52,10 +52,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/wikipathways/gpml2json.git"
+    "url": "https://github.com/wikipathways/gpml2pvjson-js.git"
   },
   "bugs": {
-    "url": "https://github.com/wikipathways/gpml2json/issues"
+    "url": "https://github.com/wikipathways/gpml2pvjson-js/issues"
   },
-  "homepage": "https://github.com/wikipathways/gpml2json"
+  "homepage": "https://github.com/wikipathways/gpml2pvjson-js"
 }
