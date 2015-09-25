@@ -47,7 +47,7 @@
     "gulp-browserify": "~0.5.0",
     "mkdirp": "^0.5.1",
     "pretty-data": "~0.40.0",
-    "rdflib": "^0.2.8",
+    "rdflib": "git://github.com/ckristo/rdflib.js.git#a5395dd5249ce383d0ecf6e087c36aa77cb3964f",
     "xmldom": "^0.1.19"
   },
   "repository": {
