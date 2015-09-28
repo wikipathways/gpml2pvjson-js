@@ -15,7 +15,6 @@
   "dependencies": {
     "async": "~0.7.0",
     "biopax2json": "wikipathways/biopax2json",
-    "bridgedbjs": "bridgedb/bridgedbjs",
     "cheerio": "~0.16.0",
     "csv": "~0.2.9",
     "d3": "~3.4.6",
