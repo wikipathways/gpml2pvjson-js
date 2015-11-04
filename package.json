@@ -17,7 +17,7 @@
   "dependencies": {
     "async": "~0.7.0",
     "biopax2json": "git://github.com/wikipathways/biopax2json.git",
-    "bridgedb": "~5.0.2",
+    "bridgedb": "~5.0.3",
     "cheerio": "^0.16.0",
     "csv": "~0.3.7",
     "csv-streamify": "~1.0.0",
