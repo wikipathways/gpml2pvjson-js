@@ -1,6 +1,6 @@
 {
   "name": "gpml2pvjson",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Convert GPML (XML) to and from pvjson (JSON)",
   "main": "index.js",
   "scripts": {
