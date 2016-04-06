@@ -4,7 +4,8 @@
   "description": "Convert GPML (XML) to and from pvjson (JSON)",
   "main": "index.js",
   "scripts": {
-    "test": "mocha test/spec/api.js"
+    "test": "npm run test:unit",
+    "test:unit": "mocha test/spec/api.js --timeout=16000"
   },
   "keywords": [
     "gpml",
@@ -17,14 +18,14 @@
   "dependencies": {
     "async": "~0.7.0",
     "biopax2json": "git://github.com/wikipathways/biopax2json.git",
-    "bridgedb": "git://github.com/bridgedb/bridgedbjs.git#e3d87e995640ffa28dffbe63429ad948337f1950",
+    "bridgedb": "git://github.com/bridgedb/bridgedbjs.git#ac7874a1f1248d89feadc8ed491c7e14585bbd3e",
     "cheerio": "^0.16.0",
     "csv": "~0.3.7",
     "csv-streamify": "~1.0.0",
     "d3": "~3.4.6",
     "he": "^0.5.0",
     "iconv-lite": "^0.4.13",
-    "jsonld-rx-extra": "git://github.com/ariutta/jsonld-rx-extra.git#90f79d1b2c7c4e0b932006b649960f628ffb19bf",
+    "jsonld-rx-extra": "git://github.com/ariutta/jsonld-rx-extra.git#15025526dc8f04ad9b83046ded747cdb54852de3",
     "lodash": "^2.4.2",
     "rgbcolor": "0.0.3",
     "rx": "^2.5.3",
@@ -41,8 +42,11 @@
     "gulp": "~3.8.1",
     "gulp-browserify": "~0.5.0",
     "hyperquest": "^1.2.0",
+    "jquery": "^1.12.3",
+    "jsdom": "^8.3.0",
     "loggin": "^3.0.1",
     "mocha": "^2.4.5",
+    "mocha-jsdom": "^1.1.0",
     "pretty-data": "~0.40.0",
     "sinon": "^1.17.3"
   },
