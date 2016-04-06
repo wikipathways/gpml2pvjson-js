@@ -1,0 +1,1052 @@
+{
+  "@context": [
+    "https://raw.githubusercontent.com/wikipathways/metadata/master/json-ld-contexts/biopax.jsonld",
+    "https://raw.githubusercontent.com/wikipathways/metadata/master/json-ld-contexts/organism.jsonld",
+    "https://raw.githubusercontent.com/wikipathways/metadata/master/json-ld-contexts/cellular-location.jsonld",
+    "https://raw.githubusercontent.com/wikipathways/metadata/master/json-ld-contexts/display.jsonld",
+    {
+      "@base": "http://identifiers.org/wikipathways/WP525/"
+    }
+  ],
+  "@graph": [
+    {
+      "displayName": "CLPP-1",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/ZK970.2",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/ZK970.2"
+      ]
+    },
+    {
+      "displayName": "HSP-60",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/Y22D7AL.5",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/Y22D7AL.5"
+      ]
+    },
+    {
+      "displayName": "HSP-6",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/C37H5.8",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/C37H5.8"
+      ]
+    },
+    {
+      "displayName": "DVE-1",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/ZK1193.5",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/ZK1193.5"
+      ]
+    },
+    {
+      "displayName": "UBL-5",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/F46F11.4",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/F46F11.4"
+      ]
+    },
+    {
+      "type": "Dna",
+      "id": "a23",
+      "textContent": "hsp-60",
+      "entityReference": "http://identifiers.org/wormbase/Y22D7AL.5"
+    },
+    {
+      "type": "Dna",
+      "id": "eb5",
+      "textContent": "hsp-6",
+      "entityReference": "http://identifiers.org/wormbase/C37H5.8"
+    },
+    {
+      "displayName": "HAF-1",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/C30H6.6",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/C30H6.6"
+      ]
+    },
+    {
+      "displayName": "ATFS-1",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/ZC376.7",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/ZC376.7"
+      ]
+    },
+    {
+      "displayName": "GCN-2",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/Y81G3A.3",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/Y81G3A.3"
+      ]
+    },
+    {
+      "displayName": "Protein Fragments",
+      "type": "SmallMoleculeReference",
+      "id": "http://identifiers.org/chebi/CHEBI:16670",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/Ce/CHEBI:16670"
+      ]
+    },
+    {
+      "type": "SmallMolecule",
+      "id": "dd906",
+      "textContent": "Protein Fragments",
+      "entityReference": "http://identifiers.org/chebi/CHEBI:16670"
+    },
+    {
+      "type": "SmallMolecule",
+      "id": "a1652",
+      "textContent": "ATFS-1 \nFragments",
+      "entityReference": "http://identifiers.org/chebi/CHEBI:16670"
+    },
+    {
+      "displayName": "Lon Protease/\nC34B2.6",
+      "type": "DnaReference",
+      "id": "http://identifiers.org/wormbase/C34B2.6",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/C34B2.6"
+      ]
+    },
+    {
+      "type": "Dna",
+      "id": "a3b8f",
+      "textContent": "Lon Protease/\nC34B2.6",
+      "entityReference": "http://identifiers.org/wormbase/C34B2.6"
+    },
+    {
+      "displayName": "eIF2-alpha\n(Y37E3.10)",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/Y37E3.10",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/Y37E3.10"
+      ]
+    },
+    {
+      "displayName": "GSP-1",
+      "type": "DnaReference",
+      "id": "http://identifiers.org/wormbase/F29F11.6",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/F29F11.6"
+      ]
+    },
+    {
+      "type": "Dna",
+      "id": "f6117",
+      "textContent": "GSP-1",
+      "entityReference": "http://identifiers.org/wormbase/F29F11.6"
+    },
+    {
+      "displayName": "SPG-7",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/Y47G6A.10",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/Y47G6A.10"
+      ]
+    },
+    {
+      "displayName": "Ethidium Bromide",
+      "type": "SmallMoleculeReference",
+      "id": "http://identifiers.org/chebi/CHEBI:4883",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/Ce/CHEBI:4883"
+      ]
+    },
+    {
+      "type": "SmallMolecule",
+      "id": "c0fa2",
+      "textContent": "Ethidium Bromide",
+      "entityReference": "http://identifiers.org/chebi/CHEBI:4883"
+    },
+    {
+      "displayName": "Paraquat",
+      "type": "SmallMoleculeReference",
+      "id": "http://identifiers.org/chebi/CHEBI:34905",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/Ce/CHEBI:34905"
+      ]
+    },
+    {
+      "type": "SmallMolecule",
+      "id": "cc60b",
+      "textContent": "Paraquat",
+      "entityReference": "http://identifiers.org/chebi/CHEBI:34905"
+    },
+    {
+      "displayName": "PHB-2",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/T24H7.1",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/T24H7.1"
+      ]
+    },
+    {
+      "displayName": "ClpX-like\nProtease/\n(K07A3.3)",
+      "type": "DnaReference",
+      "id": "http://identifiers.org/ensembl/K07A3.3",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/En/K07A3.3",
+        "http://mygene.info/v2/gene/K07A3.3"
+      ]
+    },
+    {
+      "type": "Dna",
+      "id": "db832",
+      "textContent": "ClpX-like\nProtease/\n(K07A3.3)",
+      "entityReference": "http://identifiers.org/ensembl/K07A3.3"
+    },
+    {
+      "displayName": "ClpX-like\nProtease/\n(D2030.2)",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/ensembl/D2030.2",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/En/D2030.2",
+        "http://mygene.info/v2/gene/D2030.2"
+      ]
+    },
+    {
+      "displayName": "TOMM-40",
+      "type": "ProteinReference",
+      "id": "http://identifiers.org/wormbase/C18E9.6",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/C18E9.6"
+      ]
+    },
+    {
+      "displayName": "TIMM-23",
+      "type": "DnaReference",
+      "id": "http://identifiers.org/ncbigene/173041",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/L/173041",
+        "http://mygene.info/v2/gene/173041"
+      ]
+    },
+    {
+      "type": "Dna",
+      "id": "ffdce",
+      "textContent": "TIMM-23",
+      "entityReference": "http://identifiers.org/ncbigene/173041"
+    },
+    {
+      "displayName": "dnj-10",
+      "type": "DnaReference",
+      "id": "http://identifiers.org/wormbase/F22B7.5",
+      "xrefs": [
+        "http://webservice.bridgedb.org/Caenorhabditis%20elegans/xrefs/W/F22B7.5"
+      ]
+    },
+    {
+      "type": "Dna",
+      "id": "c6a6c",
+      "textContent": "dnj-10",
+      "entityReference": "http://identifiers.org/wormbase/F22B7.5"
+    },
+    {
+      "type": "SmallMolecule",
+      "id": "ab4ad",
+      "textContent": "Protein Fragments",
+      "entityReference": "http://identifiers.org/chebi/CHEBI:16670"
+    },
+    {
+      "type": "Dna",
+      "id": "d9a63",
+      "textContent": "DVE-1",
+      "entityReference": "http://identifiers.org/wormbase/ZK1193.5"
+    },
+    {
+      "type": "Interaction",
+      "id": "id4ff173f9",
+      "participants": [
+        "a67c9",
+        "dd906"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "f3b"
+      ],
+      "id": "idc1ee3682",
+      "controller": "ab4ad",
+      "controlled": "a7d42",
+      "interactionType": [
+        "SBO:0000170"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "xrefs": [
+        "b35"
+      ],
+      "id": "id482a1806",
+      "participants": [
+        "dbab1",
+        "a1652"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Catalysis",
+      "xrefs": [
+        "b35"
+      ],
+      "id": "idb1d74a40",
+      "controller": "a3b8f",
+      "controlled": "id482a1806",
+      "interactionType": [
+        "SBO:0000172"
+      ]
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "ac8"
+      ],
+      "id": "id1af9b5c6",
+      "controller": "c93bd",
+      "controlled": "a67c9",
+      "interactionType": [
+        "SBO:0000169"
+      ]
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "cb4"
+      ],
+      "id": "id1978e1e1",
+      "controller": "ab4ad",
+      "controlled": "cb05a",
+      "interactionType": [
+        "SBO:0000170"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "id": "id468d5052",
+      "participants": [
+        "fafac",
+        "cee06"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Catalysis",
+      "xrefs": [
+        "cb4"
+      ],
+      "id": "id693789d7",
+      "controller": "cb05a",
+      "controlled": "id468d5052",
+      "interactionType": [
+        "SBO:0000172"
+      ]
+    },
+    {
+      "type": "Control",
+      "id": "idb8a520d6",
+      "controller": "cee06",
+      "controlled": "caa4a",
+      "interactionType": [
+        "SBO:0000169"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "id": "id9fa977d2",
+      "participants": [
+        "cee06",
+        "fafac"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Catalysis",
+      "xrefs": [
+        "cb4"
+      ],
+      "id": "id2a13e278",
+      "controller": "f6117",
+      "controlled": "id9fa977d2",
+      "interactionType": [
+        "SBO:0000172"
+      ]
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "ac8"
+      ],
+      "id": "id5081356c",
+      "controller": "c7c03",
+      "controlled": "a67c9",
+      "interactionType": [
+        "SBO:0000169"
+      ]
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "ac8"
+      ],
+      "id": "id457a1d82",
+      "controller": "c0fa2",
+      "controlled": "f3790",
+      "interactionType": [
+        "SBO:0000170"
+      ]
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "ac8"
+      ],
+      "id": "idc5bdf17d",
+      "controller": "cc60b",
+      "controlled": "a23",
+      "interactionType": [
+        "SBO:0000170"
+      ]
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "ac8"
+      ],
+      "id": "id87cffd7c",
+      "controller": "bb481",
+      "controlled": "a67c9",
+      "interactionType": [
+        "SBO:0000169"
+      ]
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "b35"
+      ],
+      "id": "id4ef39cae",
+      "controller": "ab4ad",
+      "controlled": "ida90cc3b4",
+      "interactionType": [
+        "SBO:0000169"
+      ]
+    },
+    {
+      "type": "Catalysis",
+      "xrefs": [
+        "f3b"
+      ],
+      "id": "id2ce27145",
+      "controller": "f4283",
+      "controlled": "id7dc4acf4",
+      "interactionType": [
+        "SBO:0000172"
+      ]
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "b35"
+      ],
+      "id": "idcc616bcc",
+      "controller": "adc80",
+      "controlled": "c6a6c",
+      "interactionType": [
+        "SBO:0000170"
+      ]
+    },
+    {
+      "type": "GeneticInteraction",
+      "id": "idc9ad097",
+      "participants": [
+        "c6a6c",
+        "c6a6c"
+      ],
+      "interactionType": [
+        "SBO:0000183",
+        "SBO:0000184"
+      ]
+    },
+    {
+      "type": "GeneticInteraction",
+      "id": "ida435914a",
+      "participants": [
+        "eb5",
+        "eb5"
+      ],
+      "interactionType": [
+        "SBO:0000183",
+        "SBO:0000184"
+      ]
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "b35",
+        "cb4",
+        "f3b"
+      ],
+      "id": "idd9dd9146",
+      "controller": "adc80",
+      "controlled": "f3790",
+      "interactionType": [
+        "SBO:0000170"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "id": "id63deac2b",
+      "participants": [
+        "ed00e",
+        "fcc93"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "xrefs": [
+        "d96"
+      ],
+      "id": "id5d87cbcd",
+      "participants": [
+        "d1b",
+        "b2d52"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "xrefs": [
+        "c22"
+      ],
+      "id": "id1a7b5539",
+      "participants": [
+        "fde",
+        "d9a63"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "xrefs": [
+        "b35"
+      ],
+      "id": "ida90cc3b4",
+      "participants": [
+        "e3f56",
+        "dbab1"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "id": "id756140b4",
+      "participants": [
+        "e3f56",
+        "adc80"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "id": "idcf94101c",
+      "participants": [
+        "fcc93",
+        "f8b84"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "id": "id7dc4acf4",
+      "participants": [
+        "dd906",
+        "ab4ad"
+      ],
+      "interactionType": [
+        "SBO:0000167",
+        "SBO:0000393",
+        "SBO:0000394"
+      ]
+    },
+    {
+      "type": "Interaction",
+      "id": "id82dd8a07"
+    },
+    {
+      "type": "Interaction",
+      "id": "id81422e78"
+    },
+    {
+      "type": "Interaction",
+      "id": "id7f2b40a9"
+    },
+    {
+      "type": "Interaction",
+      "id": "id5123d0a5"
+    },
+    {
+      "type": "Interaction",
+      "id": "id96190f32"
+    },
+    {
+      "type": "Interaction",
+      "id": "ida3abac28"
+    },
+    {
+      "type": "Control",
+      "xrefs": [
+        "c22",
+        "d96"
+      ],
+      "id": "ed8dc",
+      "xref": "http://identifiers.org/wormbase/WBInteraction000520482",
+      "controller": "faa04",
+      "controlled": "f3790",
+      "interactionType": [
+        "SBO:0000170"
+      ]
+    },
+    {
+      "type": "Catalysis",
+      "xrefs": [
+        "b35"
+      ],
+      "id": "id5c5e4f04",
+      "controller": "ffdce",
+      "controlled": "ida90cc3b4",
+      "interactionType": [
+        "SBO:0000172"
+      ]
+    },
+    {
+      "type": "Catalysis",
+      "xrefs": [
+        "b35"
+      ],
+      "id": "id438a8c9f",
+      "controller": "a7261",
+      "controlled": "ida90cc3b4",
+      "interactionType": [
+        "SBO:0000172"
+      ]
+    },
+    {
+      "type": "Catalysis",
+      "xrefs": [
+        "f3b",
+        "b35"
+      ],
+      "id": "id195dea3d",
+      "controller": "ab4ad",
+      "controlled": "id756140b4",
+      "interactionType": [
+        "SBO:0000172"
+      ]
+    },
+    {
+      "type": "Catalysis",
+      "xrefs": [
+        "c22",
+        "f3b"
+      ],
+      "id": "ida851659f",
+      "controller": "db0",
+      "controlled": "id4ff173f9",
+      "interactionType": [
+        "SBO:0000172"
+      ]
+    },
+    {
+      "type": "Catalysis",
+      "xrefs": [
+        "f3b"
+      ],
+      "id": "idaaff883",
+      "controller": "db832",
+      "controlled": "id4ff173f9",
+      "interactionType": [
+        "SBO:0000172"
+      ]
+    },
+    {
+      "type": "Catalysis",
+      "xrefs": [
+        "f3b"
+      ],
+      "id": "id52299414",
+      "controller": "f1fc4",
+      "controlled": "id4ff173f9",
+      "interactionType": [
+        "SBO:0000172"
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "c2106",
+      "contains": [
+        {
+          "id": "c1590"
+        },
+        {
+          "id": "c445d"
+        },
+        {
+          "id": "f1167"
+        },
+        {
+          "id": "b2cb6"
+        },
+        {
+          "id": "a2d69"
+        },
+        {
+          "id": "c6446"
+        },
+        {
+          "id": "be14e"
+        },
+        {
+          "id": "c8544"
+        },
+        {
+          "id": "a938e"
+        }
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "idpvjs53520",
+      "contains": [
+        {
+          "id": "e45f6"
+        },
+        {
+          "id": "d63bb"
+        },
+        {
+          "id": "d552f"
+        },
+        {
+          "id": "a3e3a"
+        },
+        {
+          "id": "e3c6d"
+        },
+        {
+          "id": "e569b"
+        },
+        {
+          "id": "bd6b4"
+        },
+        {
+          "id": "a7a91"
+        },
+        {
+          "id": "fd25e"
+        }
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "fcc93",
+      "contains": [
+        {
+          "id": "b6b"
+        },
+        {
+          "id": "ff2"
+        },
+        {
+          "id": "d25e1"
+        }
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "f8b84",
+      "contains": [
+        {
+          "id": "c93bd"
+        },
+        {
+          "id": "b040d"
+        },
+        {
+          "id": "dc1ed"
+        }
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "f3790",
+      "contains": [
+        {
+          "id": "a23"
+        },
+        {
+          "id": "eb5"
+        }
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "ec15e",
+      "contains": [
+        {
+          "id": "e9b31"
+        },
+        {
+          "id": "c80e9"
+        },
+        {
+          "id": "d7ea5"
+        },
+        {
+          "id": "bdc05"
+        },
+        {
+          "id": "aa85c"
+        },
+        {
+          "id": "bf6d8"
+        },
+        {
+          "id": "b0280"
+        },
+        {
+          "id": "d96b5"
+        },
+        {
+          "id": "eeddf"
+        }
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "idpvjs55356",
+      "contains": [
+        {
+          "id": "id5123d0a5"
+        },
+        {
+          "id": "id96190f32"
+        }
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "a7d42",
+      "contains": [
+        {
+          "id": "fde"
+        },
+        {
+          "id": "d1b"
+        }
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "idpvjs55456",
+      "contains": [
+        {
+          "id": "dad"
+        },
+        {
+          "id": "b0a"
+        },
+        {
+          "id": "b27"
+        },
+        {
+          "id": "df8"
+        }
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "idpvjs55498",
+      "contains": [
+        {
+          "id": "e5e16"
+        },
+        {
+          "id": "e5b5b"
+        },
+        {
+          "id": "ae8d8"
+        },
+        {
+          "id": "de1c8"
+        }
+      ]
+    },
+    {
+      "type": "PhysicalEntity",
+      "id": "idpvjs55540",
+      "contains": [
+        {
+          "id": "e6473"
+        },
+        {
+          "id": "dc781"
+        },
+        {
+          "id": "d1550"
+        },
+        {
+          "id": "fc60e"
+        }
+      ]
+    },
+    {
+      "id": "c22",
+      "displayName": 1,
+      "type": "PublicationXref"
+    },
+    {
+      "id": "b31",
+      "displayName": 2,
+      "type": "PublicationXref"
+    },
+    {
+      "id": "a26",
+      "displayName": 3,
+      "type": "PublicationXref"
+    },
+    {
+      "id": "a47",
+      "displayName": 4,
+      "type": "PublicationXref"
+    },
+    {
+      "id": "f3b",
+      "displayName": 5,
+      "type": "PublicationXref"
+    },
+    {
+      "id": "d96",
+      "displayName": 6,
+      "type": "PublicationXref"
+    },
+    {
+      "id": "ac8",
+      "displayName": 7,
+      "type": "PublicationXref"
+    },
+    {
+      "id": "cb4",
+      "displayName": 8,
+      "type": "PublicationXref"
+    },
+    {
+      "id": "b35",
+      "displayName": 9,
+      "type": "PublicationXref"
+    },
+    {
+      "id": "http://identifiers.org/wikipathways/WP525",
+      "idVersion": "74871",
+      "type": "Pathway",
+      "xrefs": [
+        "b31",
+        "a47",
+        "a26"
+      ],
+      "standardName": "Mitochondrial Unfolded-Protein Response",
+      "displayName": "UPRmt",
+      "organism": "Caenorhabditis elegans",
+      "pathwayComponent": [
+        "id4ff173f9",
+        "idc1ee3682",
+        "id482a1806",
+        "idb1d74a40",
+        "id1af9b5c6",
+        "id1978e1e1",
+        "id468d5052",
+        "id693789d7",
+        "idb8a520d6",
+        "id9fa977d2",
+        "id2a13e278",
+        "id5081356c",
+        "id457a1d82",
+        "idc5bdf17d",
+        "id87cffd7c",
+        "id4ef39cae",
+        "id2ce27145",
+        "idcc616bcc",
+        "idc9ad097",
+        "ida435914a",
+        "idd9dd9146",
+        "id63deac2b",
+        "id5d87cbcd",
+        "id1a7b5539",
+        "ida90cc3b4",
+        "id756140b4",
+        "idcf94101c",
+        "id7dc4acf4",
+        "id82dd8a07",
+        "id81422e78",
+        "id7f2b40a9",
+        "id5123d0a5",
+        "id96190f32",
+        "ida3abac28",
+        "ed8dc",
+        "id5c5e4f04",
+        "id438a8c9f",
+        "id195dea3d",
+        "ida851659f",
+        "idaaff883",
+        "id52299414"
+      ]
+    }
+  ]
+}
