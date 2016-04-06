@@ -4,8 +4,11 @@
   "description": "Convert GPML (XML) to and from pvjson (JSON)",
   "main": "index.js",
   "scripts": {
-    "test": "npm run test:unit",
-    "test:unit": "mocha test/spec/api.js --timeout=16000"
+    "test": "npm run test:dom",
+    "test:unit": "npm run test:dom:unit",
+    "test:dom": "npm run test:dom:unit",
+    "test:dom:unit": "mocha test/spec/api.js --timeout=16000",
+    "test:streaming": "echo \"Error: streaming tests broken/outdated. Fix them.\" && exit 1"
   },
   "keywords": [
     "gpml",
@@ -17,7 +20,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "async": "~0.7.0",
-    "biopax2json": "git://github.com/wikipathways/biopax2json.git",
+    "biopax2json": "git://github.com/wikipathways/biopax2json.git#0ebf846fc4b5d9e01c17dfff32a975d2e973c9e5",
     "bridgedb": "git://github.com/bridgedb/bridgedbjs.git#ac7874a1f1248d89feadc8ed491c7e14585bbd3e",
     "cheerio": "^0.16.0",
     "csv": "~0.3.7",

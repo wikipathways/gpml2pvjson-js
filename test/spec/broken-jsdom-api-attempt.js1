@@ -20,7 +20,7 @@ describe('Public API', function() {
 
 //  before(function(done) {
 //    jsdom.env({
-//      file: __dirname + '/../input-data/WP554_84372.gpml',
+//      file: __dirname + '/../inputs/WP554_84372.gpml',
 //      parsingMode: 'xml',
 //      done: function(err, window) {
 //        if (err) {
@@ -39,16 +39,16 @@ describe('Public API', function() {
 //  before(function() {
 //    Gpml2Pvjson = require('../../index.js') || window.Gpml2Pvjson;
 //    $ = require('jquery');
-//    var inputGpml = fs.readFileSync(__dirname + '/../input-data/WP554_84372.gpml', 'utf8');
+//    var inputGpml = fs.readFileSync(__dirname + '/../inputs/WP554_84372.gpml', 'utf8');
 //    parsedGpml = $(inputGpml);
 //  });
 
   before(function() {
     //Gpml2Pvjson = require('../../index.js') || window.Gpml2Pvjson;
     $ = require('jquery');
-    var inputGpml = fs.readFileSync(__dirname + '/../input-data/WP554_84372.gpml', 'utf8');
+    var inputGpml = fs.readFileSync(__dirname + '/../inputs/WP554_84372.gpml', 'utf8');
     jsdom({
-      file: __dirname + '/../input-data/WP554_84372.gpml',
+      file: __dirname + '/../inputs/WP554_84372.gpml',
       parsingMode: 'xml',
       src: [
         fs.readFileSync(__dirname + '/../../node_modules/jquery/src/jquery.js', 'utf-8'),
@@ -67,7 +67,7 @@ describe('Public API', function() {
   });
 
   it('should convert WP554 (streaming)', function(done) {
-    var inputGpml = fs.readFileSync(__dirname + '/../input-data/WP554_84372.gpml', 'utf8');
+    var inputGpml = fs.readFileSync(__dirname + '/../inputs/WP554_84372.gpml', 'utf8');
     console.log(inputGpml);
     var gpml2PvjsonInstance = new Gpml2Pvjson();
     gpml2PvjsonInstance.toPvjsonSource(inputGpml, {
@@ -112,3 +112,4 @@ describe('Public API', function() {
   });
 
 });
+
