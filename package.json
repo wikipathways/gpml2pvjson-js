@@ -4,6 +4,7 @@
   "description": "Convert GPML (XML) to and from pvjson (JSON)",
   "main": "index.js",
   "scripts": {
+    "build": "browserify ./index.js -o ./test/lib/gpml2pvjson.bundle.js",
     "test": "npm run test:dom",
     "test:unit": "npm run test:dom:unit",
     "test:dom": "npm run test:dom:unit",
