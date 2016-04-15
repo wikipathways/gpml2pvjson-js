@@ -29,7 +29,7 @@
     "d3": "~3.4.6",
     "he": "^0.5.0",
     "iconv-lite": "^0.4.13",
-    "jsonld-rx-extra": "git://github.com/ariutta/jsonld-rx-extra.git#2e39a93d45dc4315409cfe977b59820cecf70374",
+    "jsonld-rx-extra": "git://github.com/ariutta/jsonld-rx-extra.git#66da18716a526abdcea6c25b865858a26780e204",
     "lodash": "^2.4.2",
     "rgbcolor": "0.0.3",
     "rx-extra": "git://github.com/ariutta/rx-extra.git#f9a3bebb51e0ac54d16a62b2d35293376623a152",
