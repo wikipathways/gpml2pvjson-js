@@ -22,17 +22,15 @@
   "dependencies": {
     "async": "~0.7.0",
     "biopax2json": "git://github.com/wikipathways/biopax2json.git#dcd9a06864abe2da20002a0b4d3512d006ef2f71",
-    "bridgedb": "git://github.com/bridgedb/bridgedbjs.git#58f4fb612de493074f0129a6e284d1d523b0b961",
     "cheerio": "^0.16.0",
     "csv": "~0.3.7",
     "csv-streamify": "~1.0.0",
     "d3": "~3.4.6",
     "he": "^0.5.0",
     "iconv-lite": "^0.4.13",
-    "jsonld-rx-extra": "git://github.com/ariutta/jsonld-rx-extra.git#66da18716a526abdcea6c25b865858a26780e204",
     "lodash": "^2.4.2",
     "rgbcolor": "0.0.3",
-    "rx-extra": "git://github.com/ariutta/rx-extra.git#f9a3bebb51e0ac54d16a62b2d35293376623a152",
+    "rx-extra": "git://github.com/ariutta/rx-extra.git#d8ef18b1af76371f49cf1334cdf24e39bed1dd3d",
     "tower-strcase": "git://github.com/tower/strcase.git",
     "uuid": "~1.4.1",
     "xmlhttprequest": "~1.6.0"
