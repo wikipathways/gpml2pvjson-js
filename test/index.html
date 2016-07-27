@@ -1,0 +1,45 @@
+<body>
+</body>
+<script   src="https://code.jquery.com/jquery-1.12.3.min.js"   integrity="sha256-aaODHAgvwQW1bFOGXMeX+pC4PZIPsvn2h1sArYOhgXQ="   crossorigin="anonymous"></script>
+<script src="./lib/gpml2pvjson.bundle.js"></script>
+<script>
+    var inputIri = './inputs/WP554_77712.gpml';
+  
+    var expectedPath = './expecteds/WP554_77712.json';
+
+    var gpmlPathwaySelection = $.ajax(inputIri, {
+      normalizeWhitespace: true,
+      xmlMode: true,
+      decodeEntities: true,
+      lowerCaseTags: false
+    });
+    //var gpmlPathwaySelection = $('Pathway');
+
+    console.log('gpmlPathwaySelection');
+    console.log(gpmlPathwaySelection);
+
+    var pathwayMetadata = {};
+    pathwayMetadata.dbName = 'wikipathways';
+    pathwayMetadata.dbId = 'WP1';
+    pathwayMetadata.version = '63315';
+
+    $.ajax({
+      url: inputIri,
+      dataType: 'xml'
+    }).done(function(result) {
+      var gpmlPathwaySelection = $(result).find('Pathway');
+      var gpml2PvjsonInstance = new Gpml2Pvjson();
+      var pvjson = gpml2PvjsonInstance.toPvjson(
+          gpmlPathwaySelection,
+          pathwayMetadata,
+          function(err, actual) {
+            if (err) {
+              throw err;
+            }
+            var actualString = JSON.stringify(actual, null, '  ');
+            console.log('actualString');
+            console.log(actualString);
+          }
+      );
+    });
+</script>
