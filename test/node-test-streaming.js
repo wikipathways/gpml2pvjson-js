@@ -15,6 +15,8 @@ var strcase = require('tower-strcase');
 var url = require('url');
 var VError = require('verror');
 
+Rx.config.longStackSupport = true;
+
 var filename = 'gpml2pvjson-js/test/node-test-streaming.js';
 
 var pathwayRetryCounts = {};
