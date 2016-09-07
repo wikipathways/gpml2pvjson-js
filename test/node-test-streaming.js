@@ -10,8 +10,7 @@ var path = require('path');
 var pathwayMetadataList = require('./pathways-to-test.json');
 var pd = require('pretty-data').pd;
 var request = require('request');
-var Rx = require('rx');
-var RxNode = require('rx-node');
+var Rx = require('rx-extra');
 var strcase = require('tower-strcase');
 var url = require('url');
 var VError = require('verror');
@@ -45,7 +44,7 @@ Rx.Observable.return(pathwayMetadataList)
     //*/
     //*
     //var gpmlLocation = path.join('input', 'WP1046_63315.gpml');
-    var gpmlLocation = path.join('input', 'WP106.gpml');
+    var gpmlLocation = path.join(__dirname, 'input', 'WP106.gpml');
     var gpmlChunkStream = highland(fs.createReadStream(gpmlLocation));
     //*/
     return gpml2pvjson.gpmlToPvjsonSource(gpmlChunkStream)
