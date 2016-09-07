@@ -1,24 +1,24 @@
-var _ = require('lodash')
-  , strcase = require('tower-strcase')
-  , diff = require('deep-diff').diff
-  , pd = require('pretty-data').pd
-  , fs = require('graceful-fs')
-  , JSONStream = require('JSONStream')
-  , EventEmitter = require('events').EventEmitter
-  , request = require('request')
-  , highland = require('highland')
-  , path = require('path')
-  , Gpml2PvjsonConverter = require('../lib/index')
-  , url = require('url')
-  , pathwayMetadataList = require('./pathways-to-test.json')
-  , pathwaysCompleted
-  , pathwaysCompletedFilePath = './pathways-completed.json'
-  , pathwayRetryCounts = {}
-  , httpRetryLimit = 2
-  , httpRetryDelay = 3000
-  ;
+var _ = require('lodash');
+var strcase = require('tower-strcase');
+var diff = require('deep-diff').diff;
+var pd = require('pretty-data').pd;
+var fs = require('graceful-fs');
+var JSONStream = require('JSONStream');
+var EventEmitter = require('events').EventEmitter;
+var request = require('request');
+var highland = require('highland');
+var path = require('path');
+var Gpml2PvjsonConverter = require('../index.js');
+var url = require('url');
+var pathwayMetadataList = require('./pathways-to-test.json');
+var pathwaysCompleted;
+var pathwaysCompletedFilePath = './pathways-completed.json';
+var pathwayRetryCounts = {};
+var httpRetryLimit = 2;
+var httpRetryDelay = 3000;
 
-function findBestMatchCorrespondingNewPvjsonElement(oldPvjsonElement, correspondingNewPvjsonElements) {
+function findBestMatchCorrespondingNewPvjsonElement(
+    oldPvjsonElement, correspondingNewPvjsonElements) {
   if (correspondingNewPvjsonElements.length === 1) {
     return correspondingNewPvjsonElements[0];
   }
@@ -30,34 +30,33 @@ function findBestMatchCorrespondingNewPvjsonElement(oldPvjsonElement, correspond
   console.log(correspondingNewPvjsonElements);
 
   if (typeof oldPvjsonElement.x !== 'undefined') {
-    var oldPvjsonElementX = oldPvjsonElement.x
-      , oldPvjsonElementY = oldPvjsonElement.y
-      , oldPvjsonElementWidth = oldPvjsonElement.width
-      , oldPvjsonElementHeight = oldPvjsonElement.height
-      ;
+    var oldPvjsonElementX = oldPvjsonElement.x;
+    var oldPvjsonElementY = oldPvjsonElement.y;
+    var oldPvjsonElementWidth = oldPvjsonElement.width;
+    var oldPvjsonElementHeight = oldPvjsonElement.height;
 
     return _.sortBy(correspondingNewPvjsonElements, function(correspondingNewPvjsonElement) {
-      var correspondingNewPvjsonElementX = correspondingNewPvjsonElement.x
-        , correspondingNewPvjsonElementY = correspondingNewPvjsonElement.y
-        , correspondingNewPvjsonElementWidth = correspondingNewPvjsonElement.width
-        , correspondingNewPvjsonElementHeight = correspondingNewPvjsonElement.height
-        ;
+      var correspondingNewPvjsonElementX = correspondingNewPvjsonElement.x;
+      var correspondingNewPvjsonElementY = correspondingNewPvjsonElement.y;
+      var correspondingNewPvjsonElementWidth = correspondingNewPvjsonElement.width;
+      var correspondingNewPvjsonElementHeight = correspondingNewPvjsonElement.height;
+
       return Math.abs(oldPvjsonElementX - correspondingNewPvjsonElementX) + Math.abs(oldPvjsonElementY - correspondingNewPvjsonElementY) + Math.abs(oldPvjsonElementWidth - correspondingNewPvjsonElementWidth) + Math.abs(oldPvjsonElementHeight - correspondingNewPvjsonElementHeight);
     })[0];
   } else if (!!oldPvjsonElement.points) {
-    var firstOldPointX = oldPvjsonElement.points[0].x
-      , firstOldPointY = oldPvjsonElement.points[0].y
-      , oldPvjsonElementPointCount = oldPvjsonElement.points.length
-      , lastOldPointX = oldPvjsonElement.points[oldPvjsonElementPointCount - 1].x
-      , lastOldPointY = oldPvjsonElement.points[oldPvjsonElementPointCount - 1].y
-      ;
+    var firstOldPointX = oldPvjsonElement.points[0].x;
+    var firstOldPointY = oldPvjsonElement.points[0].y;
+    var oldPvjsonElementPointCount = oldPvjsonElement.points.length;
+    var lastOldPointX = oldPvjsonElement.points[oldPvjsonElementPointCount - 1].x;
+    var lastOldPointY = oldPvjsonElement.points[oldPvjsonElementPointCount - 1].y;
+
     return _.sortBy(correspondingNewPvjsonElements, function(correspondingNewPvjsonElement) {
-      var firstCorrespondingNewPointX = correspondingNewPvjsonElement.points[0].x
-        , firstCorrespondingNewPointY = correspondingNewPvjsonElement.points[0].y
-        , correspondingNewPvjsonElementPointCount = correspondingNewPvjsonElement.points.length
-        , lastCorrespondingNewPointX = correspondingNewPvjsonElement.points[correspondingNewPvjsonElementPointCount - 1].x
-        , lastCorrespondingNewPointY = correspondingNewPvjsonElement.points[correspondingNewPvjsonElementPointCount - 1].y
-        ;
+      var firstCorrespondingNewPointX = correspondingNewPvjsonElement.points[0].x;
+      var firstCorrespondingNewPointY = correspondingNewPvjsonElement.points[0].y;
+      var correspondingNewPvjsonElementPointCount = correspondingNewPvjsonElement.points.length;
+      var lastCorrespondingNewPointX = correspondingNewPvjsonElement.points[correspondingNewPvjsonElementPointCount - 1].x;
+      var lastCorrespondingNewPointY = correspondingNewPvjsonElement.points[correspondingNewPvjsonElementPointCount - 1].y;
+
       return Math.abs(firstOldPointX - firstCorrespondingNewPointX) + Math.abs(firstOldPointY - firstCorrespondingNewPointY) + Math.abs(lastOldPointX - lastCorrespondingNewPointX) + Math.abs(lastOldPointY - lastCorrespondingNewPointY);
     })[0];
   } else {
@@ -67,9 +66,8 @@ function findBestMatchCorrespondingNewPvjsonElement(oldPvjsonElement, correspond
 
 function findCorrespondingNewPvjsonElementMatchingCurrentOldPvjsonElement(pvjson, oldPvjsonElement) {
   // find correspondingNewPvjsonElement(s) that is/are an exact match for current oldPvjsonElement
-  var correspondingNewPvjsonElements = _.where(pvjson.elements, { 'id': oldPvjsonElement.id })
-    , correspondingNewPvjsonElement
-    ;
+  var correspondingNewPvjsonElements = _.where(pvjson.elements, {'id': oldPvjsonElement.id});
+  var correspondingNewPvjsonElement;
 
   if (_.isEmpty(correspondingNewPvjsonElements)) {
     if (oldPvjsonElement['gpml:element'] === 'gpml:Group') {
@@ -358,7 +356,6 @@ var oldPvjsonStream = oldPathwayMetadataStream.parallel(4)
     return oldRequestStream;
   });
 }));
-
 
 oldPvjsonStream.zip(newPvjsonStream.fork())
 .each(function(outerArgs) {

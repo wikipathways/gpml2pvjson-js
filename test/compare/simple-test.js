@@ -1,3 +1,6 @@
+/* This file appears very similar to compare-streaming.js
+ */
+
 var _ = require('lodash')
   , diff = require('deep-diff').diff
   , pd = require('pretty-data').pd
