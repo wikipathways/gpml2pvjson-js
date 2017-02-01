@@ -23,8 +23,12 @@ var pathwayRetryCounts = {};
 var httpRetryLimit = 2;
 var httpRetryDelay = 3000;
 
-Rx.Observable.return(pathwayMetadataList)
+Rx.Observable.from(pathwayMetadataList)
+  .first()
   .flatMap(function(pathway) {
+
+    console.log('pathway');
+    console.log(pathway);
 
     /*
     if (muteConsole) {
