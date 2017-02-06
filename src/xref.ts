@@ -1,13 +1,11 @@
-var Xref = {};
-
-Xref.toPvjson = function(args) {
+export function toPvjson(args) {
   var pvjson = args.pvjson;
   var currentClassLevelPvjsonElement = args.pvjsonElement;
   var gpmlXref = args.xref;
-  var result = {};
-
-  result.pvjson = pvjson;
-  result.pvjsonElement = currentClassLevelPvjsonElement;
+  var result = {
+		pvjson: pvjson,
+		pvjsonElement: currentClassLevelPvjsonElement
+	};
 
   var dataSourceName = gpmlXref.Database;
   var identifier = gpmlXref.ID;
@@ -30,5 +28,3 @@ Xref.toPvjson = function(args) {
 
   return result;
 };
-
-module.exports = Xref;

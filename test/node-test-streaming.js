@@ -15,8 +15,6 @@ var strcase = require('tower-strcase');
 var url = require('url');
 var VError = require('verror');
 
-Rx.config.longStackSupport = true;
-
 var filename = 'gpml2pvjson-js/test/node-test-streaming.js';
 
 var pathwayRetryCounts = {};
@@ -51,16 +49,16 @@ Rx.Observable.from(pathwayMetadataList)
     //*
     //var gpmlLocation = path.join('input', 'WP1046_63315.gpml');
     var gpmlLocation = path.join(__dirname, 'input', 'WP106.gpml');
-    var gpmlChunkStream = highland(fs.createReadStream(gpmlLocation));
+    var gpmlChunkStream = Rx.Observable.fromNodeReadableStream(fs.createReadStream(gpmlLocation, {
+      encoding: 'utf8'
+    }));
     //*/
-    return gpml2pvjson.gpmlToPvjsonSource(gpmlChunkStream)
-      .doOnError(
-          function(err) {
-            var err2 = new VError(err, 'error (after?) converting GPML to ' +
-                                  'pvjson in "%s"', filename);
-            console.error(err2.stack);
-          }
-      )
+    return gpml2pvjson.transformGpmlToPvjson(gpmlChunkStream)
+      .do(null, function(err) {
+        var err2 = new VError(err, 'error (after?) converting GPML to ' +
+                              'pvjson in "%s"', filename);
+        console.error(err2.stack);
+      })
       /*
       .map(function(data) {
         if (muteConsole) {
@@ -86,29 +84,11 @@ Rx.Observable.from(pathwayMetadataList)
 
         return pvjson;
       })
-      .flatMap(function(pvjson) {
-        var elements = pvjson.elements;
-        pvjson.elements = [];
-        return Rx.Observable.from(elements)
-          .flatMap(function(element) {
-            if (element.getSetEntityReference) {
-              return element.getSetEntityReference();
-            } else {
-              return Rx.Observable.return(element);
-            }
-          })
-          .reduce(function(pvjson, element) {
-            pvjson.elements.push(element);
-            return pvjson;
-          }, pvjson);
-      })
-      .doOnError(
-          function(err) {
-            var err2 = new VError(err, 'error (after?) converting GPML to ' +
-                                  'pvjson in "%s"', filename);
-            console.error(err2.stack);
-          }
-      );
+      .do(null, function(err) {
+        var err2 = new VError(err, 'error (after?) converting GPML to ' +
+                              'pvjson in "%s"', filename);
+        console.error(err2.stack);
+      });
   })
   .subscribe(function(result) {
     console.log('onNext result');

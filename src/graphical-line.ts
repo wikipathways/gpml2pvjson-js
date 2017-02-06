@@ -1,10 +1,9 @@
-'use strict';
-var GpmlUtilities = require('./gpml-utilities.js')
-  , Point = require('./point.js')
-  , Anchor = require('./anchor.js')
-  ;
+import * as	GpmlUtilities from './gpml-utilities';
+import * as Point from './point';
+import * as Anchor from './anchor';
 
-module.exports = {
+// TODO break these into separate exported items
+export default {
   defaults: {
     attributes: {
       Color: {

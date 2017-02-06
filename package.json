@@ -4,6 +4,7 @@
   "description": "convert GPML (XML) to pvjson (json)",
   "main": "./lib/.index.js",
   "scripts": {
+    "compile:es5": "tsc --project tsconfig.json && echo ok || echo not ok",
     "test": "echo 'Get more/better tests working, please!' && node ./test/node-test-streaming.js"
   },
   "keywords": [
@@ -13,16 +14,15 @@
   "author": "Anders Riutta",
   "license": "Apache-2.0",
   "dependencies": {
-    "async": "~0.7.0",
+    "@types/highland": "^1.14.30",
+    "@types/lodash": "^4.14.52",
     "biopax2json": "wikipathways/biopax2json",
-    "csv": "~0.2.9",
     "he": "~0.4.1",
     "highland": "~1.27.1",
-    "jsonld": "^0.4.1",
     "lodash": "^4.15.0",
     "request": "~2.40.0",
     "rgbcolor": "0.0.3",
-    "rx-extra": "ariutta/rx-extra#ec215ee2e833721ae038e06c3dd46751e71aa633",
+    "rx-extra": "^2.0.4",
     "sax": "~0.6.0",
     "tower-strcase": "~0.5.0",
     "uuid": "~1.4.1"
@@ -40,6 +40,7 @@
     "pretty-data": "~0.40.0",
     "pretty-error": "^1.2.0",
     "rdflib": "git://github.com/ckristo/rdflib.js.git#a5395dd5249ce383d0ecf6e087c36aa77cb3964f",
+    "typescript": "^2.1.5",
     "verror": "^1.6.0",
     "xmldom": "^0.1.19"
   },

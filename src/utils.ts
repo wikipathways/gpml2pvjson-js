@@ -1,4 +1,4 @@
-var _ = require('lodash');
+import _ = require('lodash');
 
 var biopaxPhysicalEntityTypes = [
   'Protein',
@@ -108,18 +108,22 @@ var tmEntityReference2Entity = _.invert(tmEntity2EntityReference);
 
 var tmEntityReferencePlain2Entity = plainifyKeys(tmEntityReference2Entity);
 
-function dereferenceElement(elements, id) {
+/* dereferenceElement
+ * From an array of elements, get the one with
+ * the specified "id" property.
+ */
+export function dereferenceElement(elements: PvjsonElement[], id: string) {
   return _.find(elements, function(element) {
     return element.id === id;
   });
-}
+};
 
-function isType(referenceTypeList, type) {
+export function isType(referenceTypeList, type) {
   type = _.isArray(type) ? type : [type];
   return !_.isEmpty(_.intersection(referenceTypeList, type));
-}
+};
 
-function isBiopaxType(referenceTypeList, oneTypeOrList) {
+export function isBiopaxType(referenceTypeList, oneTypeOrList) {
   var typeList = _.isArray(oneTypeOrList) ? oneTypeOrList : [oneTypeOrList];
   typeList = typeList.reduce(function(accumulator, type) {
     accumulator.push(type);
@@ -128,23 +132,19 @@ function isBiopaxType(referenceTypeList, oneTypeOrList) {
     return accumulator;
   }, []);
   return !_.isEmpty(_.intersection(referenceTypeList, typeList));
-}
+};
 
-module.exports = {
-  biopax: {
-    nodeTypes: biopaxNodeTypes,
-    edgeTypes: biopaxEdgeTypes,
-    physicalEntityTypes: biopaxPhysicalEntityTypes,
-    allTypes: biopaxTypes
-  },
-  typeMappings: {
-    gpmlDataNodePrefixed2biopaxEntityPlain: tmGpmlDataNodePrefixed2BiopaxEntityPlain,
-    entityGpmlPlain2entityNormalizedPrefixed: tmEntityGpmlPlain2EntityNormalizedPrefixed,
-    entityNormalized2entityGpml: tmEntityNormalized2EntityGpml,
-    entity2entityReference: tmEntity2EntityReference,
-    entityReference2entity: tmEntityReference2Entity
-  },
-  dereferenceElement: dereferenceElement,
-  isType: isType,
-  isBiopaxType: isBiopaxType
+export let biopax = {
+	nodeTypes: biopaxNodeTypes,
+	edgeTypes: biopaxEdgeTypes,
+	physicalEntityTypes: biopaxPhysicalEntityTypes,
+	allTypes: biopaxTypes
+};
+
+export let typeMappings = {
+	gpmlDataNodePrefixed2biopaxEntityPlain: tmGpmlDataNodePrefixed2BiopaxEntityPlain,
+	entityGpmlPlain2entityNormalizedPrefixed: tmEntityGpmlPlain2EntityNormalizedPrefixed,
+	entityNormalized2entityGpml: tmEntityNormalized2EntityGpml,
+	entity2entityReference: tmEntity2EntityReference,
+	entityReference2entity: tmEntityReference2Entity
 };
