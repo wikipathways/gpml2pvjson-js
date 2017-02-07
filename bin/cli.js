@@ -53,9 +53,9 @@ program
     console.log('  Example:');
     console.log();
     console.log('    Display pvjson in command line:');
-    console.log('    $ ./bin/cli.js gpml2pvjson < ./WP554_77712.gpml');
+    console.log('    $ ./bin/cli.js gpml2pvjson < ./test/inputs/WP554_77712.gpml');
     console.log('    Save pvjson to new file:');
-    console.log('    $ ./bin/cli.js gpml2pvjson < ./WP554_77712.gpml > ./WP554_77712.json');
+    console.log('    $ ./bin/cli.js gpml2pvjson < ./test/inputs/WP554_77712.gpml > ./WP554_77712.json');
     console.log('    Download from WikiPathways and convert:');
     console.log('    $ curl "http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=xml" | xpath "*/ns1:data/text()" | base64 --decode | node ./bin/cli.js gpml2pvjson');
     console.log();
