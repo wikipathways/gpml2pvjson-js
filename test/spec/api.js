@@ -6,7 +6,6 @@ var expect = require('chai').expect;
 var fs = require('fs');
 var sinon = require('sinon');
 var sologger = require('../sologger.js');
-
 var pd = require('pretty-data').pd;
 var Cheerio = require('cheerio');
 
