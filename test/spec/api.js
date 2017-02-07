@@ -2,6 +2,7 @@
  * Test public APIs
  */
 
+require('pretty-error').start(); // to make errors more readable
 var expect = require('chai').expect;
 var fs = require('fs');
 var sinon = require('sinon');
