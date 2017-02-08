@@ -11,46 +11,6 @@ interface PvjsonPositionAndOrientationMapping {
 	offset: number;
 }
 
-var getPvjsonPositionAndOrientationMapping = function(args): PvjsonPositionAndOrientationMapping {
-	var relValue = args.relValue
-		, identifier = args.identifier
-		, referencedElement = args.referencedElement
-		;
-
-	// orientation here refers to the initial direction the edge takes as it moves away from its attachment
-	var result = <PvjsonPositionAndOrientationMapping>{}, position, referencedElementDimension;
-
-	var relativeToUpperLeftCorner = (relValue + 1) / 2;
-	if (relativeToUpperLeftCorner < 0 || relativeToUpperLeftCorner > 1) {
-		if (identifier === 'RelX') {
-			referencedElementDimension = referencedElement.width || referencedElement.attributes.Width.value;
-		} else {
-			referencedElementDimension = referencedElement.height || referencedElement.attributes.Height.value;
-		}
-		if (relativeToUpperLeftCorner < 0) {
-			position = 0;
-			result.offset = relativeToUpperLeftCorner * referencedElementDimension;
-		} else {
-			position = 1;
-			result.offset = (relativeToUpperLeftCorner - 1) * referencedElementDimension;
-		}
-	} else {
-		position = relativeToUpperLeftCorner;
-	}
-	result.position = position;
-
-	if (position === 0) {
-		result.orientation = -1;
-	} else if (position === 1) {
-		result.orientation = 1;
-	} else {
-		result.orientation = 0;
-	}
-
-	return result;
-};
-
-//*
 export function toPvjson(args) {
 	var pvjson = args.pvjson
 		, pvjsonEdge = args.pvjsonElement
@@ -103,7 +63,8 @@ export function toPvjson(args) {
 				// anchor: [ 0.5, 1, 0, 1 ]
 				//
 				// this code only runs for points not attached to edges
-				if (referencedElementTag.toLowerCase() !== 'gpml:interaction' && referencedElementTag.toLowerCase() !== 'gpml:graphicalline') {
+				if (referencedElementTag.toLowerCase() !== 'gpml:interaction' &&
+						referencedElementTag.toLowerCase() !== 'gpml:graphicalline') {
 					var gpmlRelXValueString = gpmlRelXValue.toString();
 					var gpmlRelXValueInteger = parseFloat(gpmlRelXValue);
 					var argsX = {
@@ -116,12 +77,14 @@ export function toPvjson(args) {
 					explicitPoint.anchor = explicitPoint.anchor || [];
 					if (!!pvjsonPositionAndOrientationX && _.isNumber(pvjsonPositionAndOrientationX.position)) {
 						explicitPoint.anchor[0] = pvjsonPositionAndOrientationX.position;
-						if (pvjsonPositionAndOrientationX.hasOwnProperty('orientation') && _.isNumber(pvjsonPositionAndOrientationX.orientation)) {
+						if (pvjsonPositionAndOrientationX.hasOwnProperty('orientation') &&
+								_.isNumber(pvjsonPositionAndOrientationX.orientation)) {
 							explicitPoint.anchor[2] = pvjsonPositionAndOrientationX.orientation;
 						} else {
 						}
 						if (pvjsonPositionAndOrientationX.hasOwnProperty('offset')) {
-							// TODO in the case of a group as the referenced element, we don't have the group width and height yet to properly calculate this
+							// TODO in the case of a group as the referenced element,
+							// we don't have the group width and height yet to properly calculate this
 							explicitPoint.anchor[4] = pvjsonPositionAndOrientationX.offset || 20;
 						}
 					}
@@ -131,7 +94,8 @@ export function toPvjson(args) {
 			RelY: function(gpmlRelYValue) {
 				// see note at RelX
 				// this code only runs for points not attached to edges
-				if (referencedElementTag.toLowerCase() !== 'gpml:interaction' && referencedElementTag.toLowerCase() !== 'gpml:graphicalline') {
+				if (referencedElementTag.toLowerCase() !== 'gpml:interaction' &&
+						referencedElementTag.toLowerCase() !== 'gpml:graphicalline') {
 					var gpmlRelYValueString = gpmlRelYValue.toString();
 					var gpmlRelYValueInteger = parseFloat(gpmlRelYValue);
 					var argsY = {
@@ -145,7 +109,8 @@ export function toPvjson(args) {
 					explicitPoint.anchor = explicitPoint.anchor || [];
 					if (!!pvjsonPositionAndOrientationY && _.isNumber(pvjsonPositionAndOrientationY.position)) {
 						explicitPoint.anchor[1] = pvjsonPositionAndOrientationY.position;
-						if (pvjsonPositionAndOrientationY.hasOwnProperty('orientation') && _.isNumber(pvjsonPositionAndOrientationY.orientation)) {
+						if (pvjsonPositionAndOrientationY.hasOwnProperty('orientation') &&
+								_.isNumber(pvjsonPositionAndOrientationY.orientation)) {
 							explicitPoint.anchor[3] = pvjsonPositionAndOrientationY.orientation;
 						} else {
 						}
@@ -213,7 +178,12 @@ export function toPvjson(args) {
 				return pvjsonMarker;
 			}
 		};
-		explicitPoint = GpmlUtilities.convertAttributesToJson(gpmlPoint, explicitPoint, gpmlToPvjsonConverter, attributeDependencyOrder);
+		explicitPoint = GpmlUtilities.convertAttributesToJson(
+				gpmlPoint,
+				explicitPoint,
+				gpmlToPvjsonConverter,
+				attributeDependencyOrder
+		);
 		explicitPoints.push(explicitPoint);
 	});
 
@@ -228,9 +198,21 @@ export function toPvjson(args) {
 	} else if (type === 'line-segmented'){
 		pvjsonPoints = explicitPoints;
 	} else if (type === 'line-elbow'){
-		pvjsonPoints = calculatePvjsonPoints(pvjson, type, explicitPoints, referencedElements, referencedElementTags);
+		pvjsonPoints = calculatePvjsonPoints(
+				pvjson,
+				type,
+				explicitPoints,
+				referencedElements,
+				referencedElementTags
+		);
 	} else if (type === 'line-curved'){
-		pvjsonPoints = calculatePvjsonPoints(pvjson, type, explicitPoints, referencedElements, referencedElementTags);
+		pvjsonPoints = calculatePvjsonPoints(
+				pvjson,
+				type,
+				explicitPoints,
+				referencedElements,
+				referencedElementTags
+		);
 	} else {
 		console.warn('Unknown connector type: ' + type);
 	}
@@ -243,7 +225,6 @@ export function toPvjson(args) {
 	pvjsonEdge.points = pvjsonPoints;
 	return pvjsonEdge;
 }
-//*/
 
 /**
  * calculatePvjsonPoints
@@ -255,7 +236,13 @@ export function toPvjson(args) {
  * @param referencedElementTags {Array}
  * @return {Array} Set of points required to render the edge. Additional points are added if required to unambiguously specify an edge (implicit points are made explicit).
  */
-function calculatePvjsonPoints(pvjson, edgeType, explicitPoints, referencedElements, referencedElementTags) {
+function calculatePvjsonPoints(
+		pvjson,
+		edgeType,
+		explicitPoints,
+		referencedElements,
+		referencedElementTags
+): Point[] {
 	var firstPoint = explicitPoints[0]
 		, lastPoint = explicitPoints[explicitPoints.length - 1]
 		, sideCombination
@@ -265,18 +252,30 @@ function calculatePvjsonPoints(pvjson, edgeType, explicitPoints, referencedEleme
 		;
 
 	// if first and last points are attached to shapes
-	if (firstPoint.hasOwnProperty('anchor') && _.isNumber(firstPoint.anchor[2]) && _.isNumber(firstPoint.anchor[3]) && lastPoint.hasOwnProperty('anchor') && _.isNumber(lastPoint.anchor[2]) && _.isNumber(lastPoint.anchor[3])) {
+	if (firstPoint.hasOwnProperty('anchor') &&
+			_.isNumber(firstPoint.anchor[2]) &&
+				_.isNumber(firstPoint.anchor[3]) &&
+					lastPoint.hasOwnProperty('anchor') &&
+						_.isNumber(lastPoint.anchor[2]) &&
+							_.isNumber(lastPoint.anchor[3])) {
 		sideCombination = getSideCombination(firstPoint, lastPoint);
 	// if first point is attached to a shape and last point is attached to an anchor (not a group)
-	} else if (firstPoint.hasOwnProperty('anchor') && _.isNumber(firstPoint.anchor[2]) && _.isNumber(firstPoint.anchor[3]) && lastPoint.hasOwnProperty('anchor')) {
+	} else if (firstPoint.hasOwnProperty('anchor') &&
+						 _.isNumber(firstPoint.anchor[2]) &&
+							 _.isNumber(firstPoint.anchor[3]) &&
+								 lastPoint.hasOwnProperty('anchor')) {
 		lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], pvjson);
 		sideCombination = getSideCombination(firstPoint, lastPoint);
 	// if last point is attached to a shape and first point is attached to an anchor (not a group)
-	} else if (lastPoint.hasOwnProperty('anchor') && _.isNumber(lastPoint.anchor[2]) && _.isNumber(lastPoint.anchor[3]) && firstPoint.hasOwnProperty('anchor')) {
+	} else if (lastPoint.hasOwnProperty('anchor') &&
+						 _.isNumber(lastPoint.anchor[2]) &&
+							 _.isNumber(lastPoint.anchor[3]) &&
+								 firstPoint.hasOwnProperty('anchor')) {
 		firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], pvjson);
 		sideCombination = getSideCombination(firstPoint, lastPoint);
 	// if first and last points are attached to anchors
-	} else if (firstPoint.hasOwnProperty('anchor') && lastPoint.hasOwnProperty('anchor')) {
+	} else if (firstPoint.hasOwnProperty('anchor') &&
+						 lastPoint.hasOwnProperty('anchor')) {
 		firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], pvjson);
 		lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], pvjson);
 		sideCombination = getSideCombination(firstPoint, lastPoint);
@@ -481,6 +480,45 @@ function calculatePvjsonPoints(pvjson, edgeType, explicitPoints, referencedEleme
 function crossProduct (u, v) {
 	return u[0] * v[1] - v[0] * u[1];
 }
+
+function getPvjsonPositionAndOrientationMapping(args): PvjsonPositionAndOrientationMapping {
+	var relValue = args.relValue
+		, identifier = args.identifier
+		, referencedElement = args.referencedElement
+		;
+
+	// orientation here refers to the initial direction the edge takes as it moves away from its attachment
+	var result = <PvjsonPositionAndOrientationMapping>{}, position, referencedElementDimension;
+
+	var relativeToUpperLeftCorner = (relValue + 1) / 2;
+	if (relativeToUpperLeftCorner < 0 || relativeToUpperLeftCorner > 1) {
+		if (identifier === 'RelX') {
+			referencedElementDimension = referencedElement.width || referencedElement.attributes.Width.value;
+		} else {
+			referencedElementDimension = referencedElement.height || referencedElement.attributes.Height.value;
+		}
+		if (relativeToUpperLeftCorner < 0) {
+			position = 0;
+			result.offset = relativeToUpperLeftCorner * referencedElementDimension;
+		} else {
+			position = 1;
+			result.offset = (relativeToUpperLeftCorner - 1) * referencedElementDimension;
+		}
+	} else {
+		position = relativeToUpperLeftCorner;
+	}
+	result.position = position;
+
+	if (position === 0) {
+		result.orientation = -1;
+	} else if (position === 1) {
+		result.orientation = 1;
+	} else {
+		result.orientation = 0;
+	}
+
+	return result;
+};
 
 function sign(u) {
 	return u>=0;

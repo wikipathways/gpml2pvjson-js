@@ -21,7 +21,7 @@ export function toPvjson(args) {
     return result;
   }
 
-  currentClassLevelPvjsonElement.id = identifier;
+  currentClassLevelPvjsonElement.identifier = identifier;
   currentClassLevelPvjsonElement.database = dataSourceName;
 
   result.pvjsonElement = currentClassLevelPvjsonElement;

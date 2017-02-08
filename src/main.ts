@@ -58,7 +58,7 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
 
   function convertConversionToGenericInteraction(interaction) {
     console.warn('This Conversion fails BioPAX validator:)');
-    console.log(interaction);
+    console.warn(interaction);
     interaction.type = 'Interaction';
     interaction.participant = [interaction.left, interaction.right];
     delete interaction.left;
@@ -70,7 +70,7 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
 
   function convertCatalysisToGenericInteraction(interaction) {
     console.warn('This Catalysis fails BioPAX validator:)');
-    console.log(interaction);
+    console.warn(interaction);
     interaction.type = 'Interaction';
     interaction.participant = [interaction.controlled, interaction.controller];
     delete interaction.controlled;
@@ -340,22 +340,21 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
 			// elements.
 			//
 			// Remove all remaining gpml:GroupRef properties.
-			_(pvjson.elements).filter(function(element) {
+			pvjson.elements.filter(function(element) {
 				return element.hasOwnProperty('gpml:GroupRef');
 			})
-			.map(function(element) {
+			.forEach(function(element) {
 				delete element['gpml:GroupRef'];
-				return element;
 			});
 
-			var edges = _(pvjson.elements).filter(function(element) {
+			var edges = pvjson.elements.filter(function(element) {
 				// TODO figure out why this seems to run more times than it should.
 				// It might have something to do with using highland.scan() and
 				// passing the anchor through.
 				// The check for gpml:Point is a hack so we don't get an error for not having it
 				// because we've already deleted it when it runs more than once for the same edge.
 				return (element['gpml:element'] === 'gpml:Interaction' ||
-								element['gpml:element'] === 'gpml:GraphicalLine') &&
+									element['gpml:element'] === 'gpml:GraphicalLine') &&
 								element.hasOwnProperty('gpml:Point');
 			})
 			.map(function(edge) {
@@ -368,7 +367,7 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
 				return edge;
 			});
 
-			var interactions = _(edges).filter(function(element) {
+			var interactions = edges.filter(function(element) {
 				return element['gpml:element'] === 'gpml:Interaction';
 			})
 			.map(function(edge) {
