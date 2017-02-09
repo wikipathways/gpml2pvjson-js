@@ -37,29 +37,31 @@ declare interface Controlled {
 	type?: string;
 }
 
-type PvjsonElementStringProperties = 'id' |
+type PvjsonElementStringProperties = 'author' |
+      'backgroundColor' |
+      'color' |
+      'database' |
+      'dataSource' |
+      'displayName' |
+      'email' |
+      'href' |
+      'id' | // @id
+      'identifier' | // xref identifier, e.g., 1234 for Entrez Gene 1234
+      'isAttachedTo' |
       'shape' |
       'textAlign' |
-      'color' |
-      'dataSource' |
-      'email' |
-      'backgroundColor' |
       'fontFamily' |
       'fontStyle' |
       'fontWeight' |
-      'isAttachedTo' |
-      'href' |
       'lastModified' |
       'license' |
-      'strokeDasharray' |
       'maintainer' |
-      'standardName' |
-      'displayName' |
-      'type' |
-      'verticalAlign' |
       'organism' |
       'padding' |
-      'author';
+      'standardName' |
+      'strokeDasharray' |
+      'type' |
+      'verticalAlign';
 
 type PvjsonElementNumberProperties = 'x' |
       'y' |
@@ -83,7 +85,7 @@ declare type PvjsonElementWithNumberProperties = {
 }
 
 declare interface PvjsonElementWithXrefProperties {
-	xref: string[];
+	citation: string[];
 }
 
 declare interface PvjsonElementWithImageProperties {

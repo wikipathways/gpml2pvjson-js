@@ -16,9 +16,7 @@
   "dependencies": {
     "@types/highland": "^1.14.30",
     "@types/lodash": "^4.14.52",
-    "biopax2json": "wikipathways/biopax2json",
     "he": "~0.4.1",
-    "highland": "~1.27.1",
     "lodash": "^4.15.0",
     "request": "~2.40.0",
     "rgbcolor": "0.0.3",

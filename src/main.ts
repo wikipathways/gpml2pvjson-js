@@ -1,21 +1,10 @@
 import _ = require('lodash');
-import events = require('events');
 import * as sax from 'sax';
-import * as Anchor from './anchor';
-import * as Attribute from './attribute';
-import Biopax from 'biopax2json';
-//import Comment from './comment';
-import * as DataNode from './data-node';
-import * as GpmlUtilities from './gpml-utilities';
-import * as GraphicalLine from './graphical-line';
-import * as Graphics from './graphics';
+//import Biopax from 'biopax2json';
+import * as gpmlUtilities from './gpml-utilities';
 import * as Group from './group';
 import * as Interaction from './interaction';
-import * as Label from './label';
 import * as Point from './point';
-import * as Shape from './shape';
-import * as State from './state';
-//import * as Text from './text';
 import * as utils from './utils';
 import * as XmlElement from './xml-element';
 
@@ -33,8 +22,7 @@ import 'rx-extra/add/operator/throughNodeStream';
 export function transformGpmlToPvjson(sourceStream: Observable<string>) {
   var pvjson: Pvjson;
   var pathwayIri;
-  var currentClassLevelPvjsonAndGpmlElements = {};
-  var currentElementIsPathway;
+  var currentElementIsPathway: boolean;
   var currentText;
   var globalContext = [];
   var saxStream;
@@ -131,7 +119,7 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
     'Group',
     'Shape',
     'State',
-    'Pathway'
+    'Pathway',
   ];
   var tagNamesForNestedTargetElements = [
     'Anchor'
@@ -152,8 +140,40 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
   var currentTargetElement = {} as GPMLElement;
   var lastTargetElement = {} as GPMLElement;
   var currentNestedTargetElements = [];
-  var currentPublicationXrefDisplayName = 1;
-  var publicationXrefs = [];
+
+	// NOTE: this is for handling BioPAX as in GPML,
+	// which is not currently conformant with the
+	// BioPAX 3 spec.
+  var currentPublicationXref;
+  var currentPublicationXrefTag;
+  var currentPublicationXrefDisplayName = 0;
+	const bpToPvjsonMappings = {
+		'bp:ID': 'identifier',
+		'bp:DB': 'database',
+		'bp:TITLE': 'title',
+		'bp:SOURCE': 'source',
+		'bp:YEAR': 'year',
+		'bp:AUTHORS': 'author',
+	};
+	function BioPAX(x): void {
+		if (x === 'bp:PublicationXref') {
+			pvjson.elements.push(currentPublicationXref);
+			currentPublicationXref = null;
+		} else if (x.name === 'bp:PublicationXref') {
+			currentPublicationXrefDisplayName += 1;
+			currentPublicationXref = {
+				id: x.attributes['rdf:id'].value,
+				displayName: String(currentPublicationXrefDisplayName),
+				type: 'PublicationXref'
+			} as PublicationXref;
+		} else if (_.keys(bpToPvjsonMappings).indexOf(x.name) > -1) {
+			currentPublicationXrefTag = bpToPvjsonMappings[x.name];
+		} else if (!x.name && _.keys(bpToPvjsonMappings).indexOf(x) === -1) {
+			currentPublicationXref[currentPublicationXrefTag] = x;
+		} else if (_.keys(bpToPvjsonMappings).indexOf(x) > -1) {
+			currentPublicationXrefTag = null;
+		}
+	}
 
 	var topLevelGPMLElementStream = new Subject() as Subject<GPMLElement>;
 	// TODO the union seems wrong. How do we handle this?
@@ -196,27 +216,27 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
         var attributes = x.attributes;
         var xmlns = attributes.xmlns.value;
 
-        if (GpmlUtilities.supportedNamespaces.indexOf(xmlns) === -1) {
+        if (gpmlUtilities.supportedNamespaces.indexOf(xmlns) === -1) {
           // test for whether file is GPML
 					// TODO do we need to destroy saxStreamFiltered?
           const message = 'Pvjs does not support the data format provided. ' +
             'Please convert to valid GPML and retry.';
 					topLevelGPMLElementStream.error(message);
-        } else if (GpmlUtilities.supportedNamespaces.indexOf(xmlns) !== 0) {
+        } else if (gpmlUtilities.supportedNamespaces.indexOf(xmlns) !== 0) {
           // test for whether the GPML file version matches the latest version
           // (only the latest version will be supported by pvjs).
           // TODO call the Java RPC updater or in some other way call for the file to be updated.
 					// TODO do we need to destroy saxStreamFiltered?
           const message = 'Pvjs may not fully support the version of GPML provided (xmlns: ' +
             xmlns + '). Please convert to the supported version of GPML (xmlns: ' +
-            GpmlUtilities.supportedNamespaces[0] + ').';
+            gpmlUtilities.supportedNamespaces[0] + ').';
 					topLevelGPMLElementStream.error(message);
         }
 
         pvjson = {};
         pvjson['@context'] = globalContext;
 
-        pvjson.type = 'PathwayReference';
+        pvjson.type = 'Pathway';
         pvjson.elements = [];
       }
       currentTargetElement = x;
@@ -241,31 +261,9 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
       currentTargetElement.attributes['gpml:' + currentTagName].value =
         currentTargetElement.attributes['gpml:' + currentTagName].value || [];
       currentTargetElement.attributes['gpml:' + currentTagName].value.push(x);
-      // TODO pipe this through a biopax3ToJsonld converter instead of converting it here.
-      // need to look at whether that will take too long for pvjs.
-    } else if (x.name === 'Biopax' || currentTargetElement.name === 'Biopax') {
-      currentTargetElement = currentTargetElement || {} as GPMLElement;
-      currentTargetElement.name = 'Biopax';
-      if (!!x.name && x.name.toLowerCase() === 'bp:PublicationXref'.toLowerCase()) {
-        var currentPublicationXref: PublicationXref = {
-					id: x.attributes['rdf:id'].value,
-					displayName: String(currentPublicationXrefDisplayName),
-					type: 'PublicationXref'
-				};
-        // TODO re-enable this
-        //pvjson.elements.push(currentPublicationXref);
-        currentPublicationXrefDisplayName += 1;
-      }
+    } else if (x.name === 'bp:PublicationXref' || currentPublicationXref) {
+			BioPAX(x);
     }
-
-    // These resume() statements appear to be unneeded, at least right now.
-    // Maybe that would be different if I were forking the streams and using
-    // them elsewhere as well as here?
-    /*
-    openTagStream.resume();
-    textStream.resume();
-    closeTagStream.resume();
-    //*/
 
     if (x === 'Pathway') {
       topLevelGPMLElementStream.complete();
@@ -300,8 +298,7 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
 					return element['gpml:element'] === 'gpml:Group';
 				})
 				.map(function(group) {
-					// Note that a group returned from Group.toPvjson() can be null if the group
-					// is empty.
+					// Note that a group returned from Group.toPvjson() can be null if the group is empty.
 					return Group.toPvjson(pvjson, group);
 				})
 				.filter(function(group) {
@@ -348,9 +345,6 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
 			});
 
 			var edges = pvjson.elements.filter(function(element) {
-				// TODO figure out why this seems to run more times than it should.
-				// It might have something to do with using highland.scan() and
-				// passing the anchor through.
 				// The check for gpml:Point is a hack so we don't get an error for not having it
 				// because we've already deleted it when it runs more than once for the same edge.
 				return (element['gpml:element'] === 'gpml:Interaction' ||
@@ -429,15 +423,7 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
   // TODO
   // * Comments
   // * Better handling of x,y for anchors
-  // * Fully convert Biopax
-  // * Update BiopaxRefs to use pubmed URL as @id
 
-  /*
-  var biopaxStream = highland('Biopax', openTagStreamEvents)
-  .each(function(biopax) {
-  });
-  //*/
-	
 	return sourceStream
 	.let(function(o) {
 		o.subscribe(function(x) {
@@ -452,8 +438,6 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
 			saxStream.end();
 		});
 		
-		//saxStream.pipe(process.stdout);
-
 		return pvjsonStream;
 	});
 };

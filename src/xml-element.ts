@@ -1,5 +1,4 @@
 import * as _ from 'lodash';
-//import * as Anchor from './anchor';
 import * as Attribute from './attribute';
 import * as GpmlUtilities from './gpml-utilities';
 import * as He from 'he';
@@ -7,7 +6,6 @@ import * as Point from './point';
 import * as Strcase from 'tower-strcase';
 import RGBColor = require('rgbcolor');
 import * as utils from './utils';
-import * as Xref from './xref';
 
 var typeMappings = utils.typeMappings;
 var tmEntityGpmlPlain2EntityNormalizedPrefixed =
@@ -67,26 +65,18 @@ export function toPvjson(args: ToPvjsonArgs) {
 	var pvjson = args.pvjson;
 	var pvjsonElement = args.pvjsonElement;
 	var gpmlElement = args.gpmlElement;
-	var attribute;
-	var i;
-	var pvjsonStrokeWidth;
-	var pvjsonShape;
-	var pvjsonZIndex;
-	var pvjsonRelX;
-	var pvjsonRelY;
-	var pvjsonDisplayName;
-	var pvjsonHref;
 	var tagName = gpmlElement.name;
-	var type;
-	var lineStyleIsDouble;
-	var pvjsonBorderWidth;
-	var gpmlShapeType = '';
-	var pvjsonTextAlign;
-	var pvjsonVerticalAlign;
-	var gpmlRotation;
-	var gpmlDatabase;
 
-	var attributeDependencyOrder = [
+	// Note side-effects required for these values,
+	// because subsequent values depend on them.
+	var gpmlShapeType = '';
+	var pvjsonRelX: number;
+	var pvjsonRelY: number;
+	var lineStyleIsDouble: boolean;
+	var pvjsonBorderWidth: number;
+	var gpmlRotation: number;
+
+	var attributeDependencyOrder: GPMLAttributeNames[] = [
 		'GroupId',
 		'GraphId',
 		'GraphRef',
@@ -116,30 +106,29 @@ export function toPvjson(args: ToPvjsonArgs) {
 		'Database',
 		'ID',
 		'Data-Source',
-		'Version'
+		'Version',
 	];
 
 	function handleShapeType(gpmlValue) {
 		gpmlShapeType = gpmlValue;
 		// most graphics libraries use the term 'ellipse', so we're converting
 		// the GPML terms 'Oval' and 'Circle' to match
-		if (gpmlValue === 'Oval' || gpmlValue === 'Circle') {
-			pvjsonShape = 'Ellipse';
-		} else {
-			pvjsonShape = gpmlValue;
-		}
+		const ellipseEquivalents = [
+			'Oval',
+			'Circle'
+		];
 
 		// Note: if the LineStyle is "Double," then "-double" will be
 		// appended to pvjsonElement.shape when "Attributes" are handled.
 
-		pvjsonShape = Strcase.paramCase(pvjsonShape);
-		pvjsonElement.shape = pvjsonShape;
+		pvjsonElement.shape = Strcase.paramCase(
+				ellipseEquivalents.indexOf(gpmlValue) === -1 ? gpmlValue : 'ellipse'
+		);
 	}
 
 	var gpmlToPvjsonConverter = {
 		Align: function(gpmlAlignValue) {
-			pvjsonTextAlign = Strcase.paramCase(gpmlAlignValue);
-			pvjsonElement.textAlign = pvjsonTextAlign;
+			pvjsonElement.textAlign = Strcase.paramCase(gpmlAlignValue);
 		},
 		Attribute: function(gpmlValue) {
 			// NOTE: in GPML, 'Attribute' is an XML _ELEMENT_ with the tagName "Attribute."
@@ -157,10 +146,9 @@ export function toPvjson(args: ToPvjsonArgs) {
 			pvjsonElement.author = gpmlValue;
 		},
 		'gpml:BiopaxRef': function(gpmlValue) {
-			let xrefs = pvjsonElement.xref || [];
-			xrefs.push(gpmlValue);
-			// TODO will gpmlValue always be a string?
-			pvjsonElement.xref = xrefs;
+			let previousCitations = pvjsonElement.citation || [];
+			let citations = _.isArray(gpmlValue) ? gpmlValue : [gpmlValue];
+			pvjsonElement.citation = previousCitations.concat(citations);
 		},
 		BoardHeight: function(gpmlValue) {
 			pvjsonElement.image = pvjsonElement.image || {
@@ -346,11 +334,12 @@ export function toPvjson(args: ToPvjsonArgs) {
 		},
 		ConnectorType: function(gpmlConnectorTypeValue) {
 			var gpmlConnectorType = gpmlConnectorTypeValue;
-			pvjsonShape = Strcase.paramCase('line-' + gpmlConnectorType);
-			pvjsonElement.shape = pvjsonShape;
+			pvjsonElement.shape = Strcase.paramCase('line-' + gpmlConnectorType);
 		},
 		Database: function(gpmlValue) {
-			gpmlDatabase = gpmlValue;
+			if (gpmlValue) {
+				pvjsonElement.database = gpmlValue.trim();
+			}
 		},
 		'Data-Source': function(gpmlValue) {
 			pvjsonElement.dataSource = gpmlValue;
@@ -406,23 +395,12 @@ export function toPvjson(args: ToPvjsonArgs) {
 			}
 		},
 		Href: function(gpmlHrefValue) {
-			pvjsonHref = encodeURI(He.decode(gpmlHrefValue));
-			pvjsonElement.href = pvjsonHref;
+			pvjsonElement.href = encodeURI(He.decode(gpmlHrefValue));
 		},
-		// TODO what if there were multiple Xrefs for a single element?
 		ID: function(gpmlValue) {
-			var result = Xref.toPvjson({
-				pvjson: pvjson,
-				gpmlElement: gpmlElement,
-				pvjsonElement: pvjsonElement,
-				xref: {
-					Database: gpmlDatabase.trim(),
-					ID: gpmlValue.trim()
-				}
-			});
-
-			pvjson = result.pvjson;
-			pvjsonElement = result.pvjsonElement || pvjsonElement;
+			if (gpmlValue) {
+				pvjsonElement.identifier = gpmlValue.trim();
+			}
 		},
 		'Last-Modified': function(gpmlValue) {
 			pvjsonElement.lastModified = gpmlValue;
@@ -609,8 +587,7 @@ export function toPvjson(args: ToPvjsonArgs) {
 			}
 		},
 		TextLabel: function(gpmlTextLabelValue) {
-			pvjsonDisplayName = He.decode(gpmlTextLabelValue);
-			pvjsonElement.displayName = pvjsonDisplayName;
+			pvjsonElement.displayName = He.decode(gpmlTextLabelValue);
 		},
 		Type: function(gpmlValue) {
 			// NOTE: when the DataNode is set to have a Type of "Unknown" in PathVisio-Java,
@@ -628,8 +605,7 @@ export function toPvjson(args: ToPvjsonArgs) {
 			}
 		},
 		Valign: function(gpmlValignValue) {
-			pvjsonVerticalAlign = Strcase.paramCase(gpmlValignValue);
-			pvjsonElement.verticalAlign = pvjsonVerticalAlign;
+			pvjsonElement.verticalAlign = Strcase.paramCase(gpmlValignValue);
 		},
 		Version: function(gpmlValue) {
 			// This usually appears to be referring to the version from the DataSource,
@@ -644,8 +620,7 @@ export function toPvjson(args: ToPvjsonArgs) {
 			}
 		},
 		ZOrder: function(gpmlZOrderValue) {
-			pvjsonZIndex = parseAsNonNaNNumber(gpmlZOrderValue);
-			pvjsonElement.zIndex = pvjsonZIndex;
+			pvjsonElement.zIndex = parseAsNonNaNNumber(gpmlZOrderValue);
 		},
 		// everything below in this object: helper values/functions
 		gpmlColorToCssColor: function(gpmlColor) {
@@ -668,7 +643,11 @@ export function toPvjson(args: ToPvjsonArgs) {
 	pvjsonElement.type = pvjsonElement.type || 'gpml:' + tagName;
 
 	pvjsonElement = GpmlUtilities.convertAttributesToJson(
-			gpmlElement, pvjsonElement, gpmlToPvjsonConverter, attributeDependencyOrder);
+			gpmlElement,
+			pvjsonElement,
+			gpmlToPvjsonConverter,
+			attributeDependencyOrder
+	);
 	pvjsonElement['gpml:element'] = 'gpml:' + gpmlElement.name;
 
 	if (gpmlElement.name !== 'Pathway') {
