@@ -41,7 +41,7 @@
     "pretty-data": "~0.40.0",
     "pretty-error": "^1.2.0",
     "rdflib": "git://github.com/ckristo/rdflib.js.git#a5395dd5249ce383d0ecf6e087c36aa77cb3964f",
-    "typescript": "^2.1.5",
+    "typescript": "~2.1.5",
     "verror": "^1.6.0",
     "xmldom": "^0.1.19",
     "xmlhttprequest": "^1.8.0"
