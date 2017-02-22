@@ -1,1 +1,1 @@
-module.exports = require('./lib/main.js').default;
+module.exports = require('./src/main.js').default;
