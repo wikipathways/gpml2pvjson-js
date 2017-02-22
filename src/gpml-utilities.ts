@@ -1,4 +1,44 @@
-import {cloneDeep, defaultsDeep, difference, intersection, keys, map, reduce} from 'lodash';
+import { cloneDeep, defaultsDeep, difference, find, flatten, intersection, isArray, isEmpty, keys, map, reduce, toPairs, union } from 'lodash';
+
+/* LSV means JSON-LD @list or @set values
+ */
+export function arrayify(input: jsonldListSetValue): jsonldListSetPrimitive[] {
+	if (typeof input === 'undefined') {
+		return [];
+	}
+  return isArray(input) ? input : [input];
+};
+
+export function isJsonldListSetPrimitive(x): boolean {
+	const TYPE = typeof x;
+	return ['string', 'number', 'boolean'].indexOf(TYPE) > -1 ||
+		x === null ||
+		(TYPE !== 'undefined' && x.hasOwnProperty('@value'));
+};
+
+export function getValuesLSV(input: jsonldListSetValue): jsonldListSetPrimitive[] {
+	if (typeof input === 'undefined') {
+		return [];
+	}
+  return arrayify(input)
+		.map(function(x) {
+			return x && x.hasOwnProperty('@value') ? x['@value'] : x;
+		})
+		.filter(isJsonldListSetPrimitive);
+};
+
+export function intersectsLSV(x: jsonldListSetValue, y: jsonldListSetValue): boolean {
+  return !isEmpty(
+			intersection(
+					getValuesLSV(x),
+					getValuesLSV(y)
+			)
+	);
+};
+
+export function unionLSV(...inputs: jsonldListSetValue[]): jsonldListSetPrimitive[] {
+	return union(flatten(inputs.map(getValuesLSV)));
+};
 
 export let supportedNamespaces = [
 	'http://pathvisio.org/GPML/2013a',
@@ -19,7 +59,7 @@ export function applyDefaults(gpmlElement, defaultsArray) {
 	}, gpmlElement);
 };
 
-export function convertAttributesToJson(gpmlElement, pvjsonElement, converter, attributeDependencyOrder) {
+export function convertAttributesToJson(gpmlElement, dataElement, converter, attributeDependencyOrder) {
 	var converterKeys = keys(converter);
 	var attributeList, attributes;
 	attributes = gpmlElement.attributes;
@@ -51,7 +91,7 @@ export function convertAttributesToJson(gpmlElement, pvjsonElement, converter, a
 			converter[attributeListItem.name](attributeListItem.value);
 		});
 	}
-	return pvjsonElement;
+	return dataElement;
 };
 
 
@@ -225,26 +265,6 @@ export function multiplyMatrices(m1, m2) {
 	return result;
 };
 
-export function setBorderStyleAsJsonNew(jsonElement, currentGpmlLineStyleValue) {
-	var borderStyle = this.getBorderStyleNew(currentGpmlLineStyleValue);
-	jsonElement.borderStyle = borderStyle;
-	return jsonElement;
-};
-
-export function setBorderStyleAsJson(jsonElement, currentGpmlLineStyleValue, defaultGpmlLineStyleValue) {
-	var borderStyle;
-
-	// this check happens twice because it doesn't make sense to have getBorderStyle() tell us
-	// whether it has returned the default value, and we need to know whether we are using the
-	// default here.
-
-	if (currentGpmlLineStyleValue !== defaultGpmlLineStyleValue) {
-		borderStyle = this.getBorderStyle(currentGpmlLineStyleValue, defaultGpmlLineStyleValue);
-		jsonElement.borderStyle = borderStyle;
-	}
-	return jsonElement;
-};
-
 /**
  * rotate
  *
@@ -287,15 +307,16 @@ export function scale(args) {
 	];
 };
 
+let GpmlUtilities = this;
+
 export function getTransformationMatrix(transformationSequence) {
 	// Start with identity matrix
 	var concatenatedTransformationMatrix = [[1, 0, 0],
 																					[0, 1, 0],
 																					[0, 0, 1]];
-	var that = this;
 	transformationSequence.forEach(function(transformation) {
-		var thisTransformationMatrix = that[transformation.key](transformation.value);
-		concatenatedTransformationMatrix = that.multiplyMatrices(concatenatedTransformationMatrix, thisTransformationMatrix);
+		var thisTransformationMatrix = GpmlUtilities[transformation.key](transformation.value);
+		concatenatedTransformationMatrix = multiplyMatrices(concatenatedTransformationMatrix, thisTransformationMatrix);
 	});
 
 	return concatenatedTransformationMatrix;
@@ -386,7 +407,7 @@ export function transform(args) {
 		value: [(-1) * transformOriginPoint[0], (-1) * transformOriginPoint[1]]
 	});
 
-	var transformationMatrix = this.getTransformationMatrix(transformationSequence);
+	var transformationMatrix = getTransformationMatrix(transformationSequence);
 
 	var topLeftPoint = [[x],
 											[y],
@@ -396,9 +417,9 @@ export function transform(args) {
 													[y + height],
 													[1]];
 
-	var topLeftPointTransformed = this.multiplyMatrixByVector(transformationMatrix, topLeftPoint);
+	var topLeftPointTransformed = multiplyMatrixByVector(transformationMatrix, topLeftPoint);
 
-	var bottomRightPointTransformed = this.multiplyMatrixByVector(transformationMatrix, bottomRightPoint);
+	var bottomRightPointTransformed = multiplyMatrixByVector(transformationMatrix, bottomRightPoint);
 
 	element.x = topLeftPointTransformed[0][0];
 	element.y = topLeftPointTransformed[1][0];

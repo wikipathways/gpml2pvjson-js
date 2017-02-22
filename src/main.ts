@@ -1,12 +1,14 @@
-import _ = require('lodash');
+/// <reference path="../gpml2pvjson.d.ts" />
+
+import { keys, merge, omit, values } from 'lodash';
+import * as He from 'he';
+import { supportedNamespaces, unionLSV } from './gpml-utilities';
+import { postProcess as postProcessEdge } from './edge';
+import { postProcess as postProcessGroup } from './group';
+import { postProcess as postProcessInteraction } from './interaction';
 import * as sax from 'sax';
-//import Biopax from 'biopax2json';
-import * as gpmlUtilities from './gpml-utilities';
-import * as Group from './group';
-import * as Interaction from './interaction';
-import * as Point from './point';
-import * as utils from './utils';
-import * as XmlElement from './xml-element';
+import { fromGPML as elementFromGPML } from './xml-element';
+import { postProcess as postProcessDataNode } from './data-node';
 
 import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
@@ -18,59 +20,74 @@ import 'rxjs/add/operator/last';
 import 'rxjs/add/operator/let';
 import 'rxjs/add/operator/map';
 import 'rx-extra/add/operator/throughNodeStream';
- 
-export function transformGpmlToPvjson(sourceStream: Observable<string>) {
-  var pvjson: Pvjson;
-  var pathwayIri;
-  var currentElementIsPathway: boolean;
-  var currentText;
-  var globalContext = [];
-  var saxStream;
-  var saxStreamIsStrict = true; // set to false for html-mode
-  var openTagStream;
-  var currentTagName;
-  var textStream;
-  var closeTagStream;
 
-  // TODO where should these be hosted?
-  var externalContexts = [
-    'https://wikipathwayscontexts.firebaseio.com/biopax.json',
-    'https://wikipathwayscontexts.firebaseio.com/cellularLocation.json',
-    'https://wikipathwayscontexts.firebaseio.com/display.json',
-    //'https://wikipathwayscontexts.firebaseio.com/interactionType.json',
-    'https://wikipathwayscontexts.firebaseio.com/organism.json',
-    'https://wikipathwayscontexts.firebaseio.com/bridgedb/.json'
+// TODO why was I getting an error in pvjs when I had sourceStream: Observable<string>?
+//export default function(sourceStream: Observable<string>) {
+//}
+export default function(sourceStream: any, pathwayIri?: string) {
+
+  const NODES = [
+    'DataNode',
+    'Label',
+    'Shape',
+    'Group',
+    'State',
   ];
 
-  globalContext = globalContext.concat(externalContexts);
+  const EDGES = [
+    'Interaction',
+    'GraphicalLine',
+  ];
 
-  function convertConversionToGenericInteraction(interaction) {
-    console.warn('This Conversion fails BioPAX validator:)');
-    console.warn(interaction);
-    interaction.type = 'Interaction';
-    interaction.participant = [interaction.left, interaction.right];
-    delete interaction.left;
-    delete interaction.right;
-    delete interaction.conversionDirection;
-    delete interaction.interactionType;
-    return interaction;
-  }
+	// The top-level Pathway GPML element and all its children that represent entities.
+  const PATHWAY_AND_CHILD_TARGET_ELEMENTS = NODES.concat(EDGES).concat([
+		'Pathway',
+	]);
 
-  function convertCatalysisToGenericInteraction(interaction) {
-    console.warn('This Catalysis fails BioPAX validator:)');
-    console.warn(interaction);
-    interaction.type = 'Interaction';
-    interaction.participant = [interaction.controlled, interaction.controller];
-    delete interaction.controlled;
-    delete interaction.controller;
-    delete interaction.interactionType;
-    return interaction;
-  }
+	// GPML Elements that represent entities and are grandchildren or lower descendants of top-level Pathway element.
+  const SUB_CHILD_TARGET_ELEMENTS = [
+    'Anchor'
+  ];
+	
+	const TARGET_ELEMENTS = PATHWAY_AND_CHILD_TARGET_ELEMENTS.concat(SUB_CHILD_TARGET_ELEMENTS);
+
+  const SUPPLEMENTAL_ELEMENTS_WITH_ATTRIBUTES = [
+    'Graphics',
+    'Xref'
+  ];
+  const SUPPLEMENTAL_ELEMENTS_WITH_TEXT = [
+    'BiopaxRef',
+    'Comment'
+  ];
+  const NESTED_SUPPLEMENTAL_ELEMENTS = [
+    'Point',
+    'Attribute'
+  ];
+
+  let data = {
+		elementMap: {},
+		elements: [],
+		GraphIdToGroupId: {},
+		containedIdsByGroupId: {},
+		PublicationXref: [],
+		Point: [],
+	} as Data;
+
+	TARGET_ELEMENTS.forEach(function(gpmlElementName) {
+		data[gpmlElementName] = [];
+	});
+
+  let saxStream;
+  const SAX_STREAM_IS_STRICT = true; // set to false for html-mode
+  let openTagStream;
+  let currentTagName;
+  let textStream;
+  let closeTagStream;
 
   function createNewSAXStream() {
     // stream usage
     // takes the same options as the parser
-    saxStream = sax.createStream(saxStreamIsStrict, {
+    saxStream = sax.createStream(SAX_STREAM_IS_STRICT, {
       xmlns: true,
       trim: true
     });
@@ -100,56 +117,38 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
 
   saxStream = createNewSAXStream();
 
+	/* We want to be sure that every child element of the GPML Pathway element has a GraphId.
+	 * If the GraphId is already specified, we don't change it.
+	 * If it is not specified, we want to generate one with these properties:
+	 *   1) stability/purity: always the same data output for a given GPML input.
+	 *      We ensure this by using the startTagPosition.
+	 *   2) uniqueness: don't clobber an existing element id in the pathway.
+	 *      We do this by prepending the namespace "id-pvjson-".
+	 */
   function ensureGraphIdExists(x) {
-    x.attributes.GraphId = x.attributes.GraphId ||
-      {
-        name: 'GraphId',
-        value: 'idpvjs' + saxStream._parser.startTagPosition
-      };
+    x.attributes.GraphId = x.attributes.GraphId || {
+			name: 'GraphId',
+			value: 'id-pvjson-' + saxStream._parser.startTagPosition
+		};
     return x;
   }
 
-  var saxStreamFiltered = Observable.merge(openTagStream, textStream, closeTagStream);
+  let saxStreamFiltered = Observable.merge(openTagStream, textStream, closeTagStream);
 
-  var tagNamesForTargetElements = [
-    'DataNode',
-    'Label',
-    'Interaction',
-    'GraphicalLine',
-    'Group',
-    'Shape',
-    'State',
-    'Pathway',
-  ];
-  var tagNamesForNestedTargetElements = [
-    'Anchor'
-  ];
-  var tagNamesForSupplementalElementsWithAttributes = [
-    'Graphics',
-    'Xref'
-  ];
-  var tagNamesForSupplementalElementsWithText = [
-    'BiopaxRef',
-    'Comment'
-  ];
-  var tagNamesForNestedSupplementalElements = [
-    'Point',
-    'Attribute'
-  ];
+  let currentTargetElement = {} as GPMLElement;
+  let lastTargetElement = {
+		attributes: {}
+	} as GPMLElement;
+  let currentNestedTargetElements = [];
 
-  var currentTargetElement = {} as GPMLElement;
-  var lastTargetElement = {} as GPMLElement;
-  var currentNestedTargetElements = [];
-
-	// NOTE: this is for handling BioPAX as in GPML,
-	// which is not currently conformant with the
-	// BioPAX 3 spec.
-  var currentPublicationXref;
-  var currentPublicationXrefTag;
-  var currentPublicationXrefDisplayName = 0;
-	const bpToPvjsonMappings = {
-		'bp:ID': 'identifier',
-		'bp:DB': 'database',
+	// NOTE: this is for handling the BioPAX as currently embedded in GPML.
+	// Such BioPAX is not currently conformant with the BioPAX 3 spec.
+  let currentPublicationXref;
+  let currentPublicationXrefTag;
+  let currentPublicationXrefDisplayName = 0;
+	const bpToDataMappings = {
+		'bp:ID': 'dbId',
+		'bp:DB': 'dbName',
 		'bp:TITLE': 'title',
 		'bp:SOURCE': 'source',
 		'bp:YEAR': 'year',
@@ -157,34 +156,58 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
 	};
 	function BioPAX(x): void {
 		if (x === 'bp:PublicationXref') {
-			pvjson.elements.push(currentPublicationXref);
+			const currentPublicationXrefId = currentPublicationXref.id;
+			data.PublicationXref.push(currentPublicationXrefId)
+			data.elementMap[currentPublicationXrefId] = currentPublicationXref;
 			currentPublicationXref = null;
 		} else if (x.name === 'bp:PublicationXref') {
 			currentPublicationXrefDisplayName += 1;
 			currentPublicationXref = {
 				id: x.attributes['rdf:id'].value,
 				displayName: String(currentPublicationXrefDisplayName),
-				type: 'PublicationXref'
+				type: ['PublicationXref']
 			} as PublicationXref;
-		} else if (_.keys(bpToPvjsonMappings).indexOf(x.name) > -1) {
-			currentPublicationXrefTag = bpToPvjsonMappings[x.name];
-		} else if (!x.name && _.keys(bpToPvjsonMappings).indexOf(x) === -1) {
-			currentPublicationXref[currentPublicationXrefTag] = x;
-		} else if (_.keys(bpToPvjsonMappings).indexOf(x) > -1) {
+		} else if (keys(bpToDataMappings).indexOf(x.name) > -1) {
+			currentPublicationXrefTag = bpToDataMappings[x.name];
+		} else if (!x.name && keys(bpToDataMappings).indexOf(x) === -1) {
+			// using He.decode here, because some GPML at some point didn't use UTF-8
+			// for things like author names.
+			currentPublicationXref[currentPublicationXrefTag] = He.decode(x);
+		} else if (keys(bpToDataMappings).indexOf(x) > -1) {
 			currentPublicationXrefTag = null;
 		}
 	}
 
-	var topLevelGPMLElementStream = new Subject() as Subject<GPMLElement>;
+	function pushIntoArray(elements, element: DataElement): void {
+		elements.push(element);
+	}
+
+	function upsertDataMapEntry(dataMap, element: DataElement): void {
+		dataMap[element.id] = element;
+	}
+
+	function getFromTempById(id: string): DataElement {
+		return data.elementMap[id];
+	}
+
+	function getFromTempByIdAndFilter(acc: any[], id: string): any[] {
+		const element = getFromTempById(id);
+		if (element) {
+			acc.push(element);
+		}
+		return acc;
+	}
+
+	let topLevelGPMLElementStream = new Subject() as Subject<GPMLElement>;
 	// TODO the union seems wrong. How do we handle this?
   saxStreamFiltered.subscribe(function(x: GPMLElement & string) {
     if (!!x.name) {
       currentTagName = x.name;
     }
 
-    if ((tagNamesForTargetElements.indexOf(x) > -1 ||
-         tagNamesForTargetElements.indexOf(x.name) > -1) &&
-           tagNamesForTargetElements.indexOf(currentTargetElement.name) > -1) {
+    if ((PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(x) > -1 ||
+         PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(x.name) > -1) &&
+           PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(currentTargetElement.name) > -1) {
       topLevelGPMLElementStream.next(currentTargetElement);
       currentTargetElement = {} as GPMLElement;
 
@@ -209,58 +232,52 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
       currentNestedTargetElements = [];
     }
 
-    if (tagNamesForTargetElements.indexOf(x.name) > -1) {
+    if (PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(x.name) > -1) {
       if (x.name !== 'Pathway') {
         x = ensureGraphIdExists(x);
       } else if (x.name === 'Pathway') {
-        var attributes = x.attributes;
-        var xmlns = attributes.xmlns.value;
+        const attributes = x.attributes;
+        const xmlns = attributes.xmlns.value;
 
-        if (gpmlUtilities.supportedNamespaces.indexOf(xmlns) === -1) {
+        if (supportedNamespaces.indexOf(xmlns) === -1) {
           // test for whether file is GPML
 					// TODO do we need to destroy saxStreamFiltered?
           const message = 'Pvjs does not support the data format provided. ' +
             'Please convert to valid GPML and retry.';
 					topLevelGPMLElementStream.error(message);
-        } else if (gpmlUtilities.supportedNamespaces.indexOf(xmlns) !== 0) {
+        } else if (supportedNamespaces.indexOf(xmlns) !== 0) {
           // test for whether the GPML file version matches the latest version
           // (only the latest version will be supported by pvjs).
           // TODO call the Java RPC updater or in some other way call for the file to be updated.
 					// TODO do we need to destroy saxStreamFiltered?
           const message = 'Pvjs may not fully support the version of GPML provided (xmlns: ' +
             xmlns + '). Please convert to the supported version of GPML (xmlns: ' +
-            gpmlUtilities.supportedNamespaces[0] + ').';
+            supportedNamespaces[0] + ').';
 					topLevelGPMLElementStream.error(message);
         }
-
-        pvjson = {};
-        pvjson['@context'] = globalContext;
-
-        pvjson.type = 'Pathway';
-        pvjson.elements = [];
       }
       currentTargetElement = x;
-    } else if (tagNamesForSupplementalElementsWithAttributes.indexOf(x.name) > -1) {
-      _.merge(currentTargetElement.attributes, x.attributes);
-    } else if (tagNamesForNestedTargetElements.indexOf(x.name) > -1) {
+    } else if (SUPPLEMENTAL_ELEMENTS_WITH_ATTRIBUTES.indexOf(x.name) > -1) {
+      merge(currentTargetElement.attributes, x.attributes);
+    } else if (SUB_CHILD_TARGET_ELEMENTS.indexOf(x.name) > -1) {
       x = ensureGraphIdExists(x);
       currentNestedTargetElements.push(x);
-    } else if (tagNamesForNestedSupplementalElements.indexOf(x.name) > -1) {
+    } else if (NESTED_SUPPLEMENTAL_ELEMENTS.indexOf(x.name) > -1) {
       currentTargetElement.attributes[x.name] = currentTargetElement.attributes[x.name] || {};
       currentTargetElement.attributes[x.name].name = x.name;
       currentTargetElement.attributes[x.name].value =
         currentTargetElement.attributes[x.name].value || [];
       currentTargetElement.attributes[x.name].value.push(x);
-    } else if (tagNamesForSupplementalElementsWithText.indexOf(currentTagName) > -1 &&
+    } else if (SUPPLEMENTAL_ELEMENTS_WITH_TEXT.indexOf(currentTagName) > -1 &&
                !x.name &&
                  currentTagName !== x) {
       currentTargetElement.attributes = currentTargetElement.attributes || {};
-      currentTargetElement.attributes['gpml:' + currentTagName] =
-        currentTargetElement.attributes['gpml:' + currentTagName] || {};
-      currentTargetElement.attributes['gpml:' + currentTagName].name = 'gpml:' + currentTagName;
-      currentTargetElement.attributes['gpml:' + currentTagName].value =
-        currentTargetElement.attributes['gpml:' + currentTagName].value || [];
-      currentTargetElement.attributes['gpml:' + currentTagName].value.push(x);
+      currentTargetElement.attributes[currentTagName] =
+        currentTargetElement.attributes[currentTagName] || {};
+      currentTargetElement.attributes[currentTagName].name = currentTagName;
+      currentTargetElement.attributes[currentTagName].value =
+        currentTargetElement.attributes[currentTagName].value || [];
+      currentTargetElement.attributes[currentTagName].value.push(x);
     } else if (x.name === 'bp:PublicationXref' || currentPublicationXref) {
 			BioPAX(x);
     }
@@ -272,152 +289,143 @@ export function transformGpmlToPvjson(sourceStream: Observable<string>) {
 
 	let pvjsonStream = topLevelGPMLElementStream
 		.do(function(element: GPMLElement) {
-			element = XmlElement.applyDefaults(element);
-			if (tagNamesForTargetElements.indexOf(element.name) > -1) {
+			if (PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(element.name) > -1) {
 				lastTargetElement = element;
 			}
-			var pvjsonElement = (element.name !== 'Pathway') ? {} : pvjson;
-			pvjson = XmlElement.toPvjson({
-				pvjson: pvjson,
+			let dataElement = ((element.name !== 'Pathway') ? {} : data) as DataElement & Data;
+			data = elementFromGPML({
+				data: data,
 				// TODO is this union below correct?
-				pvjsonElement: pvjsonElement as PvjsonElement & Pvjson,
+				dataElement: dataElement,
 				gpmlElement: element
 			});
 		})
 		.last()
-		.map(function(gpmlElement: GPMLElement): Pvjson {
-			return pvjson;
+		.map(function(gpmlElement: GPMLElement): Data {
+			// TODO is there a cleaner way to handle this?
+			// Right now, we're just returning data once we've gone through
+			// all appropriate elements.
+			return data;
 		})
-		.map(function(pvjson: Pvjson) {
+		.map(function(data: Data) {
+			const GPML_ELEMENT_NAME_TO_PVJSON_TYPE = {
+				'DataNode': 'Node',
+				'Shape': 'Node',
+				'Label': 'Node',
+				'State': 'Decoration',
+				'PublicationXref': 'Citation',
+				'Group': 'Group',
+				'Interaction': 'Edge',
+				'GraphicalLine': 'Edge',
+			};
+
+			let elementMap = data.elementMap;
+			values(elementMap)
+				.map(function(element) {
+					const pvjsonType = element.pvjsonType = GPML_ELEMENT_NAME_TO_PVJSON_TYPE[element.gpmlElementName];
+					element.type = unionLSV(element.type, element.gpmlElementName, element.wpType, pvjsonType) as string[];
+					return element;
+				})
+				.forEach(upsertDataMapEntry.bind(undefined, elementMap));
+
+			data.DataNode
+				.reduce(getFromTempByIdAndFilter, [])
+				.map(postProcessDataNode.bind(undefined, data))
+				.forEach(upsertDataMapEntry.bind(undefined, elementMap));
+
 			// Update all groups, now that the rest of the elements have all been converted.
-			pvjson.elements = _.filter(pvjson.elements, function(element) {
-				return element['gpml:element'] !== 'gpml:Group';
-			})
-			.concat(
-				_.filter(pvjson.elements, function(element) {
-					return element['gpml:element'] === 'gpml:Group';
-				})
-				.map(function(group) {
-					// Note that a group returned from Group.toPvjson() can be null if the group is empty.
-					return Group.toPvjson(pvjson, group);
-				})
-				.filter(function(group) {
-					return !!group;
-				})
-				.map(function(group) {
-					var containsEdge = group.contains.reduce(function(accumulator, item) {
-						var isEdge = utils.isType(utils.biopax.edgeTypes, item.type);
-						accumulator = accumulator || isEdge;
-						return accumulator;
-					}, false);
-					if (!containsEdge) {
-						// TODO is this warranted?
-						group.type = 'Complex';
+			data.Group
+				.reduce(getFromTempByIdAndFilter, [])
+				.map(postProcessGroup.bind(undefined, data))
+				// A bug in PathVisio means GPML sometimes keeps empty groups.
+				// We don't want these empty groups in pvjson.
+				//.filter((group: DataElement) => group.contains.length > 0)
+				.filter(function(group: DataElement) {
+					const containsCount = group.contains.length;
+					if (containsCount === 0) {
+						// NOTE: notice side effect
+						delete elementMap[group.id];
 					}
-					return group;
+					return containsCount > 0
 				})
-				.map(function(group) {
-					group.contains = group.contains
-						.map(function(element) {
-							return element.id;
-						});
-					return group;
+				.map(function(element) {
+					return omit(element, ['gpml:Style']);
 				})
-			);
+				.forEach(function(group: DataElement) {
+					upsertDataMapEntry(elementMap, group);
 
-			// GroupRef attributes are initially represented as pvjson properties like this:
-			// "gpml:GroupRef": GroupId value
-			// Once all the elements have been converted to pvjson, these properties are
-			// removed in Group.toPvjson(), being replaced with
-			// "isPartOf": GraphId value
-			//
-			// Some GPML files have a GroupRef attribute referencing a GroupId for a non-existent
-			// Group element. The "gpml:GroupRef":GroupId properties resulting from such GroupRef
-			// attributes need to be removed below, because Group.toPvjson will not run for these
-			// elements.
-			//
-			// Remove all remaining gpml:GroupRef properties.
-			pvjson.elements.filter(function(element) {
-				return element.hasOwnProperty('gpml:GroupRef');
-			})
-			.forEach(function(element) {
-				delete element['gpml:GroupRef'];
-			});
-
-			var edges = pvjson.elements.filter(function(element) {
-				// The check for gpml:Point is a hack so we don't get an error for not having it
-				// because we've already deleted it when it runs more than once for the same edge.
-				return (element['gpml:element'] === 'gpml:Interaction' ||
-									element['gpml:element'] === 'gpml:GraphicalLine') &&
-								element.hasOwnProperty('gpml:Point');
-			})
-			.map(function(edge) {
-				edge = Point.toPvjson({
-					pvjson: pvjson,
-					pvjsonElement: edge
+					// group.id refers to the value of the GraphId
+					const groupId = group.id;
+					group.contains.forEach(function(containedId) {
+						let contained = elementMap[containedId];
+						contained.isPartOf = groupId;
+					});
 				});
 
-				delete edge['gpml:Point'];
-				return edge;
-			});
+			NODES.reduce(function(acc, gpmlElementName) {
+				return acc.concat(data[gpmlElementName]);
+			}, [])
+				.reduce(getFromTempByIdAndFilter, [])
+				.map(function(element) {
+					return omit(element, ['relX', 'relY']);
+				})
+				.forEach(pushIntoArray.bind(undefined, data.elements));
 
-			var interactions = edges.filter(function(element) {
-				return element['gpml:element'] === 'gpml:Interaction';
-			})
-			.map(function(edge) {
-				return Interaction.toPvjson({
-					pvjson: pvjson,
-					pvjsonElement: edge
-				});
-			});
+			data.GraphicalLine
+				.reduce(getFromTempByIdAndFilter, [])
+				.map(postProcessEdge.bind(undefined, data))
+				.map(function(edge) {
+					return omit(edge, ['gpml:Point']);
+				})
+				.forEach(pushIntoArray.bind(undefined, data.elements));
 
-			interactions.filter(function(interaction) {
-				return interaction.type === 'Catalysis';
-			})
-			.map(function(catalysis) {
-				var controlled: Controlled = utils.dereferenceElement(pvjson.elements, catalysis.controlled);
-				var controller: Controller = utils.dereferenceElement(pvjson.elements, catalysis.controller);
+			data.Interaction
+				.reduce(getFromTempByIdAndFilter, [])
+				.map(postProcessEdge.bind(undefined, data))
+				.map(function(edge) {
+					return omit(edge, ['gpml:Point']);
+				})
+				.map(postProcessInteraction.bind(undefined, data))
+				.forEach(pushIntoArray.bind(undefined, data.elements));
 
-				if (!utils.isBiopaxType(utils.biopax.nodeTypes, controller.type)) {
-					// If the controller is not a Pathway or PhysicalEntity,
-					// we make this interaction generic, because it's not a valid
-					// Catalysis.
+			data.PublicationXref
+				.reduce(getFromTempByIdAndFilter, [])
+				.forEach(pushIntoArray.bind(undefined, data.elements));
 
-					if (controller['gpml:Type'] === 'Group') {
-						controller.type = 'Complex';
-					} else {
-						convertCatalysisToGenericInteraction(catalysis);
-					}
-				}
-
-				// If it's still a Catalysis, we need to make the controlled be a Conversion.
-				if (catalysis.type === 'Catalysis' &&
-						utils.isType(['Interaction'], controlled.type)) {
-					controlled.type = 'Conversion';
-					var participants = controlled.participant;
-					if (_.isArray(participants) && participants.length >= 2) {
-						controlled.left = participants[0];
-						controlled.right = participants[1];
-						delete controlled.participant;
-					} else {
-						convertConversionToGenericInteraction(controlled);
-						convertCatalysisToGenericInteraction(catalysis);
-					}
-				}
-			});
-
+			const name = data.name;
+			const organism = data.organism;
 			if (!pathwayIri) {
+				const organismIriComponent = !!organism ? '&species=' + organism : '';
 				pathwayIri = encodeURI('http://wikipathways.org/index.php/Special:SearchPathways?query=' +
-															 pvjson.standardName + '&species=' + pvjson.organism +
-																 '&doSearch=1');
+															 name + organismIriComponent + '&doSearch=1');
 			}
-			var localContext = {};
-			localContext['@base'] = pathwayIri + '/';
-			pvjson['@context'].push(localContext);
 
-			delete pvjson['gpml:element'];
+			// TODO where should these be hosted?
+			const context = [
+				'https://wikipathwayscontexts.firebaseio.com/biopax.json',
+				'https://wikipathwayscontexts.firebaseio.com/cellularLocation.json',
+				'https://wikipathwayscontexts.firebaseio.com/display.json',
+				//'https://wikipathwayscontexts.firebaseio.com/interactionType.json',
+				'https://wikipathwayscontexts.firebaseio.com/organism.json',
+				'https://wikipathwayscontexts.firebaseio.com/bridgedb/.json',
+				{
+					'@base': pathwayIri + '/'
+				}
+			];
 
-			return pvjson;
+			return {
+				'@context': context,
+				id: pathwayIri,
+				name: name,
+				organism: organism,
+				width: data.width,
+				height: data.height,
+				// NOTE: GPML does not contain a way to express background color.
+				// It's always just white.
+				backgroundColor: 'white',
+				type: ['Pathway'],
+				elements: data.elements
+			};
 		});
 
   // TODO

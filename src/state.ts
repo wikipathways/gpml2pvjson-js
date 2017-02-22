@@ -1,6 +1,6 @@
 import * as GpmlUtilities from './gpml-utilities';
 
-export let defaults = {
+const STATE_DEFAULTS = {
 	attributes: {
 		Padding: {
 			name: 'Padding',
@@ -38,12 +38,12 @@ export let defaults = {
 };
 
 export function applyDefaults(gpmlElement, defaults) {
-	gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
+	gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [STATE_DEFAULTS, defaults]);
 	return gpmlElement;
 };
 
-export function toPvjson(pvjson, state) {
-	var referencedNode = pvjson.elements.filter(function(element){
+export function fromGPML(data, state) {
+	var referencedNode = data.elements.filter(function(element){
 		return element.id === state.isAttachedTo;
 	})[0];
 	

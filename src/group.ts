@@ -1,8 +1,25 @@
-import _ = require('lodash');
-import * as Graphics from './graphics';
-import * as GpmlUtilities from './gpml-utilities';
+import { applyDefaults as baseApplyDefaults, intersectsLSV, unionLSV } from './gpml-utilities';
 
-export let defaults = {
+const biopaxEdgeTypes = [
+  'Interaction',
+  'Control',
+  'TemplateReactionRegulation',
+  'Catalysis',
+  'Modulation',
+  'Conversion',
+  'BiochemicalReaction',
+  'TransportWithBiochemicalReaction',
+  'ComplexAssembly',
+  'Degradation',
+  'Transport',
+  'TransportWithBiochemicalReaction',
+  'GeneticInteraction',
+  'MolecularInteraction',
+  'TemplateReaction'
+];
+const biopaxEdgeTypesPrefixed = biopaxEdgeTypes.map(x => 'biopax:' + x);
+
+export const GROUP_DEFAULTS = {
 	attributes: {
 		Align: {
 			name: 'Align',
@@ -125,11 +142,12 @@ export function applyDefaults(gpmlElement, defaults) {
 
 	gpmlElement.attributes.Style = gpmlElement.attributes.Style || {value: 'None'};
 	var groupStyle = gpmlElement.attributes.Style;
-	gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [defaultsByStyle[groupStyle.value], this.defaults, defaults]);
+	gpmlElement = baseApplyDefaults(gpmlElement, [defaultsByStyle[groupStyle.value], GROUP_DEFAULTS, defaults]);
 	return gpmlElement;
 };
 
-export function getGroupDimensions(group): GroupDimensions {
+// TODO should we allow padding to be a value like '0.5em'?
+export function getGroupDimensions(padding: number, borderWidth: number, groupContents: DataElement[]): GroupDimensions {
 	let dimensions = <GroupDimensions>{};
 	dimensions.topLeftCorner = {
 		x: Infinity,
@@ -139,12 +157,6 @@ export function getGroupDimensions(group): GroupDimensions {
 		x: 0,
 		y: 0
 	};
-	// TODO what happens if this were set to '0.5em'?
-	var padding = parseFloat(group.padding);
-	var borderWidth = group.borderWidth;
-
-	var groupContents = group.contains;
-	groupContents = _.toArray(groupContents);
 
 	dimensions.zIndex = Infinity;
 
@@ -178,46 +190,80 @@ export function getGroupDimensions(group): GroupDimensions {
 	// TODO refactor to avoid magic number. It's currently used as a hack to put the group behind its contents.
 	dimensions.zIndex = dimensions.zIndex - 0.1;
 
-	if (typeof dimensions.x === 'undefined' || isNaN(dimensions.x) || dimensions.x === null || typeof dimensions.y === 'undefined' || isNaN(dimensions.y) || dimensions.y === null || typeof dimensions.width === 'undefined' || isNaN(dimensions.width) || dimensions.width === null || typeof dimensions.height === 'undefined' || isNaN(dimensions.height) || dimensions.height === null) {
+	if (typeof dimensions.x === 'undefined' ||
+			isNaN(dimensions.x) ||
+				dimensions.x === null ||
+					typeof dimensions.y === 'undefined' ||
+						isNaN(dimensions.y) ||
+							dimensions.y === null ||
+								typeof dimensions.width === 'undefined' ||
+									isNaN(dimensions.width) ||
+										dimensions.width === null ||
+											typeof dimensions.height === 'undefined' ||
+												isNaN(dimensions.height) ||
+													dimensions.height === null) {
 		throw new Error('Error calculating group dimensions. Cannot calculate one or more of the following: x, y, width, height.');
 	}
 
 	return dimensions;
 };
 
-
-export function toPvjson(pvjson, group) {
-
-	// TODO once GPML supports it, we should create entityReferences for Groups of Type "Complex" and "Pathway"
-
-	var id = group.id;
-
-	var contents = pvjson.elements.filter(function(element){
-		return element['gpml:GroupRef'] === group['gpml:GroupId'];
-	})
-	.map(function(content) {
-		delete content['gpml:GroupRef'];
-		content.isPartOf = id;
-		return content;
-	});
+export function postProcess(data, group: DataElement) {
+	// NOTE: pvjson doesn't use GroupId. It just uses GraphId as the id for an element.
+	// So GPML uses GroupId/GroupRef; pvjson uses just id (from GraphId) and element.isPartOf and group.contains
+	// We need to map from GroupId/GroupRef to id/contains/isPartOf here.
+	// group.id refers to the value from GraphId.
+	const containedIds = group.contains = data.containedIdsByGroupId[data.GraphIdToGroupId[group.id]] || [];
 	
-	// GPML shouldn't have empty groups, but since PathVisio-Java has a bug that sometimes results in empty groups,
-	// we need to detect and delete them.
-	if (contents.length === 0) {
-		_.pull(pvjson.elements, group);
-		// TODO make sure group is deleted
-		return;
+	// GPML shouldn't have empty groups, but PathVisio-Java has a bug that sometimes results in empty groups.
+	if (containedIds.length === 0) {
+		return group;
 	}
 
-	delete group['gpml:GroupId'];
+	const containedElements = containedIds.map((id) => data.elementMap[id]);
 
-	group.contains = contents;
-	var dimensions = getGroupDimensions(group);
+	const dimensions = getGroupDimensions(
+			group.padding,
+			group.borderWidth,
+			containedElements
+	);
 	group.y = dimensions.y;
 	group.x = dimensions.x;
 	group.width = dimensions.width;
 	group.height = dimensions.height;
 	group.zIndex = dimensions.zIndex;
 
+	// Handle 'Style' attributes for GPML 'Group' elements,
+	// using the closest Biopax term available for the mappings below.
+	// Once all the elements are converted, we come back to this and
+	// set any 'Pathways' with no interactions to be Complexes.
+	const GROUP_STYLE_TO_BIOPAX = {
+		'Group': 'Pathway',
+		'None': 'Pathway',
+		'Complex': 'Complex',
+		'Pathway': 'Pathway'
+	};
+
+	const GROUP_STYLE_TO_DRAW_AS = {
+		'Group': 'None',
+		'None': 'None',
+		'Complex': 'Complex',
+		'Pathway': 'Rectangle'
+	};
+
+	// Convert GPML Group Style to a Biopax class, like Complex
+	const additionalType = GROUP_STYLE_TO_BIOPAX[group['gpml:Style']] || 'Pathway';
+	group.type = unionLSV(group.type, additionalType) as string[];
+
+	var containsEdge = containedElements.reduce(function(accumulator, item) {
+		var isEdge = intersectsLSV(biopaxEdgeTypes, item.type);
+		accumulator = accumulator || isEdge;
+		return accumulator;
+	}, false);
+
+	if (!containsEdge) {
+		// TODO is this warranted?
+		group.type = ['Complex'];
+	}
 	return group;
 };

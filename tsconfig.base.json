@@ -13,7 +13,7 @@
 		"src/main.ts",
 		"rgbcolor.d.ts",
 		"sax.d.ts",
-		"index.d.ts"
+		"gpml2pvjson.d.ts"
 	],
 	"exclude": [
 		"dist/**/*",

@@ -1,35 +1,31 @@
-import strcase = require('tower-strcase');
-import _ = require('lodash');
+import { isNumber } from 'lodash';
 import * as GpmlUtilities from './gpml-utilities';
 
 // a stub is a short path segment that is used for the first and/or last segment(s) of a path
 var defaultStubLength = 20;
 
-interface PvjsonPositionAndOrientationMapping {
+interface DataPositionAndOrientationMapping {
 	position: number;
 	orientation: number;
 	offset: number;
 }
 
-export function toPvjson(args) {
-	var pvjson = args.pvjson
-		, pvjsonEdge = args.pvjsonElement
-		, pointElements = pvjsonEdge['gpml:Point']
-		, point
-		, gpmlPoint
-		, explicitPoint
-		, pvjsonPoint
-		, pvjsonPoints
-		, explicitPoints = []
-		, pvjsonX
-		, pvjsonY
-		, parentElement
-		, pvjsonMarker
-		, referencedElement
-		, referencedElementTag
-		, referencedElements = []
-		, referencedElementTags = []
-		;
+export function postProcess(data: Data, dataEdge: DataElement) {
+	let pointElements = dataEdge['gpml:Point'];
+	let point;
+	let gpmlPoint;
+	let explicitPoint;
+	let dataPoint;
+	let dataPoints;
+	let explicitPoints = [];
+	let dataX;
+	let dataY;
+	let parentElement;
+	let dataMarker;
+	let referencedElement;
+	let referencedElementTag;
+	let referencedElements = [];
+	let referencedElementTags = [];
 
 	pointElements.forEach(function(gpmlPoint, index, array) {
 		explicitPoint = {};
@@ -42,16 +38,16 @@ export function toPvjson(args) {
 			'Y'
 		];
 
-		var gpmlToPvjsonConverter = {
+		var gpmlToDataConverter = {
 			X: function(gpmlXValue) {
-				pvjsonX = parseFloat(gpmlXValue);
-				explicitPoint.x = pvjsonX;
-				return pvjsonX;
+				dataX = parseFloat(gpmlXValue);
+				explicitPoint.x = dataX;
+				return dataX;
 			},
 			Y: function(gpmlYValue) {
-				pvjsonY = parseFloat(gpmlYValue);
-				explicitPoint.y = pvjsonY;
-				return pvjsonY;
+				dataY = parseFloat(gpmlYValue);
+				explicitPoint.y = dataY;
+				return dataY;
 			},
 			RelX: function(gpmlRelXValue) {
 				// see jsPlumb anchor model: http://jsplumbtoolkit.com/doc/anchors
@@ -63,29 +59,29 @@ export function toPvjson(args) {
 				// anchor: [ 0.5, 1, 0, 1 ]
 				//
 				// this code only runs for points not attached to edges
-				if (referencedElementTag.toLowerCase() !== 'gpml:interaction' &&
-						referencedElementTag.toLowerCase() !== 'gpml:graphicalline') {
+				if (referencedElementTag !== 'Interaction' &&
+						referencedElementTag !== 'GraphicalLine') {
 					var gpmlRelXValueString = gpmlRelXValue.toString();
 					var gpmlRelXValueInteger = parseFloat(gpmlRelXValue);
 					var argsX = {
 						relValue: gpmlRelXValueInteger,
 						identifier: 'RelX',
 						referencedElement: referencedElement,
-						pvjson: pvjson
+						data: data
 					};
-					var pvjsonPositionAndOrientationX = getPvjsonPositionAndOrientationMapping(argsX);
+					var dataPositionAndOrientationX = getDataPositionAndOrientationMapping(argsX);
 					explicitPoint.anchor = explicitPoint.anchor || [];
-					if (!!pvjsonPositionAndOrientationX && _.isNumber(pvjsonPositionAndOrientationX.position)) {
-						explicitPoint.anchor[0] = pvjsonPositionAndOrientationX.position;
-						if (pvjsonPositionAndOrientationX.hasOwnProperty('orientation') &&
-								_.isNumber(pvjsonPositionAndOrientationX.orientation)) {
-							explicitPoint.anchor[2] = pvjsonPositionAndOrientationX.orientation;
+					if (!!dataPositionAndOrientationX && isNumber(dataPositionAndOrientationX.position)) {
+						explicitPoint.anchor[0] = dataPositionAndOrientationX.position;
+						if (dataPositionAndOrientationX.hasOwnProperty('orientation') &&
+								isNumber(dataPositionAndOrientationX.orientation)) {
+							explicitPoint.anchor[2] = dataPositionAndOrientationX.orientation;
 						} else {
 						}
-						if (pvjsonPositionAndOrientationX.hasOwnProperty('offset')) {
+						if (dataPositionAndOrientationX.hasOwnProperty('offset')) {
 							// TODO in the case of a group as the referenced element,
 							// we don't have the group width and height yet to properly calculate this
-							explicitPoint.anchor[4] = pvjsonPositionAndOrientationX.offset || 20;
+							explicitPoint.anchor[4] = dataPositionAndOrientationX.offset || 20;
 						}
 					}
 					return gpmlRelXValueInteger;
@@ -94,41 +90,39 @@ export function toPvjson(args) {
 			RelY: function(gpmlRelYValue) {
 				// see note at RelX
 				// this code only runs for points not attached to edges
-				if (referencedElementTag.toLowerCase() !== 'gpml:interaction' &&
-						referencedElementTag.toLowerCase() !== 'gpml:graphicalline') {
+				if (referencedElementTag !== 'Interaction' &&
+						referencedElementTag !== 'GraphicalLine') {
 					var gpmlRelYValueString = gpmlRelYValue.toString();
 					var gpmlRelYValueInteger = parseFloat(gpmlRelYValue);
 					var argsY = {
 						relValue: gpmlRelYValueInteger,
 						identifier: 'RelY',
 						referencedElement: referencedElement,
-						pvjson: pvjson
+						data: data
 					};
-					var pvjsonPositionAndOrientationY = getPvjsonPositionAndOrientationMapping(argsY);
+					var dataPositionAndOrientationY = getDataPositionAndOrientationMapping(argsY);
 					// here we are referring to jsplumb anchor, not GPML Anchor
 					explicitPoint.anchor = explicitPoint.anchor || [];
-					if (!!pvjsonPositionAndOrientationY && _.isNumber(pvjsonPositionAndOrientationY.position)) {
-						explicitPoint.anchor[1] = pvjsonPositionAndOrientationY.position;
-						if (pvjsonPositionAndOrientationY.hasOwnProperty('orientation') &&
-								_.isNumber(pvjsonPositionAndOrientationY.orientation)) {
-							explicitPoint.anchor[3] = pvjsonPositionAndOrientationY.orientation;
+					if (!!dataPositionAndOrientationY && isNumber(dataPositionAndOrientationY.position)) {
+						explicitPoint.anchor[1] = dataPositionAndOrientationY.position;
+						if (dataPositionAndOrientationY.hasOwnProperty('orientation') &&
+								isNumber(dataPositionAndOrientationY.orientation)) {
+							explicitPoint.anchor[3] = dataPositionAndOrientationY.orientation;
 						} else {
 						}
-						if (pvjsonPositionAndOrientationY.hasOwnProperty('offset')) {
+						if (dataPositionAndOrientationY.hasOwnProperty('offset')) {
 							// need to set the X offset to zero if it doesn't exist so that we don't have null values in the array.
 							explicitPoint.anchor[4] = explicitPoint.anchor[4] || 0;
 							// TODO in the case of a group as the referenced element, we don't have the group width and height yet to properly calculate this
-							explicitPoint.anchor[5] = pvjsonPositionAndOrientationY.offset || 15;
+							explicitPoint.anchor[5] = dataPositionAndOrientationY.offset || 15;
 						}
 					}
 					return gpmlRelYValueInteger;
 				}
 			},
 			GraphRef: function(gpmlGraphRefValue){
-				var referencedNode = pvjson.elements.filter(function(element) {
-					return element.id === gpmlGraphRefValue;
-				})[0];
-				var referencedNodeTag = referencedNode['gpml:element'];
+				var referencedNode = data.elementMap[gpmlGraphRefValue];
+				var referencedNodeTag = referencedNode.gpmlElementName;
 
 				// GPML and jsplumb/pvjson use different meaning and architecture for the term "anchor."
 				// GPML uses anchor to refer to an actual element that specifies a position along an edge.
@@ -137,7 +131,7 @@ export function toPvjson(args) {
 				// unlike GPML which refers to an element located at a position along the edge.
 				// 
 				// here we are referring to GPML Anchor, not jsplumb anchor.
-				if (referencedNodeTag.toLowerCase() !== 'gpml:anchor') {
+				if (referencedNodeTag !== 'Anchor') {
 					referencedElement = referencedNode;
 					referencedElementTag = referencedNodeTag;
 					// the id of the element this point is attached to (references)
@@ -153,11 +147,9 @@ export function toPvjson(args) {
 
 					// the id of the edge (IMPORTANT NOTE: NOT the GPML Anchor!) that this pvjson point is attached to (references)
 					var referencedEdgeId = referencedNode.isAttachedTo;
-					var referencedEdge = pvjson.elements.filter(function(element) {
-						return element.id === referencedEdgeId;
-					})[0];
+					var referencedEdge = data.elementMap[referencedEdgeId];
 					referencedElement = referencedEdge;
-					var referencedEdgeTag = referencedEdge['gpml:element'];
+					var referencedEdgeTag = referencedEdge.gpmlElementName;
 					referencedElementTag = referencedEdgeTag;
 					explicitPoint.isAttachedTo = referencedEdgeId;
 				}
@@ -165,49 +157,45 @@ export function toPvjson(args) {
 				referencedElementTags.push(referencedElementTag);
 				return gpmlGraphRefValue;
 			},
-			ArrowHead: function(gpmlArrowHeadValue) {
-				// TODO the marker names are currently camelCase and the other shape names are param-case, because I think that's how the xp-shapes library calls them.
-				// It would be less confusing if they were the same case.
-				pvjsonMarker = strcase.camelCase(gpmlArrowHeadValue);
-				//pvjsonMarker = strcase.paramCase(gpmlArrowHeadValue);
+			ArrowHead: function(dataMarker) {
 				if (index === 0) {
-					pvjsonEdge.markerStart = pvjsonMarker;
+					dataEdge.markerStart = dataMarker;
 				} else {
-					pvjsonEdge.markerEnd = pvjsonMarker;
+					dataEdge.markerEnd = dataMarker;
 				}
-				return pvjsonMarker;
+				return dataMarker;
 			}
 		};
 		explicitPoint = GpmlUtilities.convertAttributesToJson(
 				gpmlPoint,
 				explicitPoint,
-				gpmlToPvjsonConverter,
+				gpmlToDataConverter,
 				attributeDependencyOrder
 		);
 		explicitPoints.push(explicitPoint);
 	});
 
 
-	var type = pvjsonEdge.shape;
+	var type = dataEdge.drawAs;
 
-	if (type === 'line-straight'){
+	if (type === 'StraightLine'){
 		if (explicitPoints.length > 2) {
 			console.warn('Too many points for a straight line!');
 		}
-		pvjsonPoints = explicitPoints;
-	} else if (type === 'line-segmented'){
-		pvjsonPoints = explicitPoints;
-	} else if (type === 'line-elbow'){
-		pvjsonPoints = calculatePvjsonPoints(
-				pvjson,
+		dataPoints = explicitPoints;
+	} else if (type === 'SegmentedLine'){
+		dataPoints = explicitPoints;
+	} else if (type === 'ElbowLine'){
+		dataPoints = calculateDataPoints(
+				data,
 				type,
 				explicitPoints,
 				referencedElements,
 				referencedElementTags
 		);
-	} else if (type === 'line-curved'){
-		pvjsonPoints = calculatePvjsonPoints(
-				pvjson,
+	} else if (type === 'CurvedLine'){
+		dataPoints = calculateDataPoints(
+				data,
 				type,
 				explicitPoints,
 				referencedElements,
@@ -222,22 +210,22 @@ export function toPvjson(args) {
 	// Do we need to? GPML currently does not specify implicit intermediate points, but
 	// pvjson does.
 
-	pvjsonEdge.points = pvjsonPoints;
-	return pvjsonEdge;
+	dataEdge.points = dataPoints;
+	return dataEdge;
 }
 
 /**
- * calculatePvjsonPoints
+ * calculateDataPoints
  *
- * @param pvjson {Object}
+ * @param data {Object}
  * @param edgeType {String}
  * @param explicitPoints {Array}
  * @param referencedElements {Array}
  * @param referencedElementTags {Array}
  * @return {Array} Set of points required to render the edge. Additional points are added if required to unambiguously specify an edge (implicit points are made explicit).
  */
-function calculatePvjsonPoints(
-		pvjson,
+function calculateDataPoints(
+		data,
 		edgeType,
 		explicitPoints,
 		referencedElements,
@@ -251,33 +239,33 @@ function calculatePvjsonPoints(
 		, sidesToRouteAround
 		;
 
-	// if first and last points are attached to shapes
+	// if first and last points are attached to non-Anchor elements
 	if (firstPoint.hasOwnProperty('anchor') &&
-			_.isNumber(firstPoint.anchor[2]) &&
-				_.isNumber(firstPoint.anchor[3]) &&
+			isNumber(firstPoint.anchor[2]) &&
+				isNumber(firstPoint.anchor[3]) &&
 					lastPoint.hasOwnProperty('anchor') &&
-						_.isNumber(lastPoint.anchor[2]) &&
-							_.isNumber(lastPoint.anchor[3])) {
+						isNumber(lastPoint.anchor[2]) &&
+							isNumber(lastPoint.anchor[3])) {
 		sideCombination = getSideCombination(firstPoint, lastPoint);
-	// if first point is attached to a shape and last point is attached to an anchor (not a group)
+	// if first point is attached to a non-Anchor element and last point is attached to an Anchor (not a group)
 	} else if (firstPoint.hasOwnProperty('anchor') &&
-						 _.isNumber(firstPoint.anchor[2]) &&
-							 _.isNumber(firstPoint.anchor[3]) &&
+						 isNumber(firstPoint.anchor[2]) &&
+							 isNumber(firstPoint.anchor[3]) &&
 								 lastPoint.hasOwnProperty('anchor')) {
-		lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], pvjson);
+		lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], data);
 		sideCombination = getSideCombination(firstPoint, lastPoint);
-	// if last point is attached to a shape and first point is attached to an anchor (not a group)
+	// if last point is attached to a non-Anchor element and first point is attached to an Anchor (not a group)
 	} else if (lastPoint.hasOwnProperty('anchor') &&
-						 _.isNumber(lastPoint.anchor[2]) &&
-							 _.isNumber(lastPoint.anchor[3]) &&
+						 isNumber(lastPoint.anchor[2]) &&
+							 isNumber(lastPoint.anchor[3]) &&
 								 firstPoint.hasOwnProperty('anchor')) {
-		firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], pvjson);
+		firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], data);
 		sideCombination = getSideCombination(firstPoint, lastPoint);
 	// if first and last points are attached to anchors
 	} else if (firstPoint.hasOwnProperty('anchor') &&
 						 lastPoint.hasOwnProperty('anchor')) {
-		firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], pvjson);
-		lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], pvjson);
+		firstPoint = getSideEquivalentForLine(lastPoint, firstPoint, referencedElements[0], data);
+		lastPoint = getSideEquivalentForLine(firstPoint, lastPoint, referencedElements[1], data);
 		sideCombination = getSideCombination(firstPoint, lastPoint);
 		/*
 		// TODO change this to actually calculate the number
@@ -312,13 +300,13 @@ function calculatePvjsonPoints(
 		// only used for curves
 		var tension = 1;
 
-		var pvjsonPoints = [];
+		var dataPoints = [];
 
-		//first pvjson point is start point
-		pvjsonPoints[0] = firstPoint;
+		//first data point is start point
+		dataPoints[0] = firstPoint;
 
 
-		// calculate intermediate pvjson points, which are implicit
+		// calculate intermediate data points, which are implicit
 		// remember that this refers to the minimum number of points required to define the path,
 		// so 3 points means something like this:
 		//
@@ -340,33 +328,33 @@ function calculatePvjsonPoints(
 
 		if (expectedPointCount === 3) {
 			if (directionIsVertical) {
-				pvjsonPoints[1] = {};
-				pvjsonPoints[1].x = (firstPoint.x + lastPoint.x) / 2;
+				dataPoints[1] = {};
+				dataPoints[1].x = (firstPoint.x + lastPoint.x) / 2;
 				if (sidesToRouteAround.length === 0) {
-					//pvjsonPoints[1].y = (firstPoint.y + lastPoint.y) / 2;
+					//dataPoints[1].y = (firstPoint.y + lastPoint.y) / 2;
 					// this stub is not required, but we're just somewhat arbitrarily using it because the pathway author did not specify where the midpoint of the second path segment should be
-					pvjsonPoints[1].y = firstPoint.y + firstPoint.anchor[3] * defaultStubLength;
+					dataPoints[1].y = firstPoint.y + firstPoint.anchor[3] * defaultStubLength;
 				} else {
 					if (firstPoint.anchor[3] > 0) {
-						pvjsonPoints[1].y = Math.max(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
+						dataPoints[1].y = Math.max(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
 					} else {
-						pvjsonPoints[1].y = Math.min(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
+						dataPoints[1].y = Math.min(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
 					}
 				}
 			} else {
-				pvjsonPoints[1] = {};
+				dataPoints[1] = {};
 				if (sidesToRouteAround.length === 0) {
-					//pvjsonPoints[1].x = (firstPoint.x + lastPoint.x) / 2;
+					//dataPoints[1].x = (firstPoint.x + lastPoint.x) / 2;
 					// this stub is not required, but we're just somewhat arbitrarily using it because the pathway author did not specify where the midpoint of the second path segment should be
-					pvjsonPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
+					dataPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
 				} else {
 					if (firstPoint.anchor[2] > 0) {
-						pvjsonPoints[1].x = Math.max(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
+						dataPoints[1].x = Math.max(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
 					} else {
-						pvjsonPoints[1].x = Math.min(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
+						dataPoints[1].x = Math.min(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
 					}
 				}
-				pvjsonPoints[1].y = (firstPoint.y + lastPoint.y) / 2;
+				dataPoints[1].y = (firstPoint.y + lastPoint.y) / 2;
 			}
 
 		} else if (expectedPointCount === 4){
@@ -382,50 +370,50 @@ function calculatePvjsonPoints(
 		//  many other configurations possible
 
 			if (directionIsVertical) {
-				pvjsonPoints[1] = {};
-				pvjsonPoints[1].x = (firstPoint.x + lastPoint.x + lastPoint.anchor[2] * defaultStubLength) / 2;
+				dataPoints[1] = {};
+				dataPoints[1].x = (firstPoint.x + lastPoint.x + lastPoint.anchor[2] * defaultStubLength) / 2;
 				if (sidesToRouteAround.indexOf('first') === -1) {
-					pvjsonPoints[1].y = firstPoint.y + firstPoint.anchor[3] * defaultStubLength;
+					dataPoints[1].y = firstPoint.y + firstPoint.anchor[3] * defaultStubLength;
 				} else {
 					if (firstPoint.anchor[3] > 0) {
-						pvjsonPoints[1].y = Math.max(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
+						dataPoints[1].y = Math.max(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
 					} else {
-						pvjsonPoints[1].y = Math.min(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
+						dataPoints[1].y = Math.min(firstPoint.y, lastPoint.y) + firstPoint.anchor[3] * defaultStubLength;
 					}
 				}
-				pvjsonPoints[2] = {};
+				dataPoints[2] = {};
 				if (sidesToRouteAround.indexOf('last') === -1) {
-					pvjsonPoints[2].x = lastPoint.x + lastPoint.anchor[2] * defaultStubLength;
+					dataPoints[2].x = lastPoint.x + lastPoint.anchor[2] * defaultStubLength;
 				} else {
 					if (lastPoint.anchor[2] > 0) {
-						pvjsonPoints[2].x = Math.max(firstPoint.x, lastPoint.x) + lastPoint.anchor[2] * defaultStubLength;
+						dataPoints[2].x = Math.max(firstPoint.x, lastPoint.x) + lastPoint.anchor[2] * defaultStubLength;
 					} else {
-						pvjsonPoints[2].x = Math.min(firstPoint.x, lastPoint.x) + lastPoint.anchor[2] * defaultStubLength;
+						dataPoints[2].x = Math.min(firstPoint.x, lastPoint.x) + lastPoint.anchor[2] * defaultStubLength;
 					}
 				}
-				pvjsonPoints[2].y = (pvjsonPoints[1].y + lastPoint.y) / 2;
+				dataPoints[2].y = (dataPoints[1].y + lastPoint.y) / 2;
 			} else {
-				pvjsonPoints[1] = {};
-				pvjsonPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
+				dataPoints[1] = {};
+				dataPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
 				if (sidesToRouteAround.indexOf('first') === -1) {
-					pvjsonPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
+					dataPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
 				} else {
 					if (firstPoint.anchor[2] > 0) {
-						pvjsonPoints[1].x = Math.max(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
+						dataPoints[1].x = Math.max(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
 					} else {
-						pvjsonPoints[1].x = Math.min(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
+						dataPoints[1].x = Math.min(firstPoint.x, lastPoint.x) + firstPoint.anchor[2] * defaultStubLength;
 					}
 				}
-				pvjsonPoints[1].y = (firstPoint.y + lastPoint.y + lastPoint.anchor[3] * defaultStubLength) / 2;
-				pvjsonPoints[2] = {};
-				pvjsonPoints[2].x = (pvjsonPoints[1].x + lastPoint.x) / 2;
+				dataPoints[1].y = (firstPoint.y + lastPoint.y + lastPoint.anchor[3] * defaultStubLength) / 2;
+				dataPoints[2] = {};
+				dataPoints[2].x = (dataPoints[1].x + lastPoint.x) / 2;
 				if (sidesToRouteAround.indexOf('last') === -1) {
-					pvjsonPoints[2].y = lastPoint.y + lastPoint.anchor[3] * defaultStubLength;
+					dataPoints[2].y = lastPoint.y + lastPoint.anchor[3] * defaultStubLength;
 				} else {
 					if (lastPoint.anchor[3] > 0) {
-						pvjsonPoints[2].y = Math.max(firstPoint.y, lastPoint.y) + lastPoint.anchor[3] * defaultStubLength;
+						dataPoints[2].y = Math.max(firstPoint.y, lastPoint.y) + lastPoint.anchor[3] * defaultStubLength;
 					} else {
-						pvjsonPoints[2].y = Math.min(firstPoint.y, lastPoint.y) + lastPoint.anchor[3] * defaultStubLength;
+						dataPoints[2].y = Math.min(firstPoint.y, lastPoint.y) + lastPoint.anchor[3] * defaultStubLength;
 					}
 				}
 			}
@@ -444,34 +432,34 @@ function calculatePvjsonPoints(
 		//  many other configurations possible
 
 			if (directionIsVertical) {
-				pvjsonPoints[1] = {};
-				pvjsonPoints[1].x = ((lastPoint.x - firstPoint.x) / 4) + firstPoint.x;
-				pvjsonPoints[1].y = firstPoint.y + firstPoint.anchor[3] * defaultStubLength;
-				pvjsonPoints[2] = {};
-				pvjsonPoints[2].x = (firstPoint.x + lastPoint.x) / 2;
-				pvjsonPoints[2].y = (firstPoint.y + lastPoint.y) / 2;
-				pvjsonPoints[3] = {};
-				pvjsonPoints[3].x = ((lastPoint.x - firstPoint.x) * (3/4)) + firstPoint.x;
-				pvjsonPoints[3].y = lastPoint.y + lastPoint.anchor[3] * defaultStubLength;
+				dataPoints[1] = {};
+				dataPoints[1].x = ((lastPoint.x - firstPoint.x) / 4) + firstPoint.x;
+				dataPoints[1].y = firstPoint.y + firstPoint.anchor[3] * defaultStubLength;
+				dataPoints[2] = {};
+				dataPoints[2].x = (firstPoint.x + lastPoint.x) / 2;
+				dataPoints[2].y = (firstPoint.y + lastPoint.y) / 2;
+				dataPoints[3] = {};
+				dataPoints[3].x = ((lastPoint.x - firstPoint.x) * (3/4)) + firstPoint.x;
+				dataPoints[3].y = lastPoint.y + lastPoint.anchor[3] * defaultStubLength;
 			} else {
-				pvjsonPoints[1] = {};
-				pvjsonPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
-				pvjsonPoints[1].y = ((lastPoint.y - firstPoint.y) / 4) + firstPoint.y;
-				pvjsonPoints[2] = {};
-				pvjsonPoints[2].x = (firstPoint.x + lastPoint.x) / 2;
-				pvjsonPoints[2].y = (firstPoint.y + lastPoint.y) / 2;
-				pvjsonPoints[3] = {};
-				pvjsonPoints[3].x = lastPoint.x + lastPoint.anchor[2] * defaultStubLength;
-				pvjsonPoints[3].y = ((lastPoint.y - firstPoint.y) * (3/4)) + firstPoint.y;
+				dataPoints[1] = {};
+				dataPoints[1].x = firstPoint.x + firstPoint.anchor[2] * defaultStubLength;
+				dataPoints[1].y = ((lastPoint.y - firstPoint.y) / 4) + firstPoint.y;
+				dataPoints[2] = {};
+				dataPoints[2].x = (firstPoint.x + lastPoint.x) / 2;
+				dataPoints[2].y = (firstPoint.y + lastPoint.y) / 2;
+				dataPoints[3] = {};
+				dataPoints[3].x = lastPoint.x + lastPoint.anchor[2] * defaultStubLength;
+				dataPoints[3].y = ((lastPoint.y - firstPoint.y) * (3/4)) + firstPoint.y;
 			}
 		} else {
 			throw new Error('Too many points expected.');
 		}
 
-		// last pvjson point is end point
-		pvjsonPoints.push(lastPoint);
+		// last data point is end point
+		dataPoints.push(lastPoint);
 
-		return pvjsonPoints;
+		return dataPoints;
 	}
 }
 
@@ -481,14 +469,14 @@ function crossProduct (u, v) {
 	return u[0] * v[1] - v[0] * u[1];
 }
 
-function getPvjsonPositionAndOrientationMapping(args): PvjsonPositionAndOrientationMapping {
+function getDataPositionAndOrientationMapping(args): DataPositionAndOrientationMapping {
 	var relValue = args.relValue
 		, identifier = args.identifier
 		, referencedElement = args.referencedElement
 		;
 
 	// orientation here refers to the initial direction the edge takes as it moves away from its attachment
-	var result = <PvjsonPositionAndOrientationMapping>{}, position, referencedElementDimension;
+	var result = <DataPositionAndOrientationMapping>{}, position, referencedElementDimension;
 
 	var relativeToUpperLeftCorner = (relValue + 1) / 2;
 	if (relativeToUpperLeftCorner < 0 || relativeToUpperLeftCorner > 1) {
@@ -543,7 +531,7 @@ function sameSide(p1, p2, a, b) {
 	return result;
 }
 
-var getSideEquivalentForLine = function (pointOnShape, pointOnEdge, referencedEdge, pvjson) {
+var getSideEquivalentForLine = function (pointOnShape, pointOnEdge, referencedEdge, data) {
 	var riseFromPointOnEdgeToPointOnShape = pointOnShape.y - pointOnEdge.y;
 	var runFromPointOnEdgeToPointOnShape = pointOnShape.x - pointOnEdge.x;
 	var angleFromPointOnEdgeToPointOnShape = Math.atan2(riseFromPointOnEdgeToPointOnShape, runFromPointOnEdgeToPointOnShape);

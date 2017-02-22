@@ -1,3 +1,4 @@
+lib/
 test/output
 test/pathways-completed.json
 data-input

@@ -1,6 +1,6 @@
 import * as GpmlUtilities from './gpml-utilities';
 
-export let defaults = {
+export let SHAPE_DEFAULTS = {
 	attributes: {
 		Align: {
 			name: 'Align',
@@ -42,19 +42,6 @@ export let defaults = {
 };
 
 export function applyDefaults(gpmlElement, defaults) {
-	gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
+	gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [SHAPE_DEFAULTS, defaults]);
 	return gpmlElement;
-};
-
-export function toPvjson(pvjson, gpmlSelection, shapeSelection, callback) {
-	var pvjsonPath = {};
-
-	/*
-	GpmlElement.toPvjson(pvjson, gpmlSelection, shapeSelection, pvjsonPath, function(pvjsonPath) {
-		Graphics.toPvjson(pvjson, gpmlSelection, shapeSelection, pvjsonPath, function(pvjsonPath) {
-			var pvjsonElements = [pvjsonPath];
-			callback(pvjsonElements);
-		});
-	});
-	//*/
 };

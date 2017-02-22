@@ -1,33 +1,26 @@
-import Strcase = require('tower-strcase');
-import _ = require('lodash');
-import * as GpmlUtilities from './gpml-utilities';
+import { unionLSV } from './gpml-utilities';
 
-export function toPvjson(args) {
-	var pvjsonElement = args.pvjsonElement
-		, gpmlElement = args.gpmlElement
-		, attributeElement = args.attributeElement
-		;
+export function fromGPML(dataElement, gpmlElement, attributeElement) {
 
-	if (!attributeElement || !gpmlElement || !pvjsonElement) {
-		throw new Error('Missing input element(s) in attribute.toPvjson()');
+	if (!attributeElement || !gpmlElement || !dataElement) {
+		throw new Error('Missing input element(s) in attribute.fromGPML()');
 	}
 
 	// NOTE: Yes, 'attributeElementAttributes' is confusing, but that's just the
 	// way it needs to be when GPML has an element named 'Attribute'.
-	var attributeElementAttributes = attributeElement.attributes
-		, attributeKey = attributeElementAttributes.Key.value
-		, attributeValue = attributeElementAttributes.Value.value
-		;
+	const attributeElementAttributes = attributeElement.attributes;
+	const attributeKey = attributeElementAttributes.Key.value;
+	const attributeValue = attributeElementAttributes.Value.value;
 
 	if (attributeKey === 'org.pathvisio.DoubleLineProperty') {
-		pvjsonElement.shape += '-double';
-		// The line below is left here for future reference, but after discussing with AP, the desired behavior is for the entire shape to be filled. -AR
-		//pvjsonElement.fillRule = 'evenodd';
+		dataElement.lineStyle = 'double';
+		// The line below is left here for future reference, but after discussing with AP, the desired behavior is for the entire glyph to be filled. -AR
+		//dataElement.fillRule = 'evenodd';
 	} else if (attributeKey === 'org.pathvisio.CellularComponentProperty') {
-		//pvjson.type = 'PhysicalEntity'; // this is probably more valid as Biopax
-		pvjsonElement.type = 'CellularComponent'; // this is not valid Biopax
-		pvjsonElement.entityReference = attributeValue;
+		// CellularComponent is not a BioPAX term, but "PhysicalEntity" is.
+		dataElement.type = unionLSV(dataElement.type, 'PhysicalEntity', 'CellularComponent') as string[];
+		dataElement.cellularComponent = attributeValue;
 	}
 
-	return pvjsonElement;
+	return dataElement;
 };

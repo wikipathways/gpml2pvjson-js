@@ -1,7 +1,6 @@
-import _ = require('lodash');
 import * as GpmlUtilities from './gpml-utilities';
 
-export let defaults = {
+const PATHWAY_DEFAULTS = {
 	attributes: {
 		BoardHeight: {
 			name: 'BoardHeight',
@@ -15,6 +14,6 @@ export let defaults = {
 };
 
 export function applyDefaults(gpmlElement, defaults) {
-	GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
+	GpmlUtilities.applyDefaults(gpmlElement, [PATHWAY_DEFAULTS, defaults]);
 	return gpmlElement;
 };

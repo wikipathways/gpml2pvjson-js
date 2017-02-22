@@ -1,6 +1,6 @@
 import * as GpmlUtilities from './gpml-utilities';
 
-export let defaults = {
+const LABEL_DEFAULTS = {
 	attributes: {
 		Align: {
 			name: 'Align',
@@ -42,6 +42,6 @@ export let defaults = {
 };
 
 export function applyDefaults(gpmlElement, defaults) {
-	gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [this.defaults, defaults]);
+	gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [LABEL_DEFAULTS, defaults]);
 	return gpmlElement;
 };

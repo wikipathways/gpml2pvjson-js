@@ -1,5 +1,4 @@
-import _ = require('lodash');
-import * as GpmlUtilities from './gpml-utilities';
+import { applyDefaults as baseApplyDefaults } from './gpml-utilities';
 
 // anchors
 // see jsPlumb anchor model: http://jsplumbtoolkit.com/doc/anchors
@@ -15,7 +14,7 @@ import * as GpmlUtilities from './gpml-utilities';
 //    if the side specified is top or bottom, the starting point is the leftmost point on the side (smallest x or y value in SVG coordinate system).
 // }
 
-export let defaults = {
+const ANCHOR_DEFAULTS = {
 	attributes: {
 		Shape: {
 			name: 'Shape',
@@ -33,7 +32,7 @@ export let defaults = {
 };
 
 export function applyDefaults(gpmlElement, defaults) {
-	var defaultsByShape = {
+	var defaultsByShapeType = {
 		Circle: {
 			attributes: {
 				Height: {
@@ -75,8 +74,8 @@ export function applyDefaults(gpmlElement, defaults) {
 			}
 		}
 	};
-	var shape = !!gpmlElement.attributes.Shape ? gpmlElement.attributes.Shape.value : 'None';
-	return GpmlUtilities.applyDefaults(gpmlElement, [defaultsByShape[shape], this.defaults, defaults]);
+	const drawAs = !!gpmlElement.attributes.Shape ? gpmlElement.attributes.Shape.value : 'None';
+	return baseApplyDefaults(gpmlElement, [defaultsByShapeType[drawAs], ANCHOR_DEFAULTS, defaults]);
 };
 
 export function getAllFromNode(jsonNode) {

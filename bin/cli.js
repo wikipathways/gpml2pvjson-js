@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
 var fs = require('fs');
-var gpml2Pvjson = require('../index.js');
+var gpml2pvjson = require('../index');
 var npmPackage = JSON.parse(fs.readFileSync('./package.json', {encoding: 'utf8'}));
 var program = require('commander');
 var Rx = require('rx-extra');
 var VError = require('verror');
+global.XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+var atob = require('atob');
 
 program
   .version(npmPackage.version);
@@ -15,15 +17,39 @@ program
   .description('Convert GPML to pvjson')
   .action(function() {
 
-    var gpmlChunkStream = Rx.Observable.fromNodeReadableStream(process.stdin);
+//    var gpmlChunkStream = Rx.Observable.fromNodeReadableStream(process.stdin)
+//      .mergeMap(function(x) {
+//        console.log('x');
+//        console.log(x);
+//        const gpmlString = x.toString();
+//        return Rx.Observable.from([gpmlString.substring(0, 10), gpmlString.substring(10, x.length)]);
+//      });
+
+    //const wpId = 'WP2374';
+    //const version = 0;
+    const wpId = 'WP554';
+    const version = 77712; // 77712
+		const ajaxRequest = {
+			url: `http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=${wpId}&revision=${version}&format=json`,
+			method: 'GET',
+			responseType: 'json',
+			timeout: 1 * 1000, // ms
+			crossDomain: true,
+		};
+    var gpmlChunkStream = Rx.Observable.ajax(ajaxRequest)
+      .map((ajaxResponse) => ajaxResponse.xhr.responseText)
+      .map(JSON.parse)
+      .map(res => res.data)
+      .map(atob);
+
     //*/
-    var pathwaySource = gpml2Pvjson.transformGpmlToPvjson(gpmlChunkStream)
+    var pathwaySource = gpml2pvjson(gpmlChunkStream, `http://identifiers.org/wikipathways/${wpId}`)
       .do(null, function(err) {
         var err2 = new VError(err, 'error (after?) converting GPML to pvjson');
         console.error(err2.stack);
       })
-      .subscribe(function(pvjson) {
-        console.log(JSON.stringify(pvjson, null, '  '));
+      .subscribe(function(output) {
+        console.log(JSON.stringify(output, null, '  '));
         process.exit(0);
       }, function(err) {
         console.error(err);

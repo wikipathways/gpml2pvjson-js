@@ -1,44 +1,32 @@
-import * as _ from 'lodash';
-import * as Attribute from './attribute';
-import * as GpmlUtilities from './gpml-utilities';
+import { find, isEmpty, isNaN } from 'lodash';
+import { fromGPML as attributeFromGPML } from './attribute';
+import { applyDefaults as baseApplyDefaults, convertAttributesToJson, transform, unionLSV } from './gpml-utilities';
 import * as He from 'he';
-import * as Point from './point';
-import * as Strcase from 'tower-strcase';
+import * as strcase from 'tower-strcase';
 import RGBColor = require('rgbcolor');
-import * as utils from './utils';
 
-var typeMappings = utils.typeMappings;
-var tmEntityGpmlPlain2EntityNormalizedPrefixed =
-    typeMappings.entityGpmlPlain2entityNormalizedPrefixed;
-
-import * as anchor from './anchor';
-export let Anchor = anchor;
-import * as pathway from './pathway';
-export let Pathway = pathway;
-import * as group from './group';
-export let Group = group;
-import * as dataNode from './data-node';
-export let DataNode = dataNode;
-import * as graphicalLine from './graphical-line';
-export let GraphicalLine = graphicalLine;
-import * as interaction from './interaction';
-export let Interaction = interaction;
-import * as label from './label';
-export let Label = label;
-import * as shape from './shape';
-export let Shape = shape;
-import * as state from './state';
-export let State = state;
+// we are adding the applyDefaults functions to "this"
+// so that we can access them in the applyDefaults
+// function below.
+export { applyDefaults as Anchor } from './anchor';
+export { applyDefaults as Pathway } from './pathway';
+export { applyDefaults as Group } from './group';
+export { applyDefaults as DataNode } from './data-node';
+import { applyDefaults as GraphicalLine } from './graphical-line';
+export { applyDefaults as Interaction } from './interaction';
+export { applyDefaults as Label } from './label';
+export { applyDefaults as Shape } from './shape';
+export { applyDefaults as State } from './state';
 
 function parseAsNonNaNNumber(i: number | string): number {
 	const parsed = Number(i);
-	if (_.isNaN(parsed)) {
+	if (isNaN(parsed)) {
 		throw new Error('Cannot parse "' + String(i) + '" as non-NaN number');
 	}
 	return parsed;
 }
 
-export let defaults = {
+const DEFAULTS = {
 	attributes: {
 		FillColor: {
 			name: 'FillColor',
@@ -47,42 +35,44 @@ export let defaults = {
 	}
 };
 
+let XmlElement = this;
+
 export function applyDefaults(gpmlElement) {
-	var tagName = gpmlElement.name;
-	if (!!this[tagName]) {
-		return this[tagName].applyDefaults(gpmlElement, this.defaults);
+	const gpmlElementName = gpmlElement.name;
+	if (!!XmlElement[gpmlElementName]) {
+		return XmlElement[gpmlElementName](gpmlElement, DEFAULTS);
 	} else {
-		return GpmlUtilities.applyDefaults(gpmlElement, this.defaults);
+		return baseApplyDefaults(gpmlElement, DEFAULTS);
 	}
 };
 
-export interface ToPvjsonArgs {
-	pvjson: Pvjson;
-	pvjsonElement: PvjsonElement & Pvjson;
+export interface ToDataArgs {
+	data: Data;
+	dataElement: DataElement & Data;
 	gpmlElement: GPMLElement;
 }
-export function toPvjson(args: ToPvjsonArgs) {
-	var pvjson = args.pvjson;
-	var pvjsonElement = args.pvjsonElement;
-	var gpmlElement = args.gpmlElement;
-	var tagName = gpmlElement.name;
+export function fromGPML(args: ToDataArgs) {
+	let data = args.data;
+	let dataElement = args.dataElement;
+
+	let gpmlElement = applyDefaults(args.gpmlElement);
+	const gpmlElementName = dataElement.gpmlElementName = gpmlElement.name;
 
 	// Note side-effects required for these values,
 	// because subsequent values depend on them.
-	var gpmlShapeType = '';
-	var pvjsonRelX: number;
-	var pvjsonRelY: number;
-	var lineStyleIsDouble: boolean;
-	var pvjsonBorderWidth: number;
-	var gpmlRotation: number;
+	let gpmlShapeType = '';
+	let dataRelX: number;
+	let dataRelY: number;
+	let lineStyleIsDouble: boolean;
+	let dataBorderWidth: number;
+	let gpmlRotation: number;
 
-	var attributeDependencyOrder: GPMLAttributeNames[] = [
-		'GroupId',
+	const ATTRIBUTE_DEPENDENCY_ORDER: GPMLAttributeNames[] = [
 		'GraphId',
+		'GroupId',
 		'GraphRef',
 		'GroupRef',
 		'Name',
-		'IsPartOf',
 		'TextLabel',
 		'Type',
 		'CellularComponent',
@@ -109,91 +99,67 @@ export function toPvjson(args: ToPvjsonArgs) {
 		'Version',
 	];
 
-	function handleShapeType(gpmlValue) {
-		gpmlShapeType = gpmlValue;
-		// most graphics libraries use the term 'ellipse', so we're converting
-		// the GPML terms 'Oval' and 'Circle' to match
-		const ellipseEquivalents = [
-			'Oval',
-			'Circle'
-		];
-
-		// Note: if the LineStyle is "Double," then "-double" will be
-		// appended to pvjsonElement.shape when "Attributes" are handled.
-
-		pvjsonElement.shape = Strcase.paramCase(
-				ellipseEquivalents.indexOf(gpmlValue) === -1 ? gpmlValue : 'ellipse'
-		);
+	// processes Shape and ShapeType GPML attributes 
+	function processShapeType(gpmlValue) {
+		gpmlShapeType = dataElement.drawAs = gpmlValue;
 	}
 
-	var gpmlToPvjsonConverter = {
+	let gpmlToDataConverter = {
 		Align: function(gpmlAlignValue) {
-			pvjsonElement.textAlign = Strcase.paramCase(gpmlAlignValue);
+			dataElement.textAlign = strcase.paramCase(gpmlAlignValue);
 		},
 		Attribute: function(gpmlValue) {
-			// NOTE: in GPML, 'Attribute' is an XML _ELEMENT_ with the tagName "Attribute."
+			// NOTE: in GPML, 'Attribute' is an XML _ELEMENT_ with the gpmlElementName "Attribute."
 			// We push all the Attribute elements that are children of the current target
 			// element onto an array in JSON before reaching this step.
 			gpmlValue.forEach(function(attributeElement) {
-				pvjsonElement = Attribute.toPvjson({
-					gpmlElement: gpmlElement,
-					pvjsonElement: pvjsonElement,
-					attributeElement: attributeElement
-				});
+				dataElement = attributeFromGPML(dataElement, gpmlElement, attributeElement)
 			});
 		},
 		Author: function(gpmlValue) {
-			pvjsonElement.author = gpmlValue;
+			dataElement.author = gpmlValue;
 		},
-		'gpml:BiopaxRef': function(gpmlValue) {
-			let previousCitations = pvjsonElement.citation || [];
-			let citations = _.isArray(gpmlValue) ? gpmlValue : [gpmlValue];
-			pvjsonElement.citation = previousCitations.concat(citations);
+		BiopaxRef: function(gpmlValue: string[]) {
+			// NOTE: BiopaxRefs come into here grouped into an array.
+			//       See tagNamesForSupplementalElementsWithText in main.ts
+			if (!isEmpty(gpmlValue)) {
+				dataElement.citation = gpmlValue;
+			}
 		},
 		BoardHeight: function(gpmlValue) {
-			pvjsonElement.image = pvjsonElement.image || {
-				'@context': {
-					'@vocab': 'http://schema.org/'
-				}
-			};
-			pvjsonElement.image.height = parseAsNonNaNNumber(gpmlValue);
+			dataElement.height = parseAsNonNaNNumber(gpmlValue);
 		},
 		BoardWidth: function(gpmlValue) {
-			pvjsonElement.image = pvjsonElement.image || {
-				'@context': {
-					'@vocab': 'http://schema.org/'
-				}
-			};
-			pvjsonElement.image.width = parseAsNonNaNNumber(gpmlValue);
+			dataElement.width = parseAsNonNaNNumber(gpmlValue);
 		},
 		CenterX: function(gpmlValue) {
-			pvjsonElement.x = parseAsNonNaNNumber(gpmlValue) - pvjsonElement.width / 2;
+			dataElement.x = parseAsNonNaNNumber(gpmlValue) - dataElement.width / 2;
 		},
 		CenterY: function(gpmlValue) {
-			pvjsonElement.y = parseAsNonNaNNumber(gpmlValue) - pvjsonElement.height / 2;
+			dataElement.y = parseAsNonNaNNumber(gpmlValue) - dataElement.height / 2;
 
-			var transformationSequence = [];
+			let transformationSequence = [];
 
 			// Correct GPML position and size values.
 			//
-			// Some shapes have GPML values that do not match what is
-			// visually displayed in PathVisio-Java.
-			// Below are corrections for the GPML so that the display in pvjs
-			// will match the display in PathVisio-Java.
+			// Some GPML elements with ShapeTypes have Graphics values that
+			// do not match what is visually displayed in PathVisio-Java.
+			// Below are corrections for the GPML so that the display in
+			// pvjs matches the display in PathVisio-Java.
 
-			var xTranslation;
-			var yTranslation;
-			var xScale;
-			var yScale;
+			let xTranslation;
+			let yTranslation;
+			let xScale;
+			let yScale;
 
 			if (gpmlShapeType === 'Triangle') {
 				// NOTE: the numbers below come from visually experimenting with different widths
 				// in PathVisio-Java and making linear approximations of the translation
 				// scaling required to make x, y, width and height values match what is visually
 				// displayed in PathVisio-Java.
-				xScale = ((pvjsonElement.width + 0.04) / 1.07) / pvjsonElement.width;
-				yScale = ((pvjsonElement.height - 0.14) / 1.15) / pvjsonElement.height;
-				xTranslation = 0.28 * pvjsonElement.width - 2.00;
+				xScale = ((dataElement.width + 0.04) / 1.07) / dataElement.width;
+				yScale = ((dataElement.height - 0.14) / 1.15) / dataElement.height;
+				xTranslation = 0.28 * dataElement.width - 2.00;
 				yTranslation = 0;
 
 				if (typeof gpmlRotation === 'number' && gpmlRotation !== 0) {
@@ -230,7 +196,7 @@ export function toPvjson(args: ToPvjsonArgs) {
 			} else if (gpmlShapeType === 'Pentagon') {
 				xScale = 0.90;
 				yScale = 0.95;
-				xTranslation = 0.047 * pvjsonElement.width + 0.01;
+				xTranslation = 0.047 * dataElement.width + 0.01;
 				yTranslation = 0;
 
 				if (typeof gpmlRotation === 'number' && gpmlRotation !== 0) {
@@ -260,7 +226,7 @@ export function toPvjson(args: ToPvjsonArgs) {
 				xScale = 1;
 				yScale = 0.5;
 				xTranslation = 0;
-				yTranslation = pvjsonElement.height * yScale / 2;
+				yTranslation = dataElement.height * yScale / 2;
 
 				if (typeof gpmlRotation === 'number' && gpmlRotation !== 0) {
 					transformationSequence.push({
@@ -291,8 +257,8 @@ export function toPvjson(args: ToPvjsonArgs) {
 			// TODO: enable this after comparing results from old converter
 				xScale = 0.76;
 				yScale = 0.94;
-				xTranslation = 0.043 * pvjsonElement.width + 0.01;
-				yTranslation = 0.009 * pvjsonElement.height - 15.94;
+				xTranslation = 0.043 * dataElement.width + 0.01;
+				yTranslation = 0.009 * dataElement.height - 15.94;
 
 				if (typeof gpmlRotation === 'number' && gpmlRotation !== 0) {
 					transformationSequence.push({
@@ -320,106 +286,111 @@ export function toPvjson(args: ToPvjsonArgs) {
 			}
 			//*/
 
-			pvjsonElement = GpmlUtilities.transform({
-				element: pvjsonElement,
+			dataElement = transform({
+				element: dataElement,
 				transformationSequence: transformationSequence
 			});
 		},
 		Color: function(gpmlColorValue) {
-			var cssColor = this.gpmlColorToCssColor(gpmlColorValue);
-			pvjsonElement.color = cssColor;
+			const cssColor = this.gpmlColorToCssColor(gpmlColorValue);
+			dataElement.color = cssColor;
 		},
-		Comment: function(gpmlValue) {
-			pvjsonElement['gpml:Comment'] = gpmlValue;
+		Comment: function(gpmlValue: string[]) {
+			// NOTE: comments come into here grouped into an array.
+			//       See tagNamesForSupplementalElementsWithText in main.ts
+			if (!isEmpty(gpmlValue)) {
+				dataElement.comment = gpmlValue;
+			}
 		},
 		ConnectorType: function(gpmlConnectorTypeValue) {
-			var gpmlConnectorType = gpmlConnectorTypeValue;
-			pvjsonElement.shape = Strcase.paramCase('line-' + gpmlConnectorType);
+			const gpmlConnectorType = gpmlConnectorTypeValue;
+			dataElement.drawAs = gpmlConnectorType + 'Line';
 		},
 		Database: function(gpmlValue) {
 			if (gpmlValue) {
-				pvjsonElement.database = gpmlValue.trim();
+				dataElement.dbName = gpmlValue.trim();
 			}
 		},
 		'Data-Source': function(gpmlValue) {
-			pvjsonElement.dataSource = gpmlValue;
+			dataElement.dataSource = gpmlValue;
 		},
 		Email: function(gpmlValue) {
-			pvjsonElement.email = gpmlValue;
+			dataElement.email = gpmlValue;
 		},
 		FillColor: function(gpmlFillColorValue) {
-			var cssColor = this.gpmlColorToCssColor(gpmlFillColorValue);
+			const cssColor = this.gpmlColorToCssColor(gpmlFillColorValue);
 			if (gpmlShapeType.toLowerCase() !== 'none') {
-				pvjsonElement.backgroundColor = cssColor;
+				dataElement.backgroundColor = cssColor;
 			} else {
-				pvjsonElement.backgroundColor = 'transparent';
+				dataElement.backgroundColor = 'transparent';
 			}
 		},
 		FillOpacity: function(gpmlFillOpacityValue) {
-			var cssFillOpacity = parseAsNonNaNNumber(gpmlFillOpacityValue);
-			pvjsonElement.fillOpacity = cssFillOpacity;
+			const cssFillOpacity = parseAsNonNaNNumber(gpmlFillOpacityValue);
+			dataElement.fillOpacity = cssFillOpacity;
 		},
 		FontName: function(gpmlFontNameValue) {
-			var cssFontFamily = gpmlFontNameValue;
-			pvjsonElement.fontFamily = cssFontFamily;
+			const cssFontFamily = gpmlFontNameValue;
+			dataElement.fontFamily = cssFontFamily;
 		},
 		FontSize: function(gpmlFontSizeValue) {
-			pvjsonElement.fontSize = parseAsNonNaNNumber(gpmlFontSizeValue);
+			dataElement.fontSize = parseAsNonNaNNumber(gpmlFontSizeValue);
 		},
 		FontStyle: function(gpmlFontStyleValue) {
-			var cssFontStyle = gpmlFontStyleValue.toLowerCase();
-			pvjsonElement.fontStyle = cssFontStyle;
+			const cssFontStyle = gpmlFontStyleValue.toLowerCase();
+			dataElement.fontStyle = cssFontStyle;
 		},
 		FontWeight: function(gpmlFontWeightValue) {
-			var cssFontWeight = gpmlFontWeightValue.toLowerCase();
-			pvjsonElement.fontWeight = cssFontWeight;
+			const cssFontWeight = gpmlFontWeightValue.toLowerCase();
+			dataElement.fontWeight = cssFontWeight;
 		},
 		GraphId: function(gpmlValue) {
-			pvjsonElement.id = gpmlValue;
+			dataElement.id = gpmlValue;
 		},
 		GraphRef: function(gpmlValue) {
-			pvjsonElement.isAttachedTo = gpmlValue;
+			dataElement.isAttachedTo = gpmlValue;
 		},
-		GroupId: function(gpmlValue) {
-			pvjsonElement['gpml:GroupId'] = gpmlValue;
+		GroupId: function(gpmlValue: string) {
+			data.GraphIdToGroupId[dataElement.id] = gpmlValue;
 		},
 		GroupRef: function(gpmlValue) {
-			pvjsonElement['gpml:GroupRef'] = gpmlValue;
-			//pvjsonElement.isPartOf = gpmlValue;
+			let groupContents = data.containedIdsByGroupId[gpmlValue] = data.containedIdsByGroupId[gpmlValue] || [];
+			groupContents.push(dataElement.id);
 		},
 		Height: function(gpmlValue) {
 			// NOTE: this will be corrected, if needed, when CenterY is evaluated
-			pvjsonElement.height = parseAsNonNaNNumber(gpmlValue) + pvjsonBorderWidth;
+			dataElement.height = parseAsNonNaNNumber(gpmlValue) + dataBorderWidth;
 			if (lineStyleIsDouble) {
-				pvjsonElement.height += pvjsonBorderWidth;
+				dataElement.height += dataBorderWidth;
 			}
 		},
 		Href: function(gpmlHrefValue) {
-			pvjsonElement.href = encodeURI(He.decode(gpmlHrefValue));
+			dataElement.href = encodeURI(He.decode(gpmlHrefValue));
 		},
 		ID: function(gpmlValue) {
 			if (gpmlValue) {
-				pvjsonElement.identifier = gpmlValue.trim();
+				dataElement.dbId = gpmlValue.trim();
 			}
 		},
 		'Last-Modified': function(gpmlValue) {
-			pvjsonElement.lastModified = gpmlValue;
+			dataElement.lastModified = gpmlValue;
 		},
 		License: function(gpmlValue) {
-			pvjsonElement.license = gpmlValue;
+			dataElement.license = gpmlValue;
 		},
 		LineStyle: function(gpmlLineStyleValue) {
-			var pvjsonStrokeDasharray;
+			dataElement.lineStyle = gpmlLineStyleValue;
+			let dataStrokeDasharray;
 			// TODO hard-coding these here is not the most maintainable
 			if (gpmlLineStyleValue === 'Broken') {
-				pvjsonStrokeDasharray = '5,3';
-				pvjsonElement.strokeDasharray = pvjsonStrokeDasharray;
+				dataStrokeDasharray = '5,3';
+				dataElement.strokeDasharray = dataStrokeDasharray;
 			} else if (gpmlLineStyleValue === 'Double') {
 				lineStyleIsDouble = true;
 			}
 		},
 		LineThickness: function(gpmlLineThicknessValue) {
-			pvjsonBorderWidth = parseAsNonNaNNumber(gpmlLineThicknessValue);
+			dataBorderWidth = parseAsNonNaNNumber(gpmlLineThicknessValue);
 			// In PathVisio-Java, GPML Width/Height for GPML Shapes is
 			// inconsistent when zoomed in vs. when at default zoom level.
 			//
@@ -437,10 +408,10 @@ export function toPvjson(args: ToPvjsonArgs) {
 			//
 			// For pvjs, we attempt to match the view from PathVisio-Java when zoomed out,
 			// but we define width/height as outer border edge to outer border edge, meaning
-			// pvjson width/height values will not match GPML Width/Height values.
+			// data width/height values will not match GPML Width/Height values.
 			//
-			// pvjson width = GPML Width + GPML LineThickness
-			// pvjson height = GPML Height + GPML LineThickness
+			// data width = GPML Width + GPML LineThickness
+			// data height = GPML Height + GPML LineThickness
 			// (one half LineThickness on either side yields a full LineThickness to add
 			// to width/height).
 			//
@@ -448,71 +419,72 @@ export function toPvjson(args: ToPvjsonArgs) {
 			// width of each line and the space between each line, meaning the border width
 			// for the double line as a whole will be three times the listed LineThickness.
 
-			pvjsonElement.borderWidth = pvjsonBorderWidth;
+			dataElement.borderWidth = dataBorderWidth;
 		},
 		Maintainer: function(gpmlValue) {
-			pvjsonElement.maintainer = gpmlValue;
+			dataElement.maintainer = gpmlValue;
 		},
 		Name: function(nameValue) {
-			var splitName = nameValue.split(' (');
+			dataElement.name = nameValue;
+			const splitName = nameValue.split(' (');
 			if (!!splitName &&
 					splitName.length === 2 &&
 						!!nameValue.match(/\(/g) &&
 							nameValue.match(/\(/g).length === 1 &&
 								!!nameValue.match(/\)/g) &&
 									nameValue.match(/\)/g).length === 1) {
-				pvjsonElement.standardName = splitName[0];
-				pvjsonElement.displayName = splitName[1].replace(')', '');
+				dataElement.standardName = splitName[0];
+				dataElement.displayName = splitName[1].replace(')', '');
 			} else {
-				pvjsonElement.standardName = nameValue;
-				pvjsonElement.displayName = nameValue;
+				dataElement.standardName = nameValue;
+				dataElement.displayName = nameValue;
 			}
 		},
 		Organism: function(gpmlValue) {
-			pvjsonElement.organism = gpmlValue;
+			dataElement.organism = gpmlValue;
 		},
 		Padding: function(gpmlPaddingValue) {
-			pvjsonElement.padding = gpmlPaddingValue;
+			dataElement.padding = gpmlPaddingValue;
 		},
 		Point: function(gpmlValue) {
-			// Saving this to fully convert once pvjson.elements array is done being filled.
-			pvjsonElement['gpml:Point'] = gpmlValue;
+			// Saving this to fully convert later (after every appropriate element has been put into data.elementMap).
+			dataElement['gpml:Point'] = gpmlValue;
 		},
 		Position: function(gpmlPositionValue) {
-			var pvjsonPosition = parseAsNonNaNNumber(gpmlPositionValue);
-			pvjsonElement.position = pvjsonPosition;
+			const dataPosition = parseAsNonNaNNumber(gpmlPositionValue);
+			dataElement.position = dataPosition;
 		},
 		RelX: function(gpmlValue) {
-			pvjsonRelX = parseAsNonNaNNumber(gpmlValue);
-			pvjsonElement.relX = pvjsonRelX;
+			dataRelX = parseAsNonNaNNumber(gpmlValue);
+			dataElement.relX = dataRelX;
 		},
 		RelY: function(gpmlValue) {
-			pvjsonRelY = parseAsNonNaNNumber(gpmlValue);
-			pvjsonElement.relY = pvjsonRelY;
+			dataRelY = parseAsNonNaNNumber(gpmlValue);
+			dataElement.relY = dataRelY;
 
-			if (!!pvjsonElement.isAttachedTo &&
-					typeof pvjsonElement.x === 'undefined' &&
-						typeof pvjsonElement.y === 'undefined') {
-				var referencedElement = _.find(pvjson.elements, {'id': pvjsonElement.isAttachedTo});
+			if (!!dataElement.isAttachedTo &&
+					typeof dataElement.x === 'undefined' &&
+						typeof dataElement.y === 'undefined') {
+				const referencedElement = find(data.elementMap, {'id': dataElement.isAttachedTo});
 
-				var referencedElementCenterX = referencedElement.x + referencedElement.width / 2;
-				var referencedElementCenterY = referencedElement.y + referencedElement.height / 2;
+				const referencedElementCenterX = referencedElement.x + referencedElement.width / 2;
+				const referencedElementCenterY = referencedElement.y + referencedElement.height / 2;
 
-				var pvjsonElementCenterX = referencedElementCenterX +
-						pvjsonRelX * referencedElement.width / 2;
-				var pvjsonElementCenterY = referencedElementCenterY +
-						pvjsonRelY * referencedElement.height / 2;
+				const dataElementCenterX = referencedElementCenterX +
+						dataRelX * referencedElement.width / 2;
+				const dataElementCenterY = referencedElementCenterY +
+						dataRelY * referencedElement.height / 2;
 
-				pvjsonElement.x = pvjsonElementCenterX - pvjsonElement.width / 2;
-				pvjsonElement.y = pvjsonElementCenterY - pvjsonElement.height / 2;
+				dataElement.x = dataElementCenterX - dataElement.width / 2;
+				dataElement.y = dataElementCenterY - dataElement.height / 2;
 
-				pvjsonElement.zIndex = referencedElement.zIndex + 0.2;
+				dataElement.zIndex = referencedElement.zIndex + 0.2;
 			}
 		},
 		/*
 		RelX: function(gpmlRelXValue) {
-			var pvjsonRelX = parseFloat(gpmlRelXValue);
-			pvjsonElement.relX = pvjsonRelX;
+			var dataRelX = parseFloat(gpmlRelXValue);
+			dataElement.relX = dataRelX;
 			parentElement = gpmlPathwaySelection.find('[GraphId=' +
 					gpmlParentElement.attr('GraphRef') + ']');
 			//if (parentElement.length < 1) throw new Error('cannot find parent');
@@ -520,25 +492,25 @@ export function toPvjson(args: ToPvjsonArgs) {
 			var parentWidth = parseFloat(parentElement.find('Graphics').attr('Width'));
 			var parentZIndex = parseFloat(parentElement.find('Graphics').attr('ZOrder'));
 			var gpmlCenterXValue = parentCenterX + gpmlRelXValue * parentWidth/2;
-			pvjsonX = gpmlCenterXValue - pvjsonWidth/2;
-			pvjsonElement.x = pvjsonX || 0;
-			pvjsonElement.zIndex = parentZIndex + 0.2 || 0;
-			//pvjsonText.containerPadding = '0';
-			//pvjsonText.fontSize = '10';
-			return pvjsonX;
+			dataX = gpmlCenterXValue - dataWidth/2;
+			dataElement.x = dataX || 0;
+			dataElement.zIndex = parentZIndex + 0.2 || 0;
+			//dataText.containerPadding = '0';
+			//dataText.fontSize = '10';
+			return dataX;
 		},
 		RelY: function(gpmlRelYValue) {
-			var pvjsonRelY = parseFloat(gpmlRelYValue);
-			pvjsonElement.relY = pvjsonRelY;
+			var dataRelY = parseFloat(gpmlRelYValue);
+			dataElement.relY = dataRelY;
 			var parentCenterY = parseFloat(parentElement.find('Graphics').attr('CenterY'));
 			var parentHeight = parseFloat(parentElement.find('Graphics').attr('Height'));
-			var elementCenterY = parentCenterY + pvjsonRelY * parentHeight/2;
+			var elementCenterY = parentCenterY + dataRelY * parentHeight/2;
 			// TODO do we need to consider LineThickness (strokewidth) here?
-			pvjsonY = elementCenterY - pvjsonHeight/2;
-			pvjsonElement.y = pvjsonY || 0;
+			dataY = elementCenterY - dataHeight/2;
+			dataElement.y = dataY || 0;
 			// TODO this and other elements here are hacks
-			//pvjsonText.containerY = pvjsonY + 12;
-			return pvjsonY;
+			//dataText.containerY = dataY + 12;
+			return dataY;
 		},
 		//*/
 		Rotation: function(gpmlValue) {
@@ -552,79 +524,66 @@ export function toPvjson(args: ToPvjsonArgs) {
 
 			// GPML saves rotation in radians, even though PathVisio-Java displays rotation in degrees.
 			// Convert from radians to degrees:
-			var pvjsonRotation = gpmlRotation * 180 / Math.PI;
+			const dataRotation = gpmlRotation * 180 / Math.PI;
 			if (gpmlRotation !== 0) {
-				pvjsonElement.rotation = pvjsonRotation;
+				dataElement.rotation = dataRotation;
 			}
 
 			/*
 			// This conversion changes the rotation to reflect the angle between the green rotation
 			// control dot in PathVisio-Java and the X-axis.
-			// The units are radians, unlike the units for pvjsonRotation.
+			// The units are radians, unlike the units for dataRotation.
 			var angleToControlPoint = 2 * Math.PI - gpmlRotation;
 			//*/
 		},
-		Shape: handleShapeType,
-		ShapeType: handleShapeType,
+		Shape: processShapeType,
+		ShapeType: processShapeType,
 		//Shape: this.ShapeType,
 		Style: function(gpmlValue) {
-			// Handle 'Style' attributes for GPML 'Group' elements,
-			// using the closest Biopax term available for the mappings below.
-			// Once all the elements are converted, we come back to this and
-			// set any 'Pathways' with no interactions to be Complexes.
-			var gpmlGroupStyleToBiopaxEntityTypeMappings = {
-				'Group': 'Pathway',
-				'None': 'Pathway',
-				'Complex': 'Complex',
-				'Pathway': 'Pathway'
-			};
-
-			if (tagName === 'Group') {
-				// Convert GPML Group Style to a Biopax class, like Complex
-				pvjsonElement.type = gpmlGroupStyleToBiopaxEntityTypeMappings[gpmlValue] || 'Pathway';
+			if (gpmlElementName === 'Group') {
+				dataElement['gpml:Style'] = gpmlValue;
+				dataElement.type = unionLSV(dataElement.type, 'Group' + gpmlValue) as string[];
 			} else {
-				pvjsonElement['gpml:Style'] = 'gpml:' + gpmlValue;
+				throw new Error('Did not expect Style attribute on ' + gpmlElementName);
 			}
 		},
 		TextLabel: function(gpmlTextLabelValue) {
-			pvjsonElement.displayName = He.decode(gpmlTextLabelValue);
+			dataElement.displayName = He.decode(gpmlTextLabelValue);
 		},
 		Type: function(gpmlValue) {
-			// NOTE: when the DataNode is set to have a Type of "Unknown" in PathVisio-Java,
-			// it is serialized into GPML without a Type attribute.
-			var gpmlDataNodeType = gpmlValue || 'Unknown';
-
-			if (tagName === 'DataNode') {
-				// Convert GPML DataNode Type to a term from the GPML or BioPAX vocabulary,
-				// using a Biopax class when possible (like biopax:Protein),
-				// but otherwise using a GPML class.
-				pvjsonElement.type = tmEntityGpmlPlain2EntityNormalizedPrefixed[gpmlValue] ||
-						'biopax:PhysicalEntity';
-			} else {
-				pvjsonElement['gpml:Type'] = 'gpml:' + gpmlValue;
+			let wpType;
+			if (wpType) {
+				wpType = gpmlValue;
+			} else if (gpmlElementName === 'DataNode') {
+				// NOTE: when the DataNode is set to have a Type of "Unknown" in PathVisio-Java,
+				// it is serialized into GPML without a Type attribute.
+				wpType = 'Unknown';
+			}
+			if (wpType) {
+				dataElement.wpType = gpmlValue;
 			}
 		},
 		Valign: function(gpmlValignValue) {
-			pvjsonElement.verticalAlign = Strcase.paramCase(gpmlValignValue);
+			dataElement.verticalAlign = strcase.paramCase(gpmlValignValue);
 		},
 		Version: function(gpmlValue) {
 			// This usually appears to be referring to the version from the DataSource,
 			// not to the WikiPathways version.
-			pvjsonElement.dataSource += ', version: ' + gpmlValue;
+			dataElement.dataSource += ', version: ' + gpmlValue;
 		},
 		Width: function(gpmlValue) {
 			// NOTE: this will be corrected, if needed, when CenterY is evaluated
-			pvjsonElement.width = parseAsNonNaNNumber(gpmlValue) + pvjsonBorderWidth;
+			dataElement.width = parseAsNonNaNNumber(gpmlValue) + dataBorderWidth;
 			if (lineStyleIsDouble) {
-				pvjsonElement.width += pvjsonBorderWidth;
+				dataElement.width += dataBorderWidth;
 			}
 		},
 		ZOrder: function(gpmlZOrderValue) {
-			pvjsonElement.zIndex = parseAsNonNaNNumber(gpmlZOrderValue);
+			dataElement.zIndex = parseAsNonNaNNumber(gpmlZOrderValue);
 		},
 		// everything below in this object: helper values/functions
 		gpmlColorToCssColor: function(gpmlColor) {
-			var color;
+			let color;
 			if (gpmlColor.toLowerCase() === 'transparent') {
 				return 'transparent';
 			} else {
@@ -640,21 +599,22 @@ export function toPvjson(args: ToPvjsonArgs) {
 		}
 	};
 
-	pvjsonElement.type = pvjsonElement.type || 'gpml:' + tagName;
-
-	pvjsonElement = GpmlUtilities.convertAttributesToJson(
+	dataElement = convertAttributesToJson(
 			gpmlElement,
-			pvjsonElement,
-			gpmlToPvjsonConverter,
-			attributeDependencyOrder
+			dataElement,
+			gpmlToDataConverter,
+			ATTRIBUTE_DEPENDENCY_ORDER
 	);
-	pvjsonElement['gpml:element'] = 'gpml:' + gpmlElement.name;
+
+	dataElement.type = [gpmlElementName];
+
+	data[gpmlElementName].push(dataElement.id);
 
 	if (gpmlElement.name !== 'Pathway') {
-		pvjson.elements.push(pvjsonElement);
+		data.elementMap[dataElement.id] = dataElement;
 	} else {
-		pvjson = pvjsonElement;
+		data = dataElement;
 	}
 
-	return pvjson;
+	return data;
 };
