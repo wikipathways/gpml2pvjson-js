@@ -2,8 +2,8 @@
   "name": "gpml2pvjson",
   "version": "1.0.0",
   "description": "convert GPML (XML) to pvjson (json)",
-  "main": "lib/main.js",
-  "typings": "lib/main.d.ts",
+  "main": "src/main.js",
+  "typings": "src/main.d.ts",
   "scripts": {
     "compile:es5": "tsc --project tsconfig.json && echo ok || echo not ok",
     "postinstall": "npm run compile:es5",
