@@ -6,7 +6,7 @@
   "typings": "lib/main.d.ts",
   "scripts": {
     "compile:es5": "tsc --project tsconfig.json && echo ok || echo not ok",
-    "preinstall": "npm run compile:es5",
+    "postinstall": "npm run compile:es5",
     "test": "echo 'Get more/better tests working, please!' && node ./test/node-test-streaming.js"
   },
   "keywords": [
