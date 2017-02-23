@@ -5,10 +5,11 @@ Convert GPML, WikiPathways XML format, to JSON-LD.
 
 Note there are two branches:
 
-1. 1x (currently matches master)
+1. 1x
   * DOM-based.
   * current converter in use for pvjs at WikiPathways.
-2. 2x (streaming)
+2. 2x (master)
+  * streaming
   * RxJS-based.
   * Used as part of the conversion process from GPML to BioPAX for PathwayCommons.
   * Has an architecture that is more easily updated and less prone to bugs and should replace the DOM-based converter for pvjs.
