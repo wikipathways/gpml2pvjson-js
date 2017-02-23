@@ -1,75 +1,83 @@
 #!/usr/bin/env node
 
+var _ = require('lodash');
+var crypto = require('crypto');
 var fs = require('fs');
 var gpml2pvjson = require('../index');
+var hl = require('highland');
 var npmPackage = JSON.parse(fs.readFileSync('./package.json', {encoding: 'utf8'}));
 var program = require('commander');
 var Rx = require('rx-extra');
 var VError = require('verror');
-global.XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
-var atob = require('atob');
 
 program
-  .version(npmPackage.version);
+  .version(npmPackage.version)
+  .description('Converts GPML (XML) to pvjson (JSON)')
+  .option('--id [string]',
+          'Specify unique ID of this pathway, e.g., "http://identifiers.org/wikipathways/WP4"');
 
 program
-  .command('gpml2pvjson')
-  .description('Convert GPML to pvjson')
-  .action(function() {
-
-//    var gpmlChunkStream = Rx.Observable.fromNodeReadableStream(process.stdin)
-//      .mergeMap(function(x) {
-//        console.log('x');
-//        console.log(x);
-//        const gpmlString = x.toString();
-//        return Rx.Observable.from([gpmlString.substring(0, 10), gpmlString.substring(10, x.length)]);
-//      });
-
-    //const wpId = 'WP2374';
-    //const version = 0;
-    const wpId = 'WP554';
-    const version = 77712; // 77712
-		const ajaxRequest = {
-			url: `http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=${wpId}&revision=${version}&format=json`,
-			method: 'GET',
-			responseType: 'json',
-			timeout: 1 * 1000, // ms
-			crossDomain: true,
-		};
-    var gpmlChunkStream = Rx.Observable.ajax(ajaxRequest)
-      .map((ajaxResponse) => ajaxResponse.xhr.responseText)
-      .map(JSON.parse)
-      .map(res => res.data)
-      .map(atob);
-
-    //*/
-    var pathwaySource = gpml2pvjson(gpmlChunkStream, `http://identifiers.org/wikipathways/${wpId}`)
-      .do(null, function(err) {
-        var err2 = new VError(err, 'error (after?) converting GPML to pvjson');
-        console.error(err2.stack);
-      })
-      .subscribe(function(output) {
-        console.log(JSON.stringify(output, null, '  '));
-        process.exit(0);
-      }, function(err) {
-        console.error(err);
-        process.exit(1);
-      });
-  })
   .on('--help', function() {
-    console.log('  Example:');
+    console.log('  Examples:');
     console.log();
     console.log('    Display pvjson in command line:');
-    console.log('    $ ./bin/cli.js gpml2pvjson < ./test/input/WP554_77712.gpml');
+    console.log([
+        '    $ gpml2pvjson --id http://identifiers.org/wikipathways/WP554',
+                '< ./test/input/WP554_77712.gpml'
+    ].join(''));
+
     console.log('    Save pvjson to new file:');
-    console.log('    $ ./bin/cli.js gpml2pvjson < ./test/input/WP554_77712.gpml > ./WP554_77712.json');
+    console.log(
+        '    $ gpml2pvjson < ./test/input/WP554_77712.gpml > ./WP554_77712.json'
+    );
+
     console.log('    Download from WikiPathways and convert:');
-    console.log('    $ curl "http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=xml" | xpath "*/ns1:data/text()" | base64 --decode | node ./bin/cli.js gpml2pvjson');
-    console.log();
+    console.log([
+        '    $ curl "http://webservice.wikipathways.org/getPathwayAs?',
+               'fileType=xml&pwId=WP554&revision=77712&format=xml"',
+                ' | xpath "*/ns1:data/text()" | base64 --decode',
+                ' | gpml2pvjson --id http://identifiers.org/wikipathways/WP554'
+    ].join(''));
   });
 
 program.parse(process.argv);
 
-if (!program.args.length) {
-  program.help();
-}
+var id = program.id;
+// NOTE If an id is not provided, the CLI generates a hash of the input to use as the id. See
+// https://bentrask.com/?q=hash://sha256/98493caa8b37eaa26343bbf73f232597a3ccda20498563327a4c3713821df892
+// The library itself does not do this.
+var HASH_NAME = 'sha256';
+var hash = crypto.createHash(HASH_NAME);
+hash.setEncoding('hex');
+
+var source = id ? process.stdin : hl(process.stdin)
+  .doto(function(chunk) {
+    hash.update(chunk);
+  });
+
+var gpmlChunkStream = Rx.Observable.fromNodeReadableStream(source)
+  .map((x) => x.toString())
+
+gpml2pvjson(gpmlChunkStream, id)
+  .do(null, function(err) {
+    var err2 = new VError(err, 'error (after?) converting GPML to pvjson');
+    console.error(err2.stack);
+  })
+  .subscribe(function(output) {
+    if (!id) {
+      id = `hash://${ HASH_NAME }/${ hash.digest('hex') }`;
+      output.id = id;
+      output['@context'] = output['@context']
+        .map(function(ctx) {
+          if (_.isPlainObject(ctx) && ctx['@base']) {
+            ctx['@base'] = id + '/';
+          }
+          return ctx;
+        });
+    }
+    process.stdout.write(JSON.stringify(output, null, '  '));
+    process.exit(0);
+  }, function(err) {
+    console.error(err);
+    process.exit(1);
+  });

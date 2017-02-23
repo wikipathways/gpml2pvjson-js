@@ -2,7 +2,7 @@ import { find, isEmpty, isNaN } from 'lodash';
 import { fromGPML as attributeFromGPML } from './attribute';
 import { applyDefaults as baseApplyDefaults, convertAttributesToJson, transform, unionLSV } from './gpml-utilities';
 import * as He from 'he';
-import * as strcase from 'tower-strcase';
+import { paramCase } from 'tower-strcase';
 import RGBColor = require('rgbcolor');
 
 // we are adding the applyDefaults functions to "this"
@@ -106,7 +106,7 @@ export function fromGPML(args: ToDataArgs) {
 
 	let gpmlToDataConverter = {
 		Align: function(gpmlAlignValue) {
-			dataElement.textAlign = strcase.paramCase(gpmlAlignValue);
+			dataElement.textAlign = paramCase(gpmlAlignValue);
 		},
 		Attribute: function(gpmlValue) {
 			// NOTE: in GPML, 'Attribute' is an XML _ELEMENT_ with the gpmlElementName "Attribute."
@@ -564,7 +564,7 @@ export function fromGPML(args: ToDataArgs) {
 			}
 		},
 		Valign: function(gpmlValignValue) {
-			dataElement.verticalAlign = strcase.paramCase(gpmlValignValue);
+			dataElement.verticalAlign = paramCase(gpmlValignValue);
 		},
 		Version: function(gpmlValue) {
 			// This usually appears to be referring to the version from the DataSource,

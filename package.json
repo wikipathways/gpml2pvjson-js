@@ -6,7 +6,7 @@
   "typings": "lib/main.d.ts",
   "scripts": {
     "compile:es5": "tsc --project tsconfig.json && echo ok || echo not ok",
-    "postinstall": "npm run compile:es5",
+    "prepublish": "npm run compile:es5",
     "test": "echo 'Get more/better tests working, please!' && node ./test/node-test-streaming.js"
   },
   "keywords": [
@@ -20,9 +20,8 @@
     "@types/highland": "^1.14.30",
     "@types/lodash": "^4.14.52",
     "he": "~0.4.1",
+    "highland": "^2.10.2",
     "lodash": "^4.15.0",
-    "request": "~2.40.0",
-    "rgbcolor": "0.0.3",
     "rx-extra": "^2.0.4",
     "sax": "~0.6.0",
     "tower-strcase": "~0.5.0"
@@ -30,21 +29,18 @@
   "devDependencies": {
     "JSONStream": "~0.9.0",
     "adm-zip": "^0.4.7",
-    "atob": "^2.0.3",
     "colors": "~0.6.2",
     "deep-diff": "~0.2.0",
     "event-stream": "~3.1.7",
     "figlet": "~1.0.8",
-    "gulp": "~3.8.1",
-    "gulp-browserify": "~0.5.0",
     "mkdirp": "^0.5.1",
     "pretty-data": "~0.40.0",
     "pretty-error": "^1.2.0",
     "rdflib": "git://github.com/ckristo/rdflib.js.git#a5395dd5249ce383d0ecf6e087c36aa77cb3964f",
-    "typescript": "^2.1.5",
+    "rgbcolor": "0.0.3",
+    "typescript": "~2.1.5",
     "verror": "^1.6.0",
-    "xmldom": "^0.1.19",
-    "xmlhttprequest": "^1.8.0"
+    "xmldom": "^0.1.19"
   },
   "repository": {
     "type": "git",
