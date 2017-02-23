@@ -1,6 +1,6 @@
 {
   "name": "gpml2pvjson",
-  "version": "2.0.0-beta.0",
+  "version": "2.0.0-beta.1",
   "description": "convert GPML (XML) to pvjson (json)",
   "main": "lib/main.js",
   "typings": "lib/main.d.ts",
