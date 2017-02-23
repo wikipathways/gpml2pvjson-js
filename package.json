@@ -1,6 +1,6 @@
 {
   "name": "gpml2pvjson",
-  "version": "1.0.0",
+  "version": "2.0.0-beta.0",
   "description": "convert GPML (XML) to pvjson (json)",
   "main": "lib/main.js",
   "typings": "lib/main.d.ts",
@@ -48,5 +48,18 @@
   "bugs": {
     "url": "https://github.com/wikipathways/gpml2pvjson-js/issues"
   },
-  "homepage": "https://github.com/wikipathways/gpml2pvjson-js"
+  "homepage": "https://github.com/wikipathways/gpml2pvjson-js",
+  "semverBumper": {
+    "jsonFiles": [
+      {
+        "filepath": "package.json",
+        "key": "version"
+      }
+    ],
+    "grepOptions": {
+      "include": [],
+      "exclude": [],
+      "excludeDir": []
+    }
+  }
 }
