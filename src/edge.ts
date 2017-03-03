@@ -490,9 +490,9 @@ function getDataPositionAndOrientationMapping(relValue: number, identifier: stri
 	var relativeToUpperLeftCorner = (relValue + 1) / 2;
 	if (relativeToUpperLeftCorner < 0 || relativeToUpperLeftCorner > 1) {
 		if (identifier === 'RelX') {
-			referencedElementDimension = referencedElement.width || referencedElement.attributes.Width.value;
+			referencedElementDimension = referencedElement.width;
 		} else {
-			referencedElementDimension = referencedElement.height || referencedElement.attributes.Height.value;
+			referencedElementDimension = referencedElement.height;
 		}
 		if (relativeToUpperLeftCorner < 0) {
 			position = 0;

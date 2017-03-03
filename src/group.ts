@@ -159,17 +159,15 @@ export function getGroupDimensions(padding: number, borderWidth: number, groupCo
 		y: 0
 	};
 
-	//dimensions.zIndex = Infinity;
-
 	groupContents.forEach(function(groupContent) {
 		var points = groupContent['gpml:Point'];
 
-		if (!points) { // If groupContent is a node (notice the NOT)
+		if (groupContent.hasOwnProperty('x') && groupContent.hasOwnProperty('y') && groupContent.hasOwnProperty('width') && groupContent.hasOwnProperty('height')) { // If groupContent is a node (notice the NOT)
 			dimensions.topLeftCorner.x = Math.min(dimensions.topLeftCorner.x, groupContent.x);
 			dimensions.topLeftCorner.y = Math.min(dimensions.topLeftCorner.y, groupContent.y);
 			dimensions.bottomRightCorner.x = Math.max(dimensions.bottomRightCorner.x, groupContent.x + groupContent.width);
 			dimensions.bottomRightCorner.y = Math.max(dimensions.bottomRightCorner.y, groupContent.y + groupContent.height);
-		} else { // If groupContent is an edge
+		} else if (!!points) { // If groupContent is an edge
 			var firstPointAttributes = points[0].attributes;
 			var firstPointX = firstPointAttributes.X.value;
 			var firstPointY = firstPointAttributes.Y.value;
@@ -185,11 +183,7 @@ export function getGroupDimensions(padding: number, borderWidth: number, groupCo
 		dimensions.y = dimensions.topLeftCorner.y - padding - borderWidth;
 		dimensions.width = (dimensions.bottomRightCorner.x - dimensions.topLeftCorner.x) + 2 * (padding + borderWidth);
 		dimensions.height = (dimensions.bottomRightCorner.y - dimensions.topLeftCorner.y) + 2 * (padding + borderWidth);
-		//dimensions.zIndex = Math.min(dimensions.zIndex, groupContent.zIndex);
 	});
-
-	// TODO refactor to avoid magic number. It's currently used as a hack to put the group behind its contents.
-	//dimensions.zIndex = dimensions.zIndex - 0.1;
 
 	if (typeof dimensions.x === 'undefined' ||
 			isNaN(dimensions.x) ||
@@ -221,7 +215,6 @@ export function postProcess(data, group: DataElement) {
 	group.x = dimensions.x;
 	group.width = dimensions.width;
 	group.height = dimensions.height;
-	//group.zIndex = dimensions.zIndex;
 
 	// Handle 'Style' attributes for GPML 'Group' elements,
 	// using the closest Biopax term available for the mappings below.
