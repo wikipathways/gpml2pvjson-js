@@ -1,6 +1,6 @@
 import { applyDefaults as baseApplyDefaults, unionLSV } from './gpml-utilities';
 
-const wpTypes2BiopaxTypes = {
+export const wpTypes2BiopaxTypes = {
   'Complex': 'Complex',
 	// TODO which one of the following two should we use?
   'GeneProduct': 'Dna',
@@ -37,7 +37,7 @@ export let DATA_NODE_DEFAULTS = {
 		},
 		Padding: {
 			name: 'Padding',
-			value: '0.5em'
+			value: '0.1em'
 		},
 		ShapeType: {
 			name: 'ShapeType',
@@ -57,14 +57,4 @@ export let DATA_NODE_DEFAULTS = {
 export function applyDefaults(gpmlElement, defaults) {
 	gpmlElement.attributes.Type = gpmlElement.attributes.Type || {value: 'Unknown'};
 	return baseApplyDefaults(gpmlElement, [DATA_NODE_DEFAULTS, defaults]);
-};
-
-export function postProcess(data, dataNode) {
-	// Convert GPML DataNode Type to a term from the GPML or BioPAX vocabulary,
-	// using a Biopax class when possible (like biopax:Protein),
-	// but otherwise using a GPML class.
-	const wpType = dataNode.wpType;
-	const biopaxType = wpTypes2BiopaxTypes[wpType] || 'PhysicalEntity';
-	dataNode.type = unionLSV(dataNode.type, wpType, 'biopax:' + biopaxType);
-	return dataNode;
 };

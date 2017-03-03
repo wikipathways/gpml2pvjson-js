@@ -1,14 +1,12 @@
 /// <reference path="../gpml2pvjson.d.ts" />
 
-import { keys, merge, omit, values } from 'lodash';
+import { keys, merge } from 'lodash';
 import * as He from 'he';
-import { supportedNamespaces, unionLSV } from './gpml-utilities';
-import { postProcess as postProcessEdge } from './edge';
-import { postProcess as postProcessGroup } from './group';
-import { postProcess as postProcessInteraction } from './interaction';
+import { supportedNamespaces } from './gpml-utilities';
+import { unionLSV } from './gpml-utilities';
 import * as sax from 'sax';
 import { fromGPML as elementFromGPML } from './xml-element';
-import { postProcess as postProcessDataNode } from './data-node';
+import postProcess from './post-process';
 
 import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
@@ -21,23 +19,23 @@ import 'rxjs/add/operator/let';
 import 'rxjs/add/operator/map';
 import 'rx-extra/add/operator/throughNodeStream';
 
+export const NODES = [
+	'DataNode',
+	'Label',
+	'Shape',
+	'Group',
+	'State',
+];
+
+export const EDGES = [
+	'Interaction',
+	'GraphicalLine',
+];
+
 // TODO why was I getting an error in pvjs when I had sourceStream: Observable<string>?
 //export default function(sourceStream: Observable<string>) {
 //}
 export default function(sourceStream: any, pathwayIri?: string) {
-
-  const NODES = [
-    'DataNode',
-    'Label',
-    'Shape',
-    'Group',
-    'State',
-  ];
-
-  const EDGES = [
-    'Interaction',
-    'GraphicalLine',
-  ];
 
 	// The top-level Pathway GPML element and all its children that represent entities.
   const PATHWAY_AND_CHILD_TARGET_ELEMENTS = NODES.concat(EDGES).concat([
@@ -165,7 +163,8 @@ export default function(sourceStream: any, pathwayIri?: string) {
 			currentPublicationXref = {
 				id: x.attributes['rdf:id'].value,
 				displayName: String(currentPublicationXrefDisplayName),
-				type: ['PublicationXref']
+				type: ['PublicationXref'],
+				gpmlElementName: 'BiopaxRef',
 			} as PublicationXref;
 		} else if (keys(bpToDataMappings).indexOf(x.name) > -1) {
 			currentPublicationXrefTag = bpToDataMappings[x.name];
@@ -176,26 +175,6 @@ export default function(sourceStream: any, pathwayIri?: string) {
 		} else if (keys(bpToDataMappings).indexOf(x) > -1) {
 			currentPublicationXrefTag = null;
 		}
-	}
-
-	function pushIntoArray(elements, element: DataElement): void {
-		elements.push(element);
-	}
-
-	function upsertDataMapEntry(dataMap, element: DataElement): void {
-		dataMap[element.id] = element;
-	}
-
-	function getFromTempById(id: string): DataElement {
-		return data.elementMap[id];
-	}
-
-	function getFromTempByIdAndFilter(acc: any[], id: string): any[] {
-		const element = getFromTempById(id);
-		if (element) {
-			acc.push(element);
-		}
-		return acc;
 	}
 
 	let topLevelGPMLElementStream = new Subject() as Subject<GPMLElement>;
@@ -308,90 +287,7 @@ export default function(sourceStream: any, pathwayIri?: string) {
 			return data;
 		})
 		.map(function(data: Data) {
-			const GPML_ELEMENT_NAME_TO_PVJSON_TYPE = {
-				'DataNode': 'Node',
-				'Shape': 'Node',
-				'Label': 'Node',
-				'State': 'Decoration',
-				'PublicationXref': 'Citation',
-				'Group': 'Group',
-				'Interaction': 'Edge',
-				'GraphicalLine': 'Edge',
-			};
-
-			let elementMap = data.elementMap;
-			values(elementMap)
-				.map(function(element) {
-					const pvjsonType = element.pvjsonType = GPML_ELEMENT_NAME_TO_PVJSON_TYPE[element.gpmlElementName];
-					element.type = unionLSV(element.type, element.gpmlElementName, element.wpType, pvjsonType) as string[];
-					return element;
-				})
-				.forEach(upsertDataMapEntry.bind(undefined, elementMap));
-
-			data.DataNode
-				.reduce(getFromTempByIdAndFilter, [])
-				.map(postProcessDataNode.bind(undefined, data))
-				.forEach(upsertDataMapEntry.bind(undefined, elementMap));
-
-			// Update all groups, now that the rest of the elements have all been converted.
-			data.Group
-				.reduce(getFromTempByIdAndFilter, [])
-				.map(postProcessGroup.bind(undefined, data))
-				// A bug in PathVisio means GPML sometimes keeps empty groups.
-				// We don't want these empty groups in pvjson.
-				//.filter((group: DataElement) => group.contains.length > 0)
-				.filter(function(group: DataElement) {
-					const containsCount = group.contains.length;
-					if (containsCount === 0) {
-						// NOTE: notice side effect
-						delete elementMap[group.id];
-					}
-					return containsCount > 0
-				})
-				.map(function(element) {
-					return omit(element, ['gpml:Style']);
-				})
-				.forEach(function(group: DataElement) {
-					upsertDataMapEntry(elementMap, group);
-
-					// group.id refers to the value of the GraphId
-					const groupId = group.id;
-					group.contains.forEach(function(containedId) {
-						let contained = elementMap[containedId];
-						contained.isPartOf = groupId;
-					});
-				});
-
-			NODES.reduce(function(acc, gpmlElementName) {
-				return acc.concat(data[gpmlElementName]);
-			}, [])
-				.reduce(getFromTempByIdAndFilter, [])
-				.map(function(element) {
-					return omit(element, ['relX', 'relY']);
-				})
-				.forEach(pushIntoArray.bind(undefined, data.elements));
-
-			data.GraphicalLine
-				.reduce(getFromTempByIdAndFilter, [])
-				.map(postProcessEdge.bind(undefined, data))
-				.map(function(edge) {
-					return omit(edge, ['gpml:Point']);
-				})
-				.forEach(pushIntoArray.bind(undefined, data.elements));
-
-			data.Interaction
-				.reduce(getFromTempByIdAndFilter, [])
-				.map(postProcessEdge.bind(undefined, data))
-				.map(function(edge) {
-					return omit(edge, ['gpml:Point']);
-				})
-				.map(postProcessInteraction.bind(undefined, data))
-				.forEach(pushIntoArray.bind(undefined, data.elements));
-
-			data.PublicationXref
-				.reduce(getFromTempByIdAndFilter, [])
-				.forEach(pushIntoArray.bind(undefined, data.elements));
-
+			const postProcessedData = postProcess(data);
 			const name = data.name;
 			const organism = data.organism;
 			if (!pathwayIri) {

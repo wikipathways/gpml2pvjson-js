@@ -1,22 +1,31 @@
 import { find, isEmpty, isNaN } from 'lodash';
 import { fromGPML as attributeFromGPML } from './attribute';
 import { applyDefaults as baseApplyDefaults, convertAttributesToJson, transform, unionLSV } from './gpml-utilities';
-import * as He from 'he';
+import { decode } from 'he';
 import { paramCase } from 'tower-strcase';
 import RGBColor = require('rgbcolor');
 
-// we are adding the applyDefaults functions to "this"
-// so that we can access them in the applyDefaults
-// function below.
-export { applyDefaults as Anchor } from './anchor';
-export { applyDefaults as Pathway } from './pathway';
-export { applyDefaults as Group } from './group';
-export { applyDefaults as DataNode } from './data-node';
-import { applyDefaults as GraphicalLine } from './graphical-line';
-export { applyDefaults as Interaction } from './interaction';
-export { applyDefaults as Label } from './label';
-export { applyDefaults as Shape } from './shape';
-export { applyDefaults as State } from './state';
+import { applyDefaults as applyAnchorDefaults } from './anchor';
+import { applyDefaults as applyPathwayDefaults } from './pathway';
+import { applyDefaults as applyGroupDefaults } from './group';
+import { applyDefaults as applyDataNodeDefaults } from './data-node';
+import { applyDefaults as applyGraphicalLineDefaults } from './graphical-line';
+import { applyDefaults as applyInteractionDefaults } from './interaction';
+import { applyDefaults as applyLabelDefaults } from './label';
+import { applyDefaults as applyShapeDefaults } from './shape';
+import { applyDefaults as applyStateDefaults } from './state';
+
+const defaultsAppliers = {
+	Anchor: applyAnchorDefaults,
+	Pathway: applyPathwayDefaults,
+	Group: applyGroupDefaults,
+	DataNode: applyDataNodeDefaults,
+	GraphicalLine: applyGraphicalLineDefaults,
+	Interaction: applyInteractionDefaults,
+	Label: applyLabelDefaults,
+	Shape: applyShapeDefaults,
+	State: applyStateDefaults,
+};
 
 function parseAsNonNaNNumber(i: number | string): number {
 	const parsed = Number(i);
@@ -35,12 +44,10 @@ const DEFAULTS = {
 	}
 };
 
-let XmlElement = this;
-
 export function applyDefaults(gpmlElement) {
 	const gpmlElementName = gpmlElement.name;
-	if (!!XmlElement[gpmlElementName]) {
-		return XmlElement[gpmlElementName](gpmlElement, DEFAULTS);
+	if (defaultsAppliers.hasOwnProperty(gpmlElementName)) {
+		return defaultsAppliers[gpmlElementName](gpmlElement, DEFAULTS);
 	} else {
 		return baseApplyDefaults(gpmlElement, DEFAULTS);
 	}
@@ -61,8 +68,6 @@ export function fromGPML(args: ToDataArgs) {
 	// Note side-effects required for these values,
 	// because subsequent values depend on them.
 	let gpmlShapeType = '';
-	let dataRelX: number;
-	let dataRelY: number;
 	let lineStyleIsDouble: boolean;
 	let dataBorderWidth: number;
 	let gpmlRotation: number;
@@ -104,9 +109,15 @@ export function fromGPML(args: ToDataArgs) {
 		gpmlShapeType = dataElement.drawAs = gpmlValue;
 	}
 
+	const GPML_ALIGN_TO_TEXTALIGN = {
+		Middle: 'center',
+		Left: 'start',
+		Right: 'end',
+	};
+
 	let gpmlToDataConverter = {
 		Align: function(gpmlAlignValue) {
-			dataElement.textAlign = paramCase(gpmlAlignValue);
+			dataElement.textAlign = GPML_ALIGN_TO_TEXTALIGN[gpmlAlignValue];
 		},
 		Attribute: function(gpmlValue) {
 			// NOTE: in GPML, 'Attribute' is an XML _ELEMENT_ with the gpmlElementName "Attribute."
@@ -117,7 +128,9 @@ export function fromGPML(args: ToDataArgs) {
 			});
 		},
 		Author: function(gpmlValue) {
-			dataElement.author = gpmlValue;
+			if (gpmlValue) {
+				dataElement.author = decode(gpmlValue);
+			}
 		},
 		BiopaxRef: function(gpmlValue: string[]) {
 			// NOTE: BiopaxRefs come into here grouped into an array.
@@ -299,7 +312,7 @@ export function fromGPML(args: ToDataArgs) {
 			// NOTE: comments come into here grouped into an array.
 			//       See tagNamesForSupplementalElementsWithText in main.ts
 			if (!isEmpty(gpmlValue)) {
-				dataElement.comment = gpmlValue;
+				dataElement.comment = gpmlValue.map((c) => decode(c));
 			}
 		},
 		ConnectorType: function(gpmlConnectorTypeValue) {
@@ -312,10 +325,14 @@ export function fromGPML(args: ToDataArgs) {
 			}
 		},
 		'Data-Source': function(gpmlValue) {
-			dataElement.dataSource = gpmlValue;
+			if (gpmlValue) {
+				dataElement.dataSource = decode(gpmlValue);
+			}
 		},
 		Email: function(gpmlValue) {
-			dataElement.email = gpmlValue;
+			if (gpmlValue) {
+				dataElement.email = decode(gpmlValue);
+			}
 		},
 		FillColor: function(gpmlFillColorValue) {
 			const cssColor = this.gpmlColorToCssColor(gpmlFillColorValue);
@@ -330,8 +347,7 @@ export function fromGPML(args: ToDataArgs) {
 			dataElement.fillOpacity = cssFillOpacity;
 		},
 		FontName: function(gpmlFontNameValue) {
-			const cssFontFamily = gpmlFontNameValue;
-			dataElement.fontFamily = cssFontFamily;
+			dataElement.fontFamily = gpmlFontNameValue;
 		},
 		FontSize: function(gpmlFontSizeValue) {
 			dataElement.fontSize = parseAsNonNaNNumber(gpmlFontSizeValue);
@@ -365,7 +381,9 @@ export function fromGPML(args: ToDataArgs) {
 			}
 		},
 		Href: function(gpmlHrefValue) {
-			dataElement.href = encodeURI(He.decode(gpmlHrefValue));
+			if (gpmlHrefValue) {
+				dataElement.href = encodeURI(decode(gpmlHrefValue));
+			}
 		},
 		ID: function(gpmlValue) {
 			if (gpmlValue) {
@@ -376,7 +394,9 @@ export function fromGPML(args: ToDataArgs) {
 			dataElement.lastModified = gpmlValue;
 		},
 		License: function(gpmlValue) {
-			dataElement.license = gpmlValue;
+			if (gpmlValue) {
+				dataElement.license = decode(gpmlValue);
+			}
 		},
 		LineStyle: function(gpmlLineStyleValue) {
 			dataElement.lineStyle = gpmlLineStyleValue;
@@ -422,22 +442,26 @@ export function fromGPML(args: ToDataArgs) {
 			dataElement.borderWidth = dataBorderWidth;
 		},
 		Maintainer: function(gpmlValue) {
-			dataElement.maintainer = gpmlValue;
+			if (gpmlValue) {
+				dataElement.maintainer = decode(gpmlValue);
+			}
 		},
 		Name: function(nameValue) {
-			dataElement.name = nameValue;
-			const splitName = nameValue.split(' (');
-			if (!!splitName &&
-					splitName.length === 2 &&
-						!!nameValue.match(/\(/g) &&
-							nameValue.match(/\(/g).length === 1 &&
-								!!nameValue.match(/\)/g) &&
-									nameValue.match(/\)/g).length === 1) {
-				dataElement.standardName = splitName[0];
-				dataElement.displayName = splitName[1].replace(')', '');
-			} else {
-				dataElement.standardName = nameValue;
-				dataElement.displayName = nameValue;
+			if (nameValue) {
+				dataElement.name = decode(nameValue);
+				const splitName = nameValue.split(' (');
+				if (!!splitName &&
+						splitName.length === 2 &&
+							!!nameValue.match(/\(/g) &&
+								nameValue.match(/\(/g).length === 1 &&
+									!!nameValue.match(/\)/g) &&
+										nameValue.match(/\)/g).length === 1) {
+					dataElement.standardName = splitName[0];
+					dataElement.displayName = splitName[1].replace(')', '');
+				} else {
+					dataElement.standardName = nameValue;
+					dataElement.displayName = nameValue;
+				}
 			}
 		},
 		Organism: function(gpmlValue) {
@@ -451,68 +475,22 @@ export function fromGPML(args: ToDataArgs) {
 			dataElement['gpml:Point'] = gpmlValue;
 		},
 		Position: function(gpmlPositionValue) {
-			const dataPosition = parseAsNonNaNNumber(gpmlPositionValue);
-			dataElement.position = dataPosition;
+			dataElement.attachmentDisplay = {
+				position: [parseAsNonNaNNumber(gpmlPositionValue)]
+			};
 		},
 		RelX: function(gpmlValue) {
-			dataRelX = parseAsNonNaNNumber(gpmlValue);
-			dataElement.relX = dataRelX;
+			let attachmentDisplay = dataElement.attachmentDisplay = dataElement.attachmentDisplay || {} as attachmentDisplay;
+			let position = attachmentDisplay.position = attachmentDisplay.position || [];
+			const gpmlRelX = parseAsNonNaNNumber(gpmlValue);
+			position[0] = (gpmlRelX + 1) / 2;
 		},
 		RelY: function(gpmlValue) {
-			dataRelY = parseAsNonNaNNumber(gpmlValue);
-			dataElement.relY = dataRelY;
-
-			if (!!dataElement.isAttachedTo &&
-					typeof dataElement.x === 'undefined' &&
-						typeof dataElement.y === 'undefined') {
-				const referencedElement = find(data.elementMap, {'id': dataElement.isAttachedTo});
-
-				const referencedElementCenterX = referencedElement.x + referencedElement.width / 2;
-				const referencedElementCenterY = referencedElement.y + referencedElement.height / 2;
-
-				const dataElementCenterX = referencedElementCenterX +
-						dataRelX * referencedElement.width / 2;
-				const dataElementCenterY = referencedElementCenterY +
-						dataRelY * referencedElement.height / 2;
-
-				dataElement.x = dataElementCenterX - dataElement.width / 2;
-				dataElement.y = dataElementCenterY - dataElement.height / 2;
-
-				dataElement.zIndex = referencedElement.zIndex + 0.2;
-			}
+			let attachmentDisplay = dataElement.attachmentDisplay = dataElement.attachmentDisplay || {} as attachmentDisplay;
+			let position = attachmentDisplay.position = attachmentDisplay.position || [];
+			const gpmlRelY = parseAsNonNaNNumber(gpmlValue);
+			position[1] = (-1 * gpmlRelY - 1) / 2;
 		},
-		/*
-		RelX: function(gpmlRelXValue) {
-			var dataRelX = parseFloat(gpmlRelXValue);
-			dataElement.relX = dataRelX;
-			parentElement = gpmlPathwaySelection.find('[GraphId=' +
-					gpmlParentElement.attr('GraphRef') + ']');
-			//if (parentElement.length < 1) throw new Error('cannot find parent');
-			var parentCenterX = parseFloat(parentElement.find('Graphics').attr('CenterX'));
-			var parentWidth = parseFloat(parentElement.find('Graphics').attr('Width'));
-			var parentZIndex = parseFloat(parentElement.find('Graphics').attr('ZOrder'));
-			var gpmlCenterXValue = parentCenterX + gpmlRelXValue * parentWidth/2;
-			dataX = gpmlCenterXValue - dataWidth/2;
-			dataElement.x = dataX || 0;
-			dataElement.zIndex = parentZIndex + 0.2 || 0;
-			//dataText.containerPadding = '0';
-			//dataText.fontSize = '10';
-			return dataX;
-		},
-		RelY: function(gpmlRelYValue) {
-			var dataRelY = parseFloat(gpmlRelYValue);
-			dataElement.relY = dataRelY;
-			var parentCenterY = parseFloat(parentElement.find('Graphics').attr('CenterY'));
-			var parentHeight = parseFloat(parentElement.find('Graphics').attr('Height'));
-			var elementCenterY = parentCenterY + dataRelY * parentHeight/2;
-			// TODO do we need to consider LineThickness (strokewidth) here?
-			dataY = elementCenterY - dataHeight/2;
-			dataElement.y = dataY || 0;
-			// TODO this and other elements here are hacks
-			//dataText.containerY = dataY + 12;
-			return dataY;
-		},
-		//*/
 		Rotation: function(gpmlValue) {
 			// GPML can hold a rotation value for State elements in an element
 			// named "Attribute" like this:
@@ -548,7 +526,9 @@ export function fromGPML(args: ToDataArgs) {
 			}
 		},
 		TextLabel: function(gpmlTextLabelValue) {
-			dataElement.displayName = He.decode(gpmlTextLabelValue);
+			if (gpmlTextLabelValue) {
+				dataElement.displayName = decode(gpmlTextLabelValue);
+			}
 		},
 		Type: function(gpmlValue) {
 			let wpType;

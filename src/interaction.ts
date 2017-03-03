@@ -1,4 +1,4 @@
-import { cloneDeep, defaultsDeep, difference, find, flatten, intersection, isArray, isEmpty, keys, map, reduce, toPairs, union } from 'lodash';
+import { isArray } from 'lodash';
 import { applyDefaults as baseApplyDefaults, intersectsLSV, unionLSV } from './gpml-utilities';
 
 let INTERACTION_DEFAULTS = {
@@ -193,17 +193,13 @@ function convertCatalysisToGenericInteraction(interaction) {
 }
 
 export function postProcess(data, interaction) {
-	var anchor;
-	var points;
-	var relationType;
-	var targetId;
-	var targetNode;
-	var groupRef;
-	var source;
-	var sourceId;
-	var sourceNode;
+	let points;
+	let targetId;
+	let targetNode;
+	let sourceId;
+	let sourceNode;
 
-	var marker;
+	let marker;
 	if (interaction.markerStart) {
 		marker = interaction.markerStart;
 		// sometimes the graphical terminology (startMarker, endMarker) won't line up
@@ -222,31 +218,30 @@ export function postProcess(data, interaction) {
 
 	// this can be overridden with a more specific term below
 
-	let elementMap = data.elementMap;
+	const elementMap = data.elementMap;
 
 	if (!sourceId || !targetId) {
 		console.warn('Unconnected Interaction(s) present in this pathway.');
 		return interaction;
 	}
 
-	var elements = data.elements;
 	sourceNode = elementMap[sourceId];
 	targetNode = elementMap[targetId];
 
 	if (marker === 'Arrow') {
-		var sourceIsEdge = !!sourceNode.points;
-		var targetIsEdge = !!targetNode.points;
-		var sourceIsBiopaxPhysicalEntity = intersectsLSV(
+		const sourceIsEdge = !!sourceNode.points;
+		const targetIsEdge = !!targetNode.points;
+		const sourceIsBiopaxPhysicalEntity = intersectsLSV(
 				biopaxPhysicalEntityTypesPrefixed,
 				sourceNode.type
 		);
-		var targetIsBiopaxPhysicalEntity = intersectsLSV(
+		const targetIsBiopaxPhysicalEntity = intersectsLSV(
 				biopaxPhysicalEntityTypesPrefixed,
 				targetNode.type
 		);
-		var sourceIsBiopaxPhysicalEntityOrPathway = sourceIsBiopaxPhysicalEntity ||
+		const sourceIsBiopaxPhysicalEntityOrPathway = sourceIsBiopaxPhysicalEntity ||
 			intersectsLSV('Pathway', sourceNode.type);
-		var targetIsBiopaxPhysicalEntityOrPathway = targetIsBiopaxPhysicalEntity ||
+		const targetIsBiopaxPhysicalEntityOrPathway = targetIsBiopaxPhysicalEntity ||
 			intersectsLSV('Pathway', targetNode.type);
 		//*
 		if (sourceIsBiopaxPhysicalEntity && targetIsBiopaxPhysicalEntity) {
@@ -270,7 +265,7 @@ export function postProcess(data, interaction) {
 		}
 	}
 
-	var identifierMappings = markerNameToIdentifierMappings[marker];
+	const identifierMappings = markerNameToIdentifierMappings[marker];
 	let biopaxType: string;
 	if (!!identifierMappings) {
 		const biopaxMappings = identifierMappings.biopax;
@@ -334,8 +329,8 @@ export function postProcess(data, interaction) {
 	//*/
 
 	if (intersectsLSV(interaction.type, 'biopax:Catalysis')) {
-		var controlled: Controlled = elementMap[interaction.controlled];
-		var controller: Controller = elementMap[interaction.controller];
+		const controlled: Controlled = elementMap[interaction.controlled];
+		const controller: Controller = elementMap[interaction.controller];
 
 		if (!intersectsLSV(biopaxNodeTypesPrefixed, controller.type)) {
 			// If the controller is not a Pathway or PhysicalEntity,
@@ -353,7 +348,7 @@ export function postProcess(data, interaction) {
 		if (intersectsLSV('biopax:Catalysis', interaction.type) &&
 				intersectsLSV('biopax:Interaction', controlled.type)) {
 			controlled.type = unionLSV(controlled.type, 'biopax:Conversion') as string[];
-			var participants = controlled.participant;
+			const participants = controlled.participant;
 			if (isArray(participants) && participants.length >= 2) {
 				controlled.left = participants[0];
 				controlled.right = participants[1];

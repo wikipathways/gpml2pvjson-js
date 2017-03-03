@@ -1,10 +1,10 @@
-import * as GpmlUtilities from './gpml-utilities';
+import { applyDefaults as baseApplyDefaults } from './gpml-utilities';
 
 const STATE_DEFAULTS = {
 	attributes: {
 		Padding: {
 			name: 'Padding',
-			value: '0.5em'
+			value: '0.1em'
 		},
 		ShapeType: {
 			name: 'ShapeType',
@@ -38,16 +38,5 @@ const STATE_DEFAULTS = {
 };
 
 export function applyDefaults(gpmlElement, defaults) {
-	gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [STATE_DEFAULTS, defaults]);
-	return gpmlElement;
-};
-
-export function fromGPML(data, state) {
-	var referencedNode = data.elements.filter(function(element){
-		return element.id === state.isAttachedTo;
-	})[0];
-	
-	state.zIndex = referencedNode.zIndex + 0.2;
-
-	return state;
+	return baseApplyDefaults(gpmlElement, [STATE_DEFAULTS, defaults]);
 };

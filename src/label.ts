@@ -1,4 +1,4 @@
-import * as GpmlUtilities from './gpml-utilities';
+import { applyDefaults as baseApplyDefaults } from './gpml-utilities';
 
 const LABEL_DEFAULTS = {
 	attributes: {
@@ -24,7 +24,7 @@ const LABEL_DEFAULTS = {
 		},
 		Padding: {
 			name: 'Padding',
-			value: '0.5em'
+			value: '0.1em'
 		},
 		ShapeType: {
 			name: 'ShapeType',
@@ -42,6 +42,5 @@ const LABEL_DEFAULTS = {
 };
 
 export function applyDefaults(gpmlElement, defaults) {
-	gpmlElement = GpmlUtilities.applyDefaults(gpmlElement, [LABEL_DEFAULTS, defaults]);
-	return gpmlElement;
+	return baseApplyDefaults(gpmlElement, [LABEL_DEFAULTS, defaults]);
 };

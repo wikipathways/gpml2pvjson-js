@@ -1,6 +1,74 @@
 /// <reference path="rgbcolor.d.ts" />
 /// <reference path="sax.d.ts" />
 
+/* GPML */
+
+type GPMLAttributeNames = 'xmlns' |
+													'GroupId' |
+													'GraphId' |
+													'GraphRef' |
+													'GroupRef' |
+													'Name' |
+													'TextLabel' |
+													'Type' |
+													'CellularComponent' |
+													'Rotation' |
+													'LineStyle' |
+													'Shape' |
+													'ShapeType' |
+													'Attribute' |
+													'FillColor' |
+													'Color' |
+													'LineThickness' |
+													'Width' |
+													'Height' |
+													'RelX' |
+													'RelY' |
+													'CenterX' |
+													'CenterY' |
+													'ConnectorType' |
+													'Point' |
+													'Organism' |
+													'Database' |
+													'ID' |
+													'Data-Source' |
+													'ZOrder' |
+													'Version';
+
+type GPMLClassNames = 'PublicationXref' |
+											'Anchor' |
+											'Point' |
+											'Interaction' |
+											'GraphicalLine' |
+											'DataNode' |
+											'Shape' |
+											'Group' |
+											'InfoBox' |
+											'State';
+
+declare type GPML_ATTRIBUTE_NAMES_AND_TYPES = {
+	[K in GPMLAttributeNames]?: string;
+}
+
+declare interface GPMLElement extends SAXOpenTag<GPML_ATTRIBUTE_NAMES_AND_TYPES> {}
+
+/* pvjson */
+
+// decorations or other small elements attached to another element,
+// e.g., GPML States and Anchors
+declare interface Burr {
+	drawAs: number;
+	isAttachedTo: string;
+	attachmentDisplay?: attachmentDisplay;
+}
+
+declare interface Point {
+	x?: number;
+	y?: number;
+	isAttachedTo?: string;
+	attachmentDisplay?: attachmentDisplay;
+}
+
 declare interface NodeDimensions {
 		x: number;
 		y: number;
@@ -37,58 +105,63 @@ declare interface Controlled {
 	type?: string | string[];
 }
 
+declare interface attachmentDisplay {
+	// position takes two numbers for GPML States and Points, but
+	// just one for GPML Anchors, which are attached to edges.
+	position: number[];
+	offset?: [number, number];
+	orientation?: [number, number];
+}
+
 type DataElementStringProperties = 'author' |
-      'backgroundColor' |
-      'cellularComponent' |
-      'color' |
-      'dataSource' |
-      'dbName' | // e.g., Entrez Gene
-      'dbId' | // xref identifier, e.g., 1234 for Entrez Gene 1234
-      'displayName' |
-      'drawAs' |
-      'email' |
-			//'entityReference' |
-      'fontFamily' |
-      'fontStyle' |
-      'fontWeight' |
-			'gpml:GroupRef' |
-      'gpml:Style' |
-			'gpmlElementName' |
-      'href' |
-      'id' | // @id
-      'isAttachedTo' |
-			'isPartOf' |
-      'lastModified' |
-      'license' |
-      'maintainer' |
-      'markerStart' |
-      'markerEnd' |
-			'name' |
-      'organism' |
-      'pvjsonType' |
-      'standardName' |
-      'strokeDasharray' |
-      'textAlign' |
-      'verticalAlign' |
-			'wpType';
+																		'backgroundColor' |
+																		'cellularComponent' |
+																		'color' |
+																		'dataSource' |
+																		'dbName' | // e.g., Entrez Gene
+																		'dbId' | // xref identifier, e.g., 1234 for Entrez Gene 1234
+																		'displayName' |
+																		'drawAs' |
+																		'email' |
+																		//'entityReference' |
+																		'fontFamily' |
+																		'fontStyle' |
+																		'fontWeight' |
+																		'gpml:GroupRef' |
+																		'gpml:Style' |
+																		'gpmlElementName' |
+																		'href' |
+																		'id' | // @id
+																		'isPartOf' |
+																		'lastModified' |
+																		'license' |
+																		'maintainer' |
+																		'name' |
+																		'organism' |
+																		'pvjsonType' |
+																		'standardName' |
+																		'strokeDasharray' |
+																		'textAlign' |
+																		'verticalAlign' |
+																		'wpType';
 
 // This probably isn't a problem with parsing GPML,
 // but if we need to parse non-numeric values like '0.5em',
 // we can use something like this:
 // https://github.com/sebmarkbage/art/blob/51ffce8164a555d652843241c2fdda52e186cbbd/parsers/svg/core.js#L170
 type DataElementNumberProperties = 'borderWidth' |
-      'fillOpacity' |
-      'fontSize' |
-      'height' |
-      'padding' |
-      'position' |
-      'relX' |
-      'relY' |
-      'rotation' |
-			'width' |
-			'x' |
-      'y' |
-      'zIndex';
+																		'fillOpacity' |
+																		'fontSize' |
+																		'height' |
+																		'padding' |
+																		'position' |
+																		'relX' |
+																		'relY' |
+																		'rotation' |
+																		'width' |
+																		'x' |
+																		'y' |
+																		'zIndex';
 
 declare type DataElementWithStringProperties = {
 	[K in DataElementStringProperties]?: string;
@@ -98,66 +171,44 @@ declare type DataElementWithNumberProperties = {
 	[K in DataElementNumberProperties]?: number;
 }
 
-type DataElementStringArrayProperties = 'citation' |
-	'comment' |
-	'contains' |
-	'lineStyle' |
-	'type';
+type DataElementStringArrayProperties = 'burrs' |
+																				'citation' |
+																				'comment' |
+																				'contains' |
+																				'lineStyle' |
+																				'type';
 
 declare type DataElementWithStringArrayProperties = {
 	[K in DataElementStringArrayProperties]?: string[];
 }
 
 declare interface DataElementManual {
-	points: Point[];
+	attachmentDisplay?: attachmentDisplay;
+	isAttachedTo?: string;
 }
 
 declare type DataElement = DataElementWithStringProperties & DataElementWithNumberProperties & DataElementWithStringArrayProperties & DataElementManual;
 
-type GPMLAttributeNames = 'xmlns' |
-      'GroupId' |
-      'GraphId' |
-      'GraphRef' |
-      'GroupRef' |
-      'Name' |
-      'TextLabel' |
-      'Type' |
-      'CellularComponent' |
-      'Rotation' |
-      'LineStyle' |
-      'Shape' |
-      'ShapeType' |
-      'Attribute' |
-      'FillColor' |
-      'Color' |
-      'LineThickness' |
-      'Width' |
-      'Height' |
-      'RelX' |
-      'RelY' |
-      'CenterX' |
-      'CenterY' |
-      'ConnectorType' |
-      'Point' |
-      'Organism' |
-      'Database' |
-      'ID' |
-      'Data-Source' |
-			'ZOrder' |
-      'Version';
+declare interface EdgeManual {
+	markerStart?: string;
+	markerEnd?: string;
+	explicitPoints?: any;
+	points?: Point[];
+	attachmentDisplay?: attachmentDisplay;
+	isAttachedTo?: string[];
+}
 
-type GPMLClassNames = 'PublicationXref' |
-      'Point' |
-      'Interaction' |
-      'GraphicalLine' |
-      'DataNode' |
-      'Shape' |
-      'Group' |
-      'InfoBox' |
-      'State';
+declare type Edge = DataElementWithStringProperties & DataElementWithNumberProperties & DataElementWithStringArrayProperties & EdgeManual;
+//declare type Edge = DataElementWithStringProperties & DataElementWithNumberProperties & EdgeManual;
+//declare type Edge = EdgeManual;
 
 declare type DataElementsByClass = {
 	[K in GPMLClassNames]?: string[];
+}
+
+declare type DataElementMap = {
+	// TODO this could likely be improved
+	[key: string]: DataElement | Edge
 }
 
 declare type DataManual = {
@@ -168,10 +219,7 @@ declare type DataManual = {
 	// NOTE that data.elementMap may have more entries than data.elements.
 	// For example, if the source GPML has one or more empty Groups, these
 	// Groups will be in data.elementMap but not in data.elements.
-	elementMap: {
-		// TODO this could likely be improved
-		[key: string]: DataElement
-	},
+	elementMap: DataElementMap,
 	elements: DataElement[],
 	GraphIdToGroupId: {
 		[key: string]: string
@@ -191,55 +239,21 @@ declare type DataManual = {
 
 declare type Data = DataElementsByClass & DataManual;
 
-declare type GPML_ATTRIBUTE_NAMES_AND_TYPES = {
-	[K in GPMLAttributeNames]?: string;
-}
-
-declare interface GPMLElement extends SAXOpenTag<GPML_ATTRIBUTE_NAMES_AND_TYPES> {
-}
-
-// Here we are referring to GPML Anchor, not jsplumb anchor.
-// GPML and jsplumb/pvjson use different meaning and architecture for the term "anchor."
-// GPML uses anchor to refer to an actual element that specifies a position along an edge.
-// pvjson copies jsplumb in using anchor to refer to the location of the point in terms of another element,
-// which can be a node or an edge.
-// When that other element is an edge, pvjson refers directly to the edge,
-// unlike GPML, which refers to an element located at a position along the edge.
-// see jsPlumb anchor model: http://jsplumbtoolkit.com/doc/anchors
-// anchor: [ x, y, dx, dy ]
-// where x: distance from left side along width axis as a percentage of the total width
-//       y: distance from top side along height axis as a percentage of the total height
-//       dx, dy: coordinates of a point that specifies how the edge emanates from the node 
-// example: below is an anchor specifying an edge that emanates downward (0, 1) from the
-// center (0.5) of the bottom side (1) of the node
-// anchor: [ 0.5, 1, 0, 1 ]
-// since this jsplumb-anchor is specified relative to an edge, it only has one dimension
-// (position along the edge), unlike nodes, which can have two dimensions
-// (along x dimension of node, along y dimension of node).
-// So for edges, anchor[0] refers to position along the edge and anchor[1] is always a dummy value of 0.
-declare type Anchor = number[];
-/*
-declare type Anchor = [
-	number, // if node, fraction of x distance from left to right
-					// if edge, fraction of distance along edge from start to end
-	number, // if node, fraction of y distance from top to bottom
-	 				// if edge, dummy value (always 0)
-	number?, // x emanation (dx) for indicating angle at start
-	number?, // y emanation (dy) for indicating angle at start
-	number?, // x offset
-	number?  // y offset
-];
-*/
-
-declare interface Point {
-	x?: number;
-	y?: number;
-	isAttachedTo?: string;
-	anchor?: Anchor
-}
+/* jsonld and jsonld-extra */
 
 // TODO how do I specify this? see http://json-ld.org/spec/latest/json-ld/#dfn-node-object
-declare interface jsonldNodeObject {}
+// any JSON object that is not in the JSON-LD context and that meets one of these criteria:
+// * does not contain the @value, @list, or @set keywords, or
+// * not the top-most JSON object in the JSON-LD document consisting of no other members than @graph and @context.
+//
+// Since I don't know how to do this for now, I'll just use a modification of Map.
+// Maybe one of the commented out options is more appropriate?
+declare type jsonldNodeObject = {
+    //[key: string]: jsonPrimitive | jsonPrimitive[];
+    //[key: string]: jsonldNodeObject;
+    [key: string]: jsonldListSetPrimitive;
+}
+declare type jsonPrimitive = string | number | boolean | null | jsonldNodeObject;
 declare interface jsonldValueObjectWithType {
 	'@value': string | number | boolean | null;
 	'@type'?: string | null;

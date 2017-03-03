@@ -1,3 +1,4 @@
+import { omit } from 'lodash';
 import { applyDefaults as baseApplyDefaults, intersectsLSV, unionLSV } from './gpml-utilities';
 
 const biopaxEdgeTypes = [
@@ -158,7 +159,7 @@ export function getGroupDimensions(padding: number, borderWidth: number, groupCo
 		y: 0
 	};
 
-	dimensions.zIndex = Infinity;
+	//dimensions.zIndex = Infinity;
 
 	groupContents.forEach(function(groupContent) {
 		var points = groupContent['gpml:Point'];
@@ -184,11 +185,11 @@ export function getGroupDimensions(padding: number, borderWidth: number, groupCo
 		dimensions.y = dimensions.topLeftCorner.y - padding - borderWidth;
 		dimensions.width = (dimensions.bottomRightCorner.x - dimensions.topLeftCorner.x) + 2 * (padding + borderWidth);
 		dimensions.height = (dimensions.bottomRightCorner.y - dimensions.topLeftCorner.y) + 2 * (padding + borderWidth);
-		dimensions.zIndex = Math.min(dimensions.zIndex, groupContent.zIndex);
+		//dimensions.zIndex = Math.min(dimensions.zIndex, groupContent.zIndex);
 	});
 
 	// TODO refactor to avoid magic number. It's currently used as a hack to put the group behind its contents.
-	dimensions.zIndex = dimensions.zIndex - 0.1;
+	//dimensions.zIndex = dimensions.zIndex - 0.1;
 
 	if (typeof dimensions.x === 'undefined' ||
 			isNaN(dimensions.x) ||
@@ -209,18 +210,7 @@ export function getGroupDimensions(padding: number, borderWidth: number, groupCo
 };
 
 export function postProcess(data, group: DataElement) {
-	// NOTE: pvjson doesn't use GroupId. It just uses GraphId as the id for an element.
-	// So GPML uses GroupId/GroupRef; pvjson uses just id (from GraphId) and element.isPartOf and group.contains
-	// We need to map from GroupId/GroupRef to id/contains/isPartOf here.
-	// group.id refers to the value from GraphId.
-	const containedIds = group.contains = data.containedIdsByGroupId[data.GraphIdToGroupId[group.id]] || [];
-	
-	// GPML shouldn't have empty groups, but PathVisio-Java has a bug that sometimes results in empty groups.
-	if (containedIds.length === 0) {
-		return group;
-	}
-
-	const containedElements = containedIds.map((id) => data.elementMap[id]);
+	const containedElements = group.contains.map((id) => data.elementMap[id]);
 
 	const dimensions = getGroupDimensions(
 			group.padding,
@@ -231,7 +221,7 @@ export function postProcess(data, group: DataElement) {
 	group.x = dimensions.x;
 	group.width = dimensions.width;
 	group.height = dimensions.height;
-	group.zIndex = dimensions.zIndex;
+	//group.zIndex = dimensions.zIndex;
 
 	// Handle 'Style' attributes for GPML 'Group' elements,
 	// using the closest Biopax term available for the mappings below.
@@ -265,5 +255,5 @@ export function postProcess(data, group: DataElement) {
 		// TODO is this warranted?
 		group.type = ['Complex'];
 	}
-	return group;
+	return omit(group, ['gpml:Style']);
 };

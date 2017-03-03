@@ -2,7 +2,7 @@ import { cloneDeep, defaultsDeep, difference, find, flatten, intersection, isArr
 
 /* LSV means JSON-LD @list or @set values
  */
-export function arrayify(input: jsonldListSetValue): jsonldListSetPrimitive[] {
+export function arrayify<T>(input: (T & jsonldListSetPrimitive) | (T[] & jsonldListSetPrimitive[])): T[] {
 	if (typeof input === 'undefined') {
 		return [];
 	}
