@@ -183,8 +183,8 @@ export default function postProcess(data: Data) {
 
 		newIndependents.forEach(function(independent) {
 			const gpmlElementName = independent.gpmlElementName;
-			const pvjsonType = independent.pvjsonType = GPML_ELEMENT_NAME_TO_PVJSON_TYPE[gpmlElementName];
-			independent.type = unionLSV(independent.type, independent.gpmlElementName, independent.wpType, pvjsonType) as string[];
+			const kaavioType = independent.kaavioType = GPML_ELEMENT_NAME_TO_PVJSON_TYPE[gpmlElementName];
+			independent.type = unionLSV(independent.type, independent.gpmlElementName, independent.wpType, kaavioType) as string[];
 
 			if (EDGES.indexOf(gpmlElementName) > -1) {
 				independent = postProcessEdge(data, independent);

@@ -489,7 +489,7 @@ export function fromGPML(args: ToDataArgs) {
 			let attachmentDisplay = dataElement.attachmentDisplay = dataElement.attachmentDisplay || {} as attachmentDisplay;
 			let position = attachmentDisplay.position = attachmentDisplay.position || [];
 			const gpmlRelY = parseAsNonNaNNumber(gpmlValue);
-			position[1] = (-1 * gpmlRelY - 1) / 2;
+			position[1] = (gpmlRelY + 1) / 2;
 		},
 		Rotation: function(gpmlValue) {
 			// GPML can hold a rotation value for State elements in an element

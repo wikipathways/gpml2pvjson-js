@@ -138,7 +138,7 @@ type DataElementStringProperties = 'author' |
 																		'maintainer' |
 																		'name' |
 																		'organism' |
-																		'pvjsonType' |
+																		'kaavioType' |
 																		'standardName' |
 																		'strokeDasharray' |
 																		'textAlign' |
