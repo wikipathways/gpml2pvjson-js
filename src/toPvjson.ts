@@ -35,7 +35,7 @@ export const EDGES = [
 // TODO why was I getting an error in pvjs when I had sourceStream: Observable<string>?
 //export default function(sourceStream: Observable<string>) {
 //}
-export default function(sourceStream: any, pathwayIri?: string) {
+export function toPvjson(sourceStream: any, pathwayIri?: string) {
 
 	// The top-level Pathway GPML element and all its children that represent entities.
   const PATHWAY_AND_CHILD_TARGET_ELEMENTS = NODES.concat(EDGES).concat([

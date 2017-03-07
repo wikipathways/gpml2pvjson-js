@@ -10,7 +10,7 @@
 		"pretty": true
 	},
 	"files": [
-		"src/main.ts",
+		"src/index.ts",
 		"rgbcolor.d.ts",
 		"sax.d.ts",
 		"gpml2pvjson.d.ts"

@@ -6,7 +6,7 @@ import { processPointAttributes, postProcess as postProcessEdge } from './edge';
 import { postProcess as postProcessGroup } from './group';
 import { postProcess as postProcessInteraction } from './interaction';
 import { wpTypes2BiopaxTypes } from './data-node';
-import { EDGES, NODES } from './main';
+import { EDGES, NODES } from './toPvjson';
 
 const GPML_ELEMENT_NAME_TO_PVJSON_TYPE = {
 	'DataNode': 'Node',
