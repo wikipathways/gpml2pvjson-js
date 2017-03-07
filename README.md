@@ -8,7 +8,7 @@ Note there are two branches:
 1. 1x
   * DOM-based.
   * current converter in use for pvjs at WikiPathways.
-2. 2x (master)
+2. master (2x)
   * streaming
   * RxJS-based.
   * Used as part of the conversion process from GPML to BioPAX for PathwayCommons.
