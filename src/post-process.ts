@@ -1,12 +1,12 @@
 /// <reference path="../gpml2pvjson.d.ts" />
 
-import { arrayify, unionLSV } from './gpml-utilities';
-import { omit, partition, values } from 'lodash';
-import { processPointAttributes, postProcess as postProcessEdge } from './edge';
-import { postProcess as postProcessGroup } from './group';
-import { postProcess as postProcessInteraction } from './interaction';
-import { wpTypes2BiopaxTypes } from './data-node';
-import { EDGES, NODES } from './toPvjson';
+import {arrayify, unionLSV} from './gpml-utilities';
+import {omit, partition, values} from 'lodash';
+import {processPointAttributes, postProcess as postProcessEdge} from './edge';
+import {postProcess as postProcessGroup} from './group';
+import {postProcess as postProcessInteraction} from './interaction';
+import {wpTypes2BiopaxTypes} from './data-node';
+import {EDGES, NODES} from './toPvjson';
 
 const GPML_ELEMENT_NAME_TO_PVJSON_TYPE = {
 	'DataNode': 'Node',
@@ -24,7 +24,7 @@ function upsertDataMapEntry(dataMap, element: DataElement): void {
 	dataMap[element.id] = element;
 }
 
-export default function postProcess(data: Data) {
+export function postProcess(data: Data) {
 	let elementMap = data.elementMap;
 	const elements = values(elementMap);
 	const elementCount = elements.length;
@@ -192,6 +192,7 @@ export default function postProcess(data: Data) {
 					independent = postProcessInteraction(data, independent);
 				}
 				independents.push(independent);
+				upsertDataMapEntry(elementMap, independent);
 			} else if (NODES.concat('Anchor').indexOf(gpmlElementName) > -1) {
 				independent.fontFamily = independent.fontFamily || 'Arial';
 				independent.textAlign = independent.textAlign || 'center';
@@ -213,12 +214,15 @@ export default function postProcess(data: Data) {
 					if (containedIds.length > 0) {
 						independent = postProcessGroup(data, independent);
 						independents.push(independent);
+						upsertDataMapEntry(elementMap, independent);
 					}
 				} else {
 					independents.push(independent);
+					upsertDataMapEntry(elementMap, independent);
 				}
 			} else if (gpmlElementName === 'BiopaxRef') {
 				independents.push(independent);
+				upsertDataMapEntry(elementMap, independent);
 			} else {
 				console.error(independent);
 				throw new Error('Reached unexpected state in processing element above');

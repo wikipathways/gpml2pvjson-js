@@ -3,7 +3,7 @@
 var _ = require('lodash');
 var crypto = require('crypto');
 var fs = require('fs');
-var gpml2pvjson = require('../index');
+var gpml2pvjson = require('../lib').default;
 var hl = require('highland');
 var npmPackage = JSON.parse(fs.readFileSync('./package.json', {encoding: 'utf8'}));
 var program = require('commander');

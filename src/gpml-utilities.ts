@@ -1,5 +1,16 @@
 import { cloneDeep, defaultsDeep, difference, find, flatten, intersection, isArray, isEmpty, keys, map, reduce, toPairs, union } from 'lodash';
 
+/*
+ * This is needed because PublicationXref rdf:id values and
+ * GPML GraphId values are not necessarily mutually exclusive
+ * and unique within a given pathway.
+ * For example, WP306, version 80308, has rdf:id="d8a" and
+ * a DataNode with GraphId="d8a".
+ */
+export function generatePublicationXrefId(originalId: string) {
+	return 'PublicationXref' + originalId;
+}
+
 /* LSV means JSON-LD @list or @set values
  */
 export function arrayify<T>(input: (T & jsonldListSetPrimitive) | (T[] & jsonldListSetPrimitive[])): T[] {

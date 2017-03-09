@@ -1,15 +1,15 @@
 /// <reference path="../gpml2pvjson.d.ts" />
 
-import { keys, merge } from 'lodash';
+import {keys, merge} from 'lodash';
 import * as He from 'he';
-import { supportedNamespaces } from './gpml-utilities';
-import { unionLSV } from './gpml-utilities';
+import {generatePublicationXrefId, supportedNamespaces} from './gpml-utilities';
+import {unionLSV} from './gpml-utilities';
 import * as sax from 'sax';
-import { fromGPML as elementFromGPML } from './xml-element';
-import postProcess from './post-process';
+import {fromGPML as elementFromGPML} from './xml-element';
+import {postProcess} from './post-process';
 
-import { Observable } from 'rxjs/Observable';
-import { Subject } from 'rxjs/Subject';
+import {Observable} from 'rxjs/Observable';
+import {Subject} from 'rxjs/Subject';
 import 'rxjs/add/observable/fromEventPattern';
 import 'rxjs/add/observable/merge';
 
@@ -161,7 +161,7 @@ export function toPvjson(sourceStream: any, pathwayIri?: string) {
 		} else if (x.name === 'bp:PublicationXref') {
 			currentPublicationXrefDisplayName += 1;
 			currentPublicationXref = {
-				id: x.attributes['rdf:id'].value,
+				id: generatePublicationXrefId(x.attributes['rdf:id'].value),
 				displayName: String(currentPublicationXrefDisplayName),
 				type: ['PublicationXref'],
 				gpmlElementName: 'BiopaxRef',
@@ -248,8 +248,7 @@ export function toPvjson(sourceStream: any, pathwayIri?: string) {
         currentTargetElement.attributes[x.name].value || [];
       currentTargetElement.attributes[x.name].value.push(x);
     } else if (SUPPLEMENTAL_ELEMENTS_WITH_TEXT.indexOf(currentTagName) > -1 &&
-               !x.name &&
-                 currentTagName !== x) {
+               !x.name && currentTagName !== x) {
       currentTargetElement.attributes = currentTargetElement.attributes || {};
       currentTargetElement.attributes[currentTagName] =
         currentTargetElement.attributes[currentTagName] || {};

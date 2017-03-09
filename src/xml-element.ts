@@ -1,8 +1,8 @@
-import { find, isEmpty, isNaN } from 'lodash';
-import { fromGPML as attributeFromGPML } from './attribute';
-import { applyDefaults as baseApplyDefaults, convertAttributesToJson, transform, unionLSV } from './gpml-utilities';
-import { decode } from 'he';
-import { paramCase } from 'tower-strcase';
+import {find, isEmpty, isNaN} from 'lodash';
+import {fromGPML as attributeFromGPML} from './attribute';
+import {applyDefaults as baseApplyDefaults, convertAttributesToJson, generatePublicationXrefId, transform, unionLSV} from './gpml-utilities';
+import {decode} from 'he';
+import {paramCase} from 'tower-strcase';
 import RGBColor = require('rgbcolor');
 
 import { applyDefaults as applyAnchorDefaults } from './anchor';
@@ -134,9 +134,9 @@ export function fromGPML(args: ToDataArgs) {
 		},
 		BiopaxRef: function(gpmlValue: string[]) {
 			// NOTE: BiopaxRefs come into here grouped into an array.
-			//       See tagNamesForSupplementalElementsWithText in main.ts
+			//       See SUPPLEMENTAL_ELEMENTS_WITH_TEXT in toPvjson.ts
 			if (!isEmpty(gpmlValue)) {
-				dataElement.citation = gpmlValue;
+				dataElement.citation = gpmlValue.map(generatePublicationXrefId);
 			}
 		},
 		BoardHeight: function(gpmlValue) {

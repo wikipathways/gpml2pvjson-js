@@ -148,7 +148,7 @@ export function applyDefaults(gpmlElement, defaults) {
 };
 
 // TODO should we allow padding to be a value like '0.5em'?
-export function getGroupDimensions(padding: number, borderWidth: number, groupContents: DataElement[]): GroupDimensions {
+export function getGroupDimensions(padding: number, borderWidth: number, groupContents: (DataElement & Edge)[]): GroupDimensions {
 	let dimensions = <GroupDimensions>{};
 	dimensions.topLeftCorner = {
 		x: Infinity,
@@ -160,24 +160,27 @@ export function getGroupDimensions(padding: number, borderWidth: number, groupCo
 	};
 
 	groupContents.forEach(function(groupContent) {
-		var points = groupContent['gpml:Point'];
+		var points = groupContent.points;
 
-		if (groupContent.hasOwnProperty('x') && groupContent.hasOwnProperty('y') && groupContent.hasOwnProperty('width') && groupContent.hasOwnProperty('height')) { // If groupContent is a node (notice the NOT)
+		if (groupContent.hasOwnProperty('x') && groupContent.hasOwnProperty('y') &&
+				groupContent.hasOwnProperty('width') && groupContent.hasOwnProperty('height')) { // If groupContent is a node
 			dimensions.topLeftCorner.x = Math.min(dimensions.topLeftCorner.x, groupContent.x);
 			dimensions.topLeftCorner.y = Math.min(dimensions.topLeftCorner.y, groupContent.y);
 			dimensions.bottomRightCorner.x = Math.max(dimensions.bottomRightCorner.x, groupContent.x + groupContent.width);
 			dimensions.bottomRightCorner.y = Math.max(dimensions.bottomRightCorner.y, groupContent.y + groupContent.height);
 		} else if (!!points) { // If groupContent is an edge
-			var firstPointAttributes = points[0].attributes;
-			var firstPointX = firstPointAttributes.X.value;
-			var firstPointY = firstPointAttributes.Y.value;
-			var lastPointAttributes = points[points.length - 1].attributes;
-			var lastPointX = lastPointAttributes.X.value;
-			var lastPointY = lastPointAttributes.Y.value;
+			const firstPoint = points[0];
+			var firstPointX = firstPoint.x;
+			var firstPointY = firstPoint.y;
+			var lastPoint = points[points.length - 1];
+			var lastPointX = lastPoint.x;
+			var lastPointY = lastPoint.y;
 			dimensions.topLeftCorner.x = Math.min(dimensions.topLeftCorner.x, firstPointX, lastPointX);
 			dimensions.topLeftCorner.y = Math.min(dimensions.topLeftCorner.y, firstPointY, lastPointY);
 			dimensions.bottomRightCorner.x = Math.max(dimensions.bottomRightCorner.x, firstPointX, lastPointX);
 			dimensions.bottomRightCorner.y = Math.max(dimensions.bottomRightCorner.y, firstPointY, lastPointY);
+		} else {
+			throw new Error(`Unexpected content (id: "${groupContent.id}", type: "${groupContent.kaavioType}") in Group`);
 		}
 		dimensions.x = dimensions.topLeftCorner.x - padding - borderWidth;
 		dimensions.y = dimensions.topLeftCorner.y - padding - borderWidth;
@@ -246,7 +249,7 @@ export function postProcess(data, group: DataElement) {
 
 	if (!containsEdge) {
 		// TODO is this warranted?
-		group.type = ['Complex'];
+		group.type = ['Group Complex GroupComplex'];
 	}
 	return omit(group, ['gpml:Style']);
 };
