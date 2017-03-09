@@ -336,9 +336,9 @@ export function postProcess(data, interaction) {
 			// If the controller is not a Pathway or PhysicalEntity,
 			// we make this interaction generic, because it's not a valid
 			// Catalysis.
-
-			if (intersectsLSV(controller.type, 'Group')) {
-				controller.type = 'Complex';
+			const controllerType = controller.type;
+			if (intersectsLSV(controllerType, 'Group')) {
+				controller.type = unionLSV(controllerType, 'Complex') as string[];
 			} else {
 				convertCatalysisToGenericInteraction(interaction);
 			}

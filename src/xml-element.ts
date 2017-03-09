@@ -53,16 +53,8 @@ export function applyDefaults(gpmlElement) {
 	}
 };
 
-export interface ToDataArgs {
-	data: Data;
-	dataElement: DataElement & Data;
-	gpmlElement: GPMLElement;
-}
-export function fromGPML(args: ToDataArgs) {
-	let data = args.data;
-	let dataElement = args.dataElement;
-
-	let gpmlElement = applyDefaults(args.gpmlElement);
+export function fromGPML(data: Data, dataElement: DataElement & Data, inputGPMLElement: GPMLElement) {
+	const gpmlElement = applyDefaults(inputGPMLElement);
 	const gpmlElementName = dataElement.gpmlElementName = gpmlElement.name;
 
 	// Note side-effects required for these values,
@@ -579,14 +571,15 @@ export function fromGPML(args: ToDataArgs) {
 		}
 	};
 
+	dataElement.type = dataElement.type || [];
+	dataElement.type.push(gpmlElementName);
+
 	dataElement = convertAttributesToJson(
 			gpmlElement,
 			dataElement,
 			gpmlToDataConverter,
 			ATTRIBUTE_DEPENDENCY_ORDER
 	);
-
-	dataElement.type = [gpmlElementName];
 
 	data[gpmlElementName].push(dataElement.id);
 

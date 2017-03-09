@@ -20,6 +20,24 @@ const biopaxEdgeTypes = [
 ];
 const biopaxEdgeTypesPrefixed = biopaxEdgeTypes.map(x => 'biopax:' + x);
 
+// Handle 'Style' attributes for GPML 'Group' elements,
+// using the closest Biopax term available for the mappings below.
+// Once all the elements are converted, we come back to this and
+// set any 'Pathways' with no interactions to be Complexes.
+const GROUP_STYLE_TO_BIOPAX = {
+	'Group': 'Pathway',
+	'None': 'Pathway',
+	'Complex': 'Complex',
+	'Pathway': 'Pathway'
+};
+
+const GROUP_STYLE_TO_DRAW_AS = {
+	'Group': 'None',
+	'None': 'None',
+	'Complex': 'Complex',
+	'Pathway': 'Rectangle'
+};
+
 export const GROUP_DEFAULTS = {
 	attributes: {
 		Align: {
@@ -58,7 +76,7 @@ export const GROUP_DEFAULTS = {
 };
 
 export function applyDefaults(gpmlElement, defaults) {
-	var defaultsByStyle = {
+	const defaultsByStyle = {
 		None: {
 			attributes: {
 				Padding: {
@@ -142,7 +160,7 @@ export function applyDefaults(gpmlElement, defaults) {
 	};
 
 	gpmlElement.attributes.Style = gpmlElement.attributes.Style || {value: 'None'};
-	var groupStyle = gpmlElement.attributes.Style;
+	const groupStyle = gpmlElement.attributes.Style;
 	gpmlElement = baseApplyDefaults(gpmlElement, [defaultsByStyle[groupStyle.value], GROUP_DEFAULTS, defaults]);
 	return gpmlElement;
 };
@@ -160,7 +178,7 @@ export function getGroupDimensions(padding: number, borderWidth: number, groupCo
 	};
 
 	groupContents.forEach(function(groupContent) {
-		var points = groupContent.points;
+		const points = groupContent.points;
 
 		if (groupContent.hasOwnProperty('x') && groupContent.hasOwnProperty('y') &&
 				groupContent.hasOwnProperty('width') && groupContent.hasOwnProperty('height')) { // If groupContent is a node
@@ -170,11 +188,11 @@ export function getGroupDimensions(padding: number, borderWidth: number, groupCo
 			dimensions.bottomRightCorner.y = Math.max(dimensions.bottomRightCorner.y, groupContent.y + groupContent.height);
 		} else if (!!points) { // If groupContent is an edge
 			const firstPoint = points[0];
-			var firstPointX = firstPoint.x;
-			var firstPointY = firstPoint.y;
-			var lastPoint = points[points.length - 1];
-			var lastPointX = lastPoint.x;
-			var lastPointY = lastPoint.y;
+			const firstPointX = firstPoint.x;
+			const firstPointY = firstPoint.y;
+			const lastPoint = points[points.length - 1];
+			const lastPointX = lastPoint.x;
+			const lastPointY = lastPoint.y;
 			dimensions.topLeftCorner.x = Math.min(dimensions.topLeftCorner.x, firstPointX, lastPointX);
 			dimensions.topLeftCorner.y = Math.min(dimensions.topLeftCorner.y, firstPointY, lastPointY);
 			dimensions.bottomRightCorner.x = Math.max(dimensions.bottomRightCorner.x, firstPointX, lastPointX);
@@ -219,37 +237,14 @@ export function postProcess(data, group: DataElement) {
 	group.width = dimensions.width;
 	group.height = dimensions.height;
 
-	// Handle 'Style' attributes for GPML 'Group' elements,
-	// using the closest Biopax term available for the mappings below.
-	// Once all the elements are converted, we come back to this and
-	// set any 'Pathways' with no interactions to be Complexes.
-	const GROUP_STYLE_TO_BIOPAX = {
-		'Group': 'Pathway',
-		'None': 'Pathway',
-		'Complex': 'Complex',
-		'Pathway': 'Pathway'
-	};
-
-	const GROUP_STYLE_TO_DRAW_AS = {
-		'Group': 'None',
-		'None': 'None',
-		'Complex': 'Complex',
-		'Pathway': 'Rectangle'
-	};
-
 	// Convert GPML Group Style to a Biopax class, like Complex
-	const additionalType = GROUP_STYLE_TO_BIOPAX[group['gpml:Style']] || 'Pathway';
-	group.type = unionLSV(group.type, additionalType) as string[];
-
-	var containsEdge = containedElements.reduce(function(accumulator, item) {
-		var isEdge = intersectsLSV(biopaxEdgeTypes, item.type);
+	const containsEdge = containedElements.reduce(function(accumulator, item) {
+		const isEdge = intersectsLSV(biopaxEdgeTypes, item.type);
 		accumulator = accumulator || isEdge;
 		return accumulator;
 	}, false);
+	const biopaxType = containsEdge ? (GROUP_STYLE_TO_BIOPAX[group['gpml:Style']] || 'Pathway') : 'Complex';
+	group.type = unionLSV(group.type, biopaxType) as string[];
 
-	if (!containsEdge) {
-		// TODO is this warranted?
-		group.type = ['Group Complex GroupComplex'];
-	}
 	return omit(group, ['gpml:Style']);
 };

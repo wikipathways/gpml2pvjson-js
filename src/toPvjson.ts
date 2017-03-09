@@ -270,13 +270,9 @@ export function toPvjson(sourceStream: any, pathwayIri?: string) {
 			if (PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(element.name) > -1) {
 				lastTargetElement = element;
 			}
+			// TODO is this union below correct?
 			let dataElement = ((element.name !== 'Pathway') ? {} : data) as DataElement & Data;
-			data = elementFromGPML({
-				data: data,
-				// TODO is this union below correct?
-				dataElement: dataElement,
-				gpmlElement: element
-			});
+			data = elementFromGPML(data, dataElement, element);
 		})
 		.last()
 		.map(function(gpmlElement: GPMLElement): Data {
