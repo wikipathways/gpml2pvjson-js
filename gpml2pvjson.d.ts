@@ -89,9 +89,9 @@ declare interface GroupDimensions extends NodeDimensions {
 }
 
 declare interface PublicationXref {
-	displayName: string;
 	id: string;
-	type: any;
+	type: string[];
+	displayName?: string;
 }
 
 declare interface Controller {

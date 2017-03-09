@@ -143,7 +143,7 @@ export function toPvjson(sourceStream: any, pathwayIri?: string) {
 	// Such BioPAX is not currently conformant with the BioPAX 3 spec.
   let currentPublicationXref;
   let currentPublicationXrefTag;
-  let currentPublicationXrefDisplayName = 0;
+  //let currentPublicationXrefDisplayName = 0;
 	const bpToDataMappings = {
 		'bp:ID': 'dbId',
 		'bp:DB': 'dbName',
@@ -159,10 +159,10 @@ export function toPvjson(sourceStream: any, pathwayIri?: string) {
 			data.elementMap[currentPublicationXrefId] = currentPublicationXref;
 			currentPublicationXref = null;
 		} else if (x.name === 'bp:PublicationXref') {
-			currentPublicationXrefDisplayName += 1;
+			//currentPublicationXrefDisplayName += 1;
 			currentPublicationXref = {
 				id: generatePublicationXrefId(x.attributes['rdf:id'].value),
-				displayName: String(currentPublicationXrefDisplayName),
+				//displayName: String(currentPublicationXrefDisplayName),
 				type: ['PublicationXref'],
 				gpmlElementName: 'BiopaxRef',
 			} as PublicationXref;
@@ -315,7 +315,7 @@ export function toPvjson(sourceStream: any, pathwayIri?: string) {
 				// It's always just white.
 				backgroundColor: 'white',
 				type: ['Pathway'],
-				elements: data.elements
+				entities: data.elements
 			};
 		});
 

@@ -37,6 +37,25 @@ export function postProcess(data: Data) {
 		return acc;
 	}
 
+	data.PublicationXref
+		.reduce(getFromElementMapByIdIfExists, [])
+		.sort(function(a, b) {
+			const yearA = parseInt(a.year);
+			const yearB = parseInt(b.year);
+			if (yearA > yearB) {
+				return 1;
+			} else if (yearA < yearB) {
+				return -1;
+			} else {
+				return 0;
+			}
+		})
+		.map(function(publicationXref, i) {
+			publicationXref.displayName = String(i + 1);
+			return publicationXref;
+		})
+		.forEach(upsertDataMapEntry.bind(undefined, elementMap));
+
 	// Process all edges.
 	EDGES
 		.reduce(function(acc, gpmlElementName) {
