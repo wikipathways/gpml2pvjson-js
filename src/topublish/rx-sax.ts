@@ -125,142 +125,99 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 							textStream,
 							closeTagStream,
 							selector
-					);
-//						.mergeMap(function(openingsClosingsSource) {
-//							/*
-//							console.log('openingsClosingsSource');
-//							console.log(openingsClosingsSource);
-//							openingsClosingsSource.subscribe(function(x) {
-//								console.log('openingsClosingsSource');
-//								console.log(x);
-//							}, console.error);
-//							//console.log(`typeof startStopSource1: ${typeof startStopSource1}`)
-//							//*/
-//							/*
-//							const startStopSource = Observable.merge(
-//									openTagStream.filter(n => n['name'] === 'DataNode').mapTo(true),
-//									closeTagStream.filter(t => t === 'DataNode').mapTo(false)//,
-//									//queue
-//							);
-//							return o.windowToggle(startStopSource.filter(x => x).do(x => console.log('|> start')), function(x) {
-//								//return closeTagStream.filter(t => t === 'DataNode');
-//								return startStopSource.filter(x => !x).do(x => console.log('|| stop'));
-//							})
-//							//*/
-//							//*
-//							return o
-//								//.do(console.log)
-//								.windowToggle(openingsClosingsSource.filter(x => x), function(x) {
-//									return openingsClosingsSource.filter(x => !x);
-//								})
-//							//*/
-//						})
-							//console.log(`startStopSource`)
-							//console.log(startStopSource)
-							const startSource = startStopSource
-								.filter(x => x)
-								.do(x => console.log('|> start'))
-								.reduce(function(acc: Observable<boolean>, s: boolean): Observable<boolean> {
-									//return Observable.merge(acc, Observable.of(s))
-									return Observable.merge(acc, Observable.of(s))
-								}, Observable.of(true));
+					)
+						.share();
+					const startSource = startStopSource
+						.filter(x => x)
+						.do(x => console.log('|> start'));
 
-							const stopSource = startStopSource
-								.filter(x => !x)
-								.do(x => console.log('|| stop'))
-								.reduce(function(acc: Observable<boolean>, s: boolean): Observable<boolean> {
-									return Observable.merge(acc, Observable.of(s));
-								}, Observable.of(true));
-							let path = [];
+					const stopSource = startStopSource
+						.filter(x => !x)
+						.do(x => console.log('|| stop'));
 
-							acc[selector] = o.windowToggle(startSource, function(x) {
-									return stopSource;
-								})
-								/*
-								return o.withLatestFrom(startStopSource, function(x, record) {
-									return record ? x : false;
-								})
-								//.timeoutWith(400, Observable.of(false))
-								.filter(x => !!x)
-								//*/
-								.reduce(function(acc, x: any) {
-								//.scan(function(acc, x: any) {...})
-									console.log('acc166');
-									console.log(acc);
-									const type = x.type;
-									const value = x.value;
+					let path = [];
 
-									//console.log('x178');
-									//console.log(x);
+					acc[selector] = o.windowToggle(startSource, function(x) {
+							return stopSource;
+						})
+						.reduce(function(acc, x: any) {
+						//.scan(function(acc, x: any) {...})
+							console.log('acc166');
+							console.log(acc);
+							const type = x.type;
+							const value = x.value;
 
-									if (type === 'open') {
-										const openTagName = value['tagName'];
-										path.push(openTagName);
-									} else if (type === 'close') {
-										path.pop();
-									}
+							//console.log('x178');
+							//console.log(x);
 
-									let current;
-									if (path.length === 1) {
-										if (type === 'open') {
-											const openTagName = value['tagName'];
-											current = Array(4 * (path.length - 1) + 1).join(' ') + openTagName;
-											//console.log();
-											/*
-											current = value;
-											current.textContent = '';
-											current.children = [];
-											//*/
-											acc.push(current);
-										} else if (type === 'text') {
-											/*
-											current = acc[acc.length - 1];
-											current.textContent += value;
-											//*/
-										}
-									} else if (path.length > 1) {
-										/*
-										current = acc[acc.length - 1];
-										const parentIndex = path.length - 2;
-										let parentEl = path.slice(0, parentIndex).reduce(function(subAcc, pathX) {
-											const children = subAcc.children;
-											return children[children.length - 1];
-										}, current);
-										let parentChildren = parentEl.children;
-										if (type === 'open') {
-											parentChildren.push(value);
-										} else if (type === 'text') {
-											const el = parentChildren[parentChildren.length - 1];
-											el.textContent = value;
-										}
-										//*/
-									} else {
-										//current = {textContent: '', children: []};
-									}
+							if (type === 'open') {
+								const openTagName = value['tagName'];
+								path.push(openTagName);
+							} else if (type === 'close') {
+								path.pop();
+							}
 
-									//console.log('acc226');
-									//console.log(acc);
-									return acc;
-								}, [])
-								/*
-								return o
-									.windowToggle(startStopSource.filter(x => x).do(x => console.log('|> start')), function(x) {
-										//return startStopSource.filter(x => !x).do(x => console.log('|| stop'));
-										return startStopSource.do(x => console.log('|| stop'));
-									})
-								//*/
+							let current;
+							if (path.length === 1) {
+								if (type === 'open') {
+									const openTagName = value['tagName'];
+									current = Array(4 * (path.length - 1) + 1).join(' ') + openTagName;
+									//console.log();
 									/*
-									.do(function(x) {
-										console.log('x184');
-										console.log(x);
-									})
-									.do(function(x) {
-										x.subscribe(function(y) {
-											console.log('y184');
-											console.log(y);
-										})
-									})
+									current = value;
+									current.textContent = '';
+									current.children = [];
 									//*/
+									acc.push(current);
+								} else if (type === 'text') {
+									/*
+									current = acc[acc.length - 1];
+									current.textContent += value;
+									//*/
+								}
+							} else if (path.length > 1) {
+								/*
+								current = acc[acc.length - 1];
+								const parentIndex = path.length - 2;
+								let parentEl = path.slice(0, parentIndex).reduce(function(subAcc, pathX) {
+									const children = subAcc.children;
+									return children[children.length - 1];
+								}, current);
+								let parentChildren = parentEl.children;
+								if (type === 'open') {
+									parentChildren.push(value);
+								} else if (type === 'text') {
+									const el = parentChildren[parentChildren.length - 1];
+									el.textContent = value;
+								}
+								//*/
+							} else {
+								//current = {textContent: '', children: []};
+							}
+
+							//console.log('acc226');
+							//console.log(acc);
+							return acc;
+						}, [])
+						/*
+						return o
+							.windowToggle(startStopSource.filter(x => x).do(x => console.log('|> start')), function(x) {
+								//return startStopSource.filter(x => !x).do(x => console.log('|| stop'));
+								return startStopSource.do(x => console.log('|| stop'));
+							})
+						//*/
+							/*
+							.do(function(x) {
+								console.log('x184');
+								console.log(x);
+							})
+							.do(function(x) {
+								x.subscribe(function(y) {
+									console.log('y184');
+									console.log(y);
+								})
+							})
+							//*/
 //									.map(function(o) {
 //										//console.log('o182');
 //										//console.log(o);
