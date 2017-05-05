@@ -1,0 +1,193 @@
+#!/usr/bin/env node
+
+var _ = require("lodash");
+var crypto = require("crypto");
+var fs = require("fs");
+var gpml2pvjson = require("../lib").default;
+//var gpml2pvjson = require("../lib").toJXON;
+var hl = require("highland");
+var npmPackage = JSON.parse(
+  fs.readFileSync("./package.json", { encoding: "utf8" })
+);
+var ndjson = require("ndjson");
+var program = require("commander");
+var Rx = require("rx-extra");
+var VError = require("verror");
+
+program
+  .version(npmPackage.version)
+  .description("Converts GPML (XML) to pvjson (JSON)")
+  .option(
+    "--id [string]",
+    'Specify unique ID of this pathway, e.g., "http://identifiers.org/wikipathways/WP4"'
+  );
+
+program.on("--help", function() {
+  console.log("  Examples:");
+  console.log();
+  console.log("    Display pvjson in command line:");
+  console.log(
+    [
+      "    $ gpml2pvjson --id http://identifiers.org/wikipathways/WP554",
+      "< ./test/input/WP554_77712.gpml"
+    ].join("")
+  );
+
+  console.log("    Save pvjson to new file:");
+  console.log(
+    "    $ gpml2pvjson < ./test/input/WP554_77712.gpml > ./WP554_77712.json"
+  );
+
+  console.log("    Download from WikiPathways and convert:");
+  console.log(
+    [
+      '    $ curl "http://webservice.wikipathways.org/getPathwayAs?',
+      'fileType=xml&pwId=WP554&revision=77712&format=xml"',
+      ' | xpath "*/ns1:data/text()" | base64 --decode',
+      " | gpml2pvjson --id http://identifiers.org/wikipathways/WP554"
+    ].join("")
+  );
+
+  console.log("    Get w/ WikiPathways API and convert:");
+  // currently:
+  // ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway WP4 | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP4
+  console.log(
+    [
+      "    $ wikipathways-api-client get-pathway WP4 | ",
+      "gpml2pvjson --id http://identifiers.org/wikipathways/WP4"
+    ].join("")
+  );
+});
+
+program.parse(process.argv);
+
+var id = program.id;
+// NOTE If an id is not provided, the CLI generates a hash of the input to use as the id. See
+// https://bentrask.com/?q=hash://sha256/98493caa8b37eaa26343bbf73f232597a3ccda20498563327a4c3713821df892
+// The library itself does not do this.
+var HASH_NAME = "sha256";
+var hash = crypto.createHash(HASH_NAME);
+hash.setEncoding("hex");
+
+var gpmlSeparator = '<?xml version="1.0" encoding="UTF-8"?>';
+
+//var source = hl(process.stdin);
+//var source = hl(process.stdin).split('\r');
+//var source = hl(process.stdin).splitBy(gpmlSeparator).intersperse(gpmlSeparator);
+var source = hl(process.stdin).splitBy(gpmlSeparator).drop(1);
+//var source = hl(process.stdin).intersperse('woooop');
+// <?xml version="1.0" encoding="UTF-8"?>
+/*
+var source = id
+  ? process.stdin
+  : hl(process.stdin).doto(function(chunk) {
+      hash.update(chunk);
+    });
+//*/
+
+/*
+// This isn't working yet, because gpml2pvjson isn't accepting multiple
+../wikipathways-api-client-js/bin/wikipathways-api-client list | while read i; do echo "$i"; sleep 0.01; done | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
+
+../wikipathways-api-client-js/bin/wikipathways-api-client list | head | while read i; do echo "$i"; sleep 0.01; done | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
+
+../wikipathways-api-client-js/bin/wikipathways-api-client list | while read i; do echo "$i"; sleep 0.01; done | head | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
+//*/
+const selector = '/Pathway/DataNode';
+var gpmlChunkStream = Rx.Observable
+  .fromNodeReadableStream(source)
+  .take(5)
+  .do(null, function(err) {
+    var err2 = new VError(err, "error (after?) reading in GPML chunk");
+    console.error(err2.stack);
+  })
+  //.map(x => x.toString())
+  .mergeMap(function(gpml) {
+    console.log('gpml100');
+    console.log(gpml.length);
+    return gpml2pvjson(
+        Rx.Observable.of(gpml),
+        [
+          selector,
+          //'/Pathway/@Name',
+        ],
+        id
+    );
+  })
+  .do(x => console.log(`typeof x117: ${typeof x}`))
+  //.mergeMap(x => x[selector])
+  .mergeMap(x => x[selector])
+  .do(x => console.log(`typeof x119: ${typeof x}`))
+  //.debounceTime(100)
+  //.mergeAll()
+  .do(x => console.log(`typeof x121: ${typeof x}`))
+//  //*
+//  .map(function(x) {
+//    console.log('x121');
+//    console.log(x);
+//    return x[selector];
+//      //.do(x => console.log(`typeof x124: ${typeof x}`))
+//      //.mergeAll()
+//      //.do(x => console.log(`typeof x126: ${typeof x}`))
+//  })
+//  //*/
+//  .debounceTime(1000)
+//  .map(function(x) {
+//    console.log('x131');
+//    console.log(x);
+//    const o = x[selector]
+//    console.log('gpml2pvjson:134/o');
+//    console.log(o);
+//      //.mergeAll()
+//    return o.do(x => console.log(`typeof x134: ${typeof x}`))
+//      //.debounceTime(1000)
+//      .do(x => console.log(`typeof x137: ${typeof x}`))
+//  })
+//  .do(x => console.log(`typeof x140: ${typeof x}`))
+//  .do(console.log)
+  .do(function(x) {
+    console.log('gpml2pvjson result');
+    //console.log(JSON.stringify(x, null, '  '));
+    //console.log(x);
+    if (!!x) {
+      console.log(x);
+    } else {
+      console.log('x falsey for gpml2pvjsonext');
+    }
+  }, function(err) {
+    var err2 = new VError(err, "error (after?) converting GPML to pvjson");
+    console.error(err2.stack);
+  })
+  .subscribe(null, console.error);
+  //.map(x => x.toString());
+
+/*
+gpml2pvjson(gpmlChunkStream, id)
+  .do(null, function(err) {
+    var err2 = new VError(err, "error (after?) converting GPML to pvjson");
+    console.error(err2.stack);
+  })
+  .throughNodeStream(ndjson.serialize())
+  .subscribe(
+    function(output) {
+//      if (!id) {
+//        id = `hash://${HASH_NAME}/${hash.digest("hex")}`;
+//        output.id = id;
+//        output["@context"] = output["@context"].map(function(ctx) {
+//          if (_.isPlainObject(ctx) && ctx["@base"]) {
+//            ctx["@base"] = id + "/";
+//          }
+//          return ctx;
+//        });
+//      }
+      process.stdout.write(output);
+    },
+    function(err) {
+      console.error(err);
+      process.exit(1);
+    },
+    function() {
+      process.exit(0);
+    }
+  );
+//*/
