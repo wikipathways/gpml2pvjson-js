@@ -134,21 +134,12 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 								.do(x => console.log('|| stop'));
 						})
 						.mergeMap(function(subO) {
-							console.log('subO');
 							let path = [];
 
 							return subO
 								.reduce(function(subAcc, x: any) {
-								//.scan(function(subAcc, x: any) {...})
-									console.log('rx-sax:140/acc');
-									console.log(subAcc);
-									console.log('rx-sax:142/x');
-									console.log(x);
 									const type = x.type;
 									const value = x.value;
-
-									//console.log('x178');
-									//console.log(x);
 
 									if (type === 'open') {
 										const openTagName = value['tagName'];
@@ -157,30 +148,27 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 										path.pop();
 									}
 
-									console.log('rx-sax:158/path');
-									console.log(path);
-
 									let current;
 									if (path.length === 1) {
 										if (type === 'open') {
 											const openTagName = value['tagName'];
-											current = Array(4 * (path.length - 1) + 1).join(' ') + openTagName;
+											//current = Array(4 * (path.length - 1) + 1).join(' ') + openTagName;
 											//console.log();
-											/*
+											//*
 											current = value;
 											current.textContent = '';
 											current.children = [];
 											//*/
 											subAcc.push(current);
 										} else if (type === 'text') {
-											/*
-											current = acc[acc.length - 1];
+											//*
+											current = subAcc[subAcc.length - 1];
 											current.textContent += value;
 											//*/
 										}
 									} else if (path.length > 1) {
-										/*
-										current = acc[acc.length - 1];
+										//*
+										current = subAcc[subAcc.length - 1];
 										const parentIndex = path.length - 2;
 										let parentEl = path.slice(0, parentIndex).reduce(function(subAcc, pathX) {
 											const children = subAcc.children;
