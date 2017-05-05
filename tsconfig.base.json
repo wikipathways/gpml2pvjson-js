@@ -11,6 +11,7 @@
 	},
 	"files": [
 		"src/index.ts",
+		"src/topublish/XPathParser.d.ts",
 		"rgbcolor.d.ts",
 		"sax.d.ts",
 		"gpml2pvjson.d.ts"

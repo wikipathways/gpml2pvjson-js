@@ -27,7 +27,7 @@ declare type SAXEVENTS = 'text' |
 
 declare module 'sax' {
 	export function createStream<ATTR_NAMES_AND_TYPES>(strict: boolean, opt: Opt): SAXStreamInstance<ATTR_NAMES_AND_TYPES>;
-	export function parser(strict: boolean, opt: Opt): any;
+	export function parser(strict: boolean, opt: Opt): void;
 	export type EVENTS = SAXEVENTS;
 	export const MAX_BUFFER_LENGTH = 65536;
 }
@@ -73,7 +73,20 @@ declare class SAXParser<ATTR_NAMES_AND_TYPES> {
 }
 
 // TODO is this the right way to indicate an instance of class SAXStream?
-interface SAXStreamInstance<ATTR_NAMES_AND_TYPES> extends SAXStream<ATTR_NAMES_AND_TYPES> {}
+interface SAXStreamInstance<ATTR_NAMES_AND_TYPES> extends SAXStream<ATTR_NAMES_AND_TYPES> {
+	_parser: {
+		error: any,
+		resume: Function
+		'onopentag'?: Function,
+	}
+}
+
+//declare const OpenTagHandler<ATTR_NAMES_AND_TYPES> = (saxElement: SAXOpenTag<ATTR_NAMES_AND_TYPES>) => any;
+declare type OpenTagHandler<ATTR_NAMES_AND_TYPES> = (saxElement: SAXOpenTag<ATTR_NAMES_AND_TYPES>) => any;
+declare type TextHandler<ATTR_NAMES_AND_TYPES> = (textNode: string) => any;
+declare type CloseTagHandler<ATTR_NAMES_AND_TYPES> = (saxElement: string) => any;
+declare type ErrorHandler<ATTR_NAMES_AND_TYPES> = (err: Error) => void;
+declare type SaxEventHandler<ATTR_NAMES_AND_TYPES> = OpenTagHandler<ATTR_NAMES_AND_TYPES> & TextHandler<ATTR_NAMES_AND_TYPES> & CloseTagHandler<ATTR_NAMES_AND_TYPES> & ErrorHandler<ATTR_NAMES_AND_TYPES>;
 
 declare class SAXStream<ATTR_NAMES_AND_TYPES> {
 	writable: true;
@@ -81,11 +94,13 @@ declare class SAXStream<ATTR_NAMES_AND_TYPES> {
 	value: any; // should be SAXStream
 	constructor(strict: boolean, opt: Opt);
 	createStream(strict: boolean, opt: Opt): SAXStreamInstance<ATTR_NAMES_AND_TYPES>;
-	end(chunk): true;
-	on(event: 'opentag', handler: (saxElement: SAXOpenTag<ATTR_NAMES_AND_TYPES>) => any): void;
-	on(event: 'text', handler: (textNode: string) => any): void;
-	on(event: 'closetag', handler: (saxElement: string) => any): void;
+	end(chunk?): true;
+	on(event: 'opentag', handler: OpenTagHandler<ATTR_NAMES_AND_TYPES>): void;
+	on(event: 'text', handler: TextHandler<ATTR_NAMES_AND_TYPES>): void;
+	on(event: 'closetag', handler: CloseTagHandler<ATTR_NAMES_AND_TYPES>): void;
+	on(event: 'error', handler: ErrorHandler<ATTR_NAMES_AND_TYPES>): void;
 	emit(eventName: SAXEVENTS, data?: any): any;
 	// ... TODO add the rest of the events from sax.EVENTS
 	write(data): true;
+	close(): void;
 }

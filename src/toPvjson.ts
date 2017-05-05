@@ -5,13 +5,15 @@ import * as He from 'he';
 import {generatePublicationXrefId, supportedNamespaces} from './gpml-utilities';
 import {unionLSV} from './gpml-utilities';
 import * as sax from 'sax';
+import {sax as saxtract} from 'saxtract';
 import {fromGPML as elementFromGPML} from './xml-element';
 import {postProcess} from './post-process';
 
 import {Observable} from 'rxjs/Observable';
-import {Subject} from 'rxjs/Subject';
 import 'rxjs/add/observable/fromEventPattern';
 import 'rxjs/add/observable/merge';
+
+import {parse} from './topublish/rx-sax';
 
 import 'rxjs/add/operator/do';
 import 'rxjs/add/operator/last';
@@ -35,7 +37,7 @@ export const EDGES = [
 // TODO why was I getting an error in pvjs when I had sourceStream: Observable<string>?
 //export default function(sourceStream: Observable<string>) {
 //}
-export function toPvjson(sourceStream: any, pathwayIri?: string) {
+export function toPvjson(sourceStream: any, selectors: any, pathwayIri?: string) {
 
 	// The top-level Pathway GPML element and all its children that represent entities.
   const PATHWAY_AND_CHILD_TARGET_ELEMENTS = NODES.concat(EDGES).concat([
@@ -71,50 +73,6 @@ export function toPvjson(sourceStream: any, pathwayIri?: string) {
 		Point: [],
 	} as Data;
 
-	TARGET_ELEMENTS.forEach(function(gpmlElementName) {
-		data[gpmlElementName] = [];
-	});
-
-  let saxStream;
-  const SAX_STREAM_IS_STRICT = true; // set to false for html-mode
-  let openTagStream;
-  let currentTagName;
-  let textStream;
-  let closeTagStream;
-
-  function createNewSAXStream() {
-    // stream usage
-    // takes the same options as the parser
-    saxStream = sax.createStream(SAX_STREAM_IS_STRICT, {
-      xmlns: true,
-      trim: true
-    });
-    saxStream.on('error', function(e) {
-      // unhandled errors will throw, since this is a proper node
-      // event emitter.
-      console.error('error!', e);
-      // clear the error
-      this._parser.error = null;
-      this._parser.resume();
-    });
-
-		function fromSAXEvent(eventName) {
-			return Observable.fromEventPattern(function(handler) {
-				saxStream.on(eventName, handler);
-			}, function(handler) {
-				saxStream._parser['on' + eventName] = undefined;
-			});
-		}
-
-		openTagStream = fromSAXEvent('opentag') as Observable<GPMLElement>;
-		textStream = fromSAXEvent('text') as Observable<string>;
-		closeTagStream = fromSAXEvent('closetag') as Observable<string>;
-
-    return saxStream;
-  }
-
-  saxStream = createNewSAXStream();
-
 	/* We want to be sure that every child element of the GPML Pathway element has a GraphId.
 	 * If the GraphId is already specified, we don't change it.
 	 * If it is not specified, we want to generate one with these properties:
@@ -123,15 +81,13 @@ export function toPvjson(sourceStream: any, pathwayIri?: string) {
 	 *   2) uniqueness: don't clobber an existing element id in the pathway.
 	 *      We do this by prepending the namespace "id-pvjson-".
 	 */
-  function ensureGraphIdExists(x) {
-    x.attributes.GraphId = x.attributes.GraphId || {
-			name: 'GraphId',
-			value: 'id-pvjson-' + saxStream._parser.startTagPosition
-		};
-    return x;
-  }
-
-  let saxStreamFiltered = Observable.merge(openTagStream, textStream, closeTagStream);
+//  function ensureGraphIdExists(x) {
+//    x.attributes.GraphId = x.attributes.GraphId || {
+//			name: 'GraphId',
+//			value: 'id-pvjson-' + saxStream._parser.startTagPosition
+//		};
+//    return x;
+//  }
 
   let currentTargetElement = {} as GPMLElement;
   let lastTargetElement = {
@@ -177,166 +133,14 @@ export function toPvjson(sourceStream: any, pathwayIri?: string) {
 		}
 	}
 
-	let topLevelGPMLElementStream = new Subject() as Subject<GPMLElement>;
-	// TODO the union seems wrong. How do we handle this?
-  saxStreamFiltered.subscribe(function(x: GPMLElement & string) {
-    if (!!x.name) {
-      currentTagName = x.name;
-    }
-
-    if ((PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(x) > -1 ||
-         PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(x.name) > -1) &&
-           PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(currentTargetElement.name) > -1) {
-      topLevelGPMLElementStream.next(currentTargetElement);
-      currentTargetElement = {} as GPMLElement;
-
-      currentNestedTargetElements.forEach(function(currentNestedTargetElement) {
-        currentNestedTargetElement.attributes.Color = {};
-        currentNestedTargetElement.attributes.Color.name = 'Color';
-        currentNestedTargetElement.attributes.Color.value =
-          lastTargetElement.attributes.Color.value;
-
-        currentNestedTargetElement.attributes.GraphRef = {};
-        currentNestedTargetElement.attributes.GraphRef.name = 'GraphRef';
-        currentNestedTargetElement.attributes.GraphRef.value =
-          lastTargetElement.attributes.GraphId.value;
-
-        currentNestedTargetElement.attributes.ZOrder = {};
-        currentNestedTargetElement.attributes.ZOrder.name = 'ZOrder';
-        currentNestedTargetElement.attributes.ZOrder.value =
-          lastTargetElement.attributes.ZOrder.value + 0.1;
-
-				topLevelGPMLElementStream.next(currentNestedTargetElement);
-      });
-      currentNestedTargetElements = [];
-    }
-
-    if (PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(x.name) > -1) {
-      if (x.name !== 'Pathway') {
-        x = ensureGraphIdExists(x);
-      } else if (x.name === 'Pathway') {
-        const attributes = x.attributes;
-        const xmlns = attributes.xmlns.value;
-
-        if (supportedNamespaces.indexOf(xmlns) === -1) {
-          // test for whether file is GPML
-					// TODO do we need to destroy saxStreamFiltered?
-          const message = 'Pvjs does not support the data format provided. ' +
-            'Please convert to valid GPML and retry.';
-					topLevelGPMLElementStream.error(message);
-        } else if (supportedNamespaces.indexOf(xmlns) !== 0) {
-          // test for whether the GPML file version matches the latest version
-          // (only the latest version will be supported by pvjs).
-          // TODO call the Java RPC updater or in some other way call for the file to be updated.
-					// TODO do we need to destroy saxStreamFiltered?
-          const message = 'Pvjs may not fully support the version of GPML provided (xmlns: ' +
-            xmlns + '). Please convert to the supported version of GPML (xmlns: ' +
-            supportedNamespaces[0] + ').';
-					topLevelGPMLElementStream.error(message);
-        }
-      }
-      currentTargetElement = x;
-    } else if (SUPPLEMENTAL_ELEMENTS_WITH_ATTRIBUTES.indexOf(x.name) > -1) {
-      merge(currentTargetElement.attributes, x.attributes);
-    } else if (SUB_CHILD_TARGET_ELEMENTS.indexOf(x.name) > -1) {
-      x = ensureGraphIdExists(x);
-      currentNestedTargetElements.push(x);
-    } else if (NESTED_SUPPLEMENTAL_ELEMENTS.indexOf(x.name) > -1) {
-      currentTargetElement.attributes[x.name] = currentTargetElement.attributes[x.name] || {};
-      currentTargetElement.attributes[x.name].name = x.name;
-      currentTargetElement.attributes[x.name].value =
-        currentTargetElement.attributes[x.name].value || [];
-      currentTargetElement.attributes[x.name].value.push(x);
-    } else if (SUPPLEMENTAL_ELEMENTS_WITH_TEXT.indexOf(currentTagName) > -1 &&
-               !x.name && currentTagName !== x) {
-      currentTargetElement.attributes = currentTargetElement.attributes || {};
-      currentTargetElement.attributes[currentTagName] =
-        currentTargetElement.attributes[currentTagName] || {};
-      currentTargetElement.attributes[currentTagName].name = currentTagName;
-      currentTargetElement.attributes[currentTagName].value =
-        currentTargetElement.attributes[currentTagName].value || [];
-      currentTargetElement.attributes[currentTagName].value.push(x);
-    } else if (x.name === 'bp:PublicationXref' || currentPublicationXref) {
-			BioPAX(x);
-    }
-
-    if (x === 'Pathway') {
-      topLevelGPMLElementStream.complete();
-    }
-  });
-
-	let pvjsonStream = topLevelGPMLElementStream
-		.do(function(element: GPMLElement) {
-			if (PATHWAY_AND_CHILD_TARGET_ELEMENTS.indexOf(element.name) > -1) {
-				lastTargetElement = element;
-			}
-			// TODO is this union below correct?
-			let dataElement = ((element.name !== 'Pathway') ? {} : data) as DataElement & Data;
-			data = elementFromGPML(data, dataElement, element);
-		})
-		.last()
-		.map(function(gpmlElement: GPMLElement): Data {
-			// TODO is there a cleaner way to handle this?
-			// Right now, we're just returning data once we've gone through
-			// all appropriate elements.
-			return data;
-		})
-		.map(function(data: Data) {
-			const postProcessedData = postProcess(data);
-			const name = data.name;
-			const organism = data.organism;
-			if (!pathwayIri) {
-				const organismIriComponent = !!organism ? '&species=' + organism : '';
-				pathwayIri = encodeURI('http://wikipathways.org/index.php/Special:SearchPathways?query=' +
-															 name + organismIriComponent + '&doSearch=1');
-			}
-
-			// TODO where should these be hosted?
-			const context = [
-				'https://wikipathwayscontexts.firebaseio.com/biopax.json',
-				'https://wikipathwayscontexts.firebaseio.com/cellularLocation.json',
-				'https://wikipathwayscontexts.firebaseio.com/display.json',
-				//'https://wikipathwayscontexts.firebaseio.com/interactionType.json',
-				'https://wikipathwayscontexts.firebaseio.com/organism.json',
-				'https://wikipathwayscontexts.firebaseio.com/bridgedb/.json',
-				{
-					'@base': pathwayIri + '/'
-				}
-			];
-
-			return {
-				'@context': context,
-				id: pathwayIri,
-				name: name,
-				organism: organism,
-				width: data.width,
-				height: data.height,
-				// NOTE: GPML does not contain a way to express background color.
-				// It's always just white.
-				backgroundColor: 'white',
-				type: ['Pathway'],
-				entities: data.elements
-			};
-		});
-
-  // TODO
-  // * Comments
-  // * Better handling of x,y for anchors
-
-	return sourceStream
-	.let(function(o) {
-		o.subscribe(function(x) {
-			saxStream.write(x);
-		}, function(err) {
-			// TODO is this how we want to handle errors?
-			saxStream.emit('error', err);
-			topLevelGPMLElementStream.error(err);
-			saxStream.end();
-			throw err;
-		}, function() {
-			saxStream.end();
-		});
-		
-		return pvjsonStream;
-	});
+	//* using rx-sax.ts
+	return parse(
+			sourceStream,
+			selectors
+			//['/Pathway']
+			//['/Pathway/@*']
+			//['/Pathway/DataNode']
+			//['//DataNode']
+	);
+	//*/
 };

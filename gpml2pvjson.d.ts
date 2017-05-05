@@ -1,5 +1,6 @@
 /// <reference path="rgbcolor.d.ts" />
 /// <reference path="sax.d.ts" />
+/// <reference path="src/topublish/XPathParser.d.ts" />
 
 /* GPML */
 
