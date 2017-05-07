@@ -150,7 +150,8 @@ var gpmlChunkStream = Rx.Observable
     //console.log(JSON.stringify(x, null, '  '));
     //console.log(x);
     if (!!x) {
-      console.log(x);
+      console.log(JSON.stringify(x, null, '  '));
+      //console.log(x);
     } else {
       console.log('x falsey for gpml2pvjsonext');
     }

@@ -1,0 +1,35 @@
+start
+        = (axis namespace? name? predicate? attribute?)+
+
+axis
+        = '//' / '/'
+
+namespace
+        = str:[a-z_]i str2:[a-z0-9_\-\.]i* ':' { return str + str2.join(""); }
+
+name
+        = str:[a-z_]i str2:[a-z0-9_\-\.]i* { return str + str2.join(""); }
+          /
+          '*'
+
+predicate
+        = '[' expr ']'
+
+expr
+        = attribute_ref op (string_literal / number_literal)
+
+attribute_ref
+        = '@' name
+
+op
+        = '='
+
+string_literal
+        = '"' str:[^"]i+ '"' { return str.join(""); } /
+          "'" str:[^']i+ "'" { return str.join(""); }
+
+number_literal
+        = str:[0-9]+ { return str.join(""); }
+
+attribute
+        = '@' str:[a-zA-Z0-9\*]+ { return str.join(""); }

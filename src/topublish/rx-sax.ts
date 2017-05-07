@@ -1,6 +1,6 @@
 /// <reference path="../../gpml2pvjson.d.ts" />
 
-import {defaults, forEach, keys, map, merge, reduce} from 'lodash';
+import {defaults, find, forEach, keys, map, merge, reduce} from 'lodash';
 import * as sax from 'sax';
 import {Observable} from 'rxjs/Observable';
 import {ReplaySubject} from 'rxjs/ReplaySubject';
@@ -34,7 +34,72 @@ import 'rxjs/add/operator/withLatestFrom';
 import 'rx-extra/add/operator/throughNodeStream';
 import {async} from 'rxjs/scheduler/async';
 import {queue} from 'rxjs/scheduler/queue';
+import {StateMachine} from 'javascript-state-machine';
 import {create as createOpeningsClosingsSource} from './openingsClosingsSource';
+
+
+/*
+State
+  |
+  v            Event ->   | init | open | text | close |
+--------------------------|----------------------------|
+s0: uninitialized, x=0    |  s1  |  -   |  -   |   -   |
+s1: adding to level x=1   |  -   |s2,x+1|  s1  |  s5   |
+s2: adding to level x>1   |  -   |s2,x+1|  s2  |s2,x-1 |
+s3: complete              |  -   |  -   |  -   |  -    |
+*/
+
+function getParent(elements, path) {
+	const current = elements[elements.length - 1];
+	const parentIndex = path.length - 2;
+	return path.slice(0, parentIndex).reduce(function(elements, pathX) {
+		const children = elements.children;
+		return children[children.length - 1];
+	}, current);
+}
+
+function getCurrent(elements) {
+	return elements[elements.length - 1];
+}
+
+function Stater() {
+	let path = [];
+	let elements = [];
+	return {
+		init: function() {
+			return elements;
+		},
+		open: function(value) {
+			path.push(value['tagName']);
+			let elementsOrChildren;
+			if (path.length > 1) {
+				let current = getCurrent(elements);
+				let parentEl = getParent(elements, path);
+				let parentChildren = parentEl.children;
+				parentChildren.push(value);
+			} else {
+				elements.push(value);
+			}
+			return elements;
+		},
+		text: function(value) {
+			let current = getCurrent(elements);
+			if (path.length > 1) {
+				let parentEl = getParent(elements, path);
+				let parentChildren = parentEl.children;
+				let child = parentChildren[parentChildren.length - 1];
+				child.textContent = value;
+			} else {
+				current.textContent += value;
+			}
+			return elements;
+		},
+		close: function(value) {
+			path.pop();
+			return elements;
+		},
+	};
+}
 
 export function parse<ATTR_NAMES_AND_TYPES>(
 		sourceStream: Observable<string>,
@@ -60,24 +125,7 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 	const textStream = fromSAXEvent('text').share() as Observable<string>;
 	const closeTagStream = fromSAXEvent('closetag').share() as Observable<string>;
 
-	/*
-	queue.schedule(function(state) {
-		const that = this;
-		forEach(selectors, function(selector) {
-			that.schedule(
-				state[selector] = createOpeningsClosingsSource(
-						openTagStream,
-						attributeStream,
-						textStream,
-						closeTagStream,
-						selector
-				)
-			);
-		});
-	}, 0, {});
-	//*/
-
-	const outputSource =  Observable.merge(
+	const saxSource =  Observable.merge(
 			openTagStream
 				.map(function(openTag: any) {
 					return {
@@ -115,428 +163,35 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 				}),
 
 			queue
-	)
-		.let(function(o) {
-			return Observable.from(selectors)
-				.reduce(function(acc: any, selector) {
-					const startStopSource = createOpeningsClosingsSource(
-							openTagStream,
-							//attributeStream,
-							textStream,
-							closeTagStream,
-							selector
-					)
-						.share();
+	);
 
-					acc[selector] = o.windowToggle(startStopSource.filter(x => x).do(x => console.log('|> start')), function(x) {
-							return startStopSource
-								.filter(x => !x)
-								.do(x => console.log('|| stop'));
-						})
-						.mergeMap(function(subO) {
-							let path = [];
+	const outputSource = Observable.from(selectors)
+		// TODO add types for acc and output
+		.reduce(function(acc: any, selector: string) {
+			const startStopSource = createOpeningsClosingsSource(
+					openTagStream,
+					//attributeStream,
+					textStream,
+					closeTagStream,
+					selector
+			)
+				.share();
 
-							return subO
-								.reduce(function(subAcc, x: any) {
-									const type = x.type;
-									const value = x.value;
+			acc[selector] = saxSource.
+				windowToggle(startStopSource.filter(x => x), function(x) {
+					return startStopSource
+						.filter(x => !x);
+				})
+				.mergeMap(function(subO) {
+					let stater: any = Stater();
+					return subO
+						.reduce(function(subAcc, {type, value}) {
+							return stater[type](value);
+						}, stater.init());
+				});
 
-									if (type === 'open') {
-										const openTagName = value['tagName'];
-										path.push(openTagName);
-									} else if (type === 'close') {
-										path.pop();
-									}
-
-									let current;
-									if (path.length === 1) {
-										if (type === 'open') {
-											const openTagName = value['tagName'];
-											//current = Array(4 * (path.length - 1) + 1).join(' ') + openTagName;
-											//console.log();
-											//*
-											current = value;
-											current.textContent = '';
-											current.children = [];
-											//*/
-											subAcc.push(current);
-										} else if (type === 'text') {
-											//*
-											current = subAcc[subAcc.length - 1];
-											current.textContent += value;
-											//*/
-										}
-									} else if (path.length > 1) {
-										//*
-										current = subAcc[subAcc.length - 1];
-										const parentIndex = path.length - 2;
-										let parentEl = path.slice(0, parentIndex).reduce(function(subAcc, pathX) {
-											const children = subAcc.children;
-											return children[children.length - 1];
-										}, current);
-										let parentChildren = parentEl.children;
-										if (type === 'open') {
-											parentChildren.push(value);
-										} else if (type === 'text') {
-											const el = parentChildren[parentChildren.length - 1];
-											el.textContent = value;
-										}
-										//*/
-									} else {
-										//current = {textContent: '', children: []};
-									}
-
-									//console.log('acc226');
-									//console.log(acc);
-									return subAcc;
-								}, [])
-						})
-						/*
-						return o
-							.windowToggle(startStopSource.filter(x => x).do(x => console.log('|> start')), function(x) {
-								//return startStopSource.filter(x => !x).do(x => console.log('|| stop'));
-								return startStopSource.do(x => console.log('|| stop'));
-							})
-						//*/
-							/*
-							.do(function(x) {
-								console.log('x184');
-								console.log(x);
-							})
-							.do(function(x) {
-								x.subscribe(function(y) {
-									console.log('y184');
-									console.log(y);
-								})
-							})
-							//*/
-//									.map(function(o) {
-//										//console.log('o182');
-//										//console.log(o);
-//										let path = [];
-//										return o
-//											.reduce(function(acc, x: any) {
-//											//.scan(function(acc, x: any) {})
-//												const type = x.type;
-//												const value = x.value;
-//
-//												//console.log('x178');
-//												//console.log(x);
-//
-//												if (type === 'open') {
-//													const openTagName = value['tagName'];
-//													path.push(openTagName);
-//												} else if (type === 'close') {
-//													path.pop();
-//												}
-//
-//												let current;
-//												if (path.length === 1) {
-//													if (type === 'open') {
-//														const openTagName = value['tagName'];
-//														current = Array(4 * (path.length - 1) + 1).join(' ') + openTagName;
-//														//console.log();
-//														/*
-//														current = value;
-//														current.textContent = '';
-//														current.children = [];
-//														//*/
-//														acc.push(current);
-//													} else if (type === 'text') {
-//														/*
-//														current = acc[acc.length - 1];
-//														current.textContent += value;
-//														//*/
-//													}
-//												} else if (path.length > 1) {
-//													/*
-//													current = acc[acc.length - 1];
-//													const parentIndex = path.length - 2;
-//													let parentEl = path.slice(0, parentIndex).reduce(function(subAcc, pathX) {
-//														const children = subAcc.children;
-//														return children[children.length - 1];
-//													}, current);
-//													let parentChildren = parentEl.children;
-//													if (type === 'open') {
-//														parentChildren.push(value);
-//													} else if (type === 'text') {
-//														const el = parentChildren[parentChildren.length - 1];
-//														el.textContent = value;
-//													}
-//													//*/
-//												} else {
-//													//current = {textContent: '', children: []};
-//												}
-//
-//												//console.log('acc226');
-//												//console.log(acc);
-//												return acc;
-//											}, [])
-//									});
-
-					return acc;
-				}, {})
-		})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//	const outputSource = Observable.from(selectors, queue)
-//		.reduce(function(acc: any, selector) {
-//			console.log(`selector: ${selector}`)
-//		  acc[selector] = createOpeningsClosingsSource(
-//					openTagStream,
-//					attributeStream,
-//					textStream,
-//					closeTagStream,
-//					selector
-//			)
-//				.mergeMap(function(startStopSource) {
-//					console.log(`startStopSource`)
-//					console.log(startStopSource)
-//					return Observable.merge(
-//							openTagStream
-//								.map(function(openTag: any) {
-//									return {
-//										type: 'open',
-//										value: {
-//											tagName: openTag.name,
-//											textContent: '',
-//											attributes: openTag.attributes,
-//											children: [],
-//										} 
-//									};
-//								}),
-//							attributeStream
-//								.map(function(attribute) {
-//									return {
-//										type: 'attribute',
-//										value: attribute
-//									};
-//								}),
-//							textStream
-//								.map(function(text) {
-//									return {
-//										type: 'text',
-//										value: text
-//									};
-//								}),
-//							closeTagStream
-//								.map(function(closeTag) {
-//									return {
-//										type: 'close',
-//										value: closeTag
-//									};
-//								}),
-//
-//							queue
-//					)
-//						/*
-//						.windowToggle(Observable.of(true, async), function(x) {
-//							//return Observable.of(false, queue).delay(0);
-//							return startStopSource.filter(x => !x);
-//						})
-//						//*/
-//						//*
-//						.windowToggle(startStopSource.filter(x => x).do(x => console.log('|> start')), function(x) {
-//							console.log('inside windowToggle');
-//							//startStopSource.filter(x => x === 'close').subscribe(function(x) {})
-//							startStopSource.subscribe(function(x) {
-//								console.log('|||||||||||||| windowStatus: ' + x)
-//							});
-//							//console.log('inside windowToggle');
-//							return startStopSource.filter(x => !x);
-//							//return startStopSource.filter(x => !x).do(x => console.log('|| stop')).map(x => x);
-//							//return Observable.of('close').do(x => console.log('|| stop'));
-//							//return Observable.of('close', queue).do(x => console.log('close before delay')).do(x => console.log('close after delay'));
-//							//return Observable.of('close').delay(0);
-//							//return startStopSource.filter(x => !x).do(x => console.log('|| stop'));
-//						})
-//						//*/
-//
-//						/*
-//						.reduce(function(accSource, xSource) {
-//							return accSource.mergeMap(function({path, output}) {
-//								return xSource.map(function({type, value}) {
-//
-//									if (type === 'open') {
-//										const openTagName = value['tagName'];
-//										path.push(openTagName);
-//									} else if (type === 'close') {
-//										path.pop();
-//									}
-//
-//									if (path.length === 1) {
-//										if (type === 'open') {
-//											output = defaults(output, value);
-//										} else if (type === 'text') {
-//											output.textContent += value;
-//										}
-//									} else if (path.length > 1) {
-//										const parentIndex = path.length - 2;
-//										let parentEl = path.slice(0, parentIndex).reduce(function(subAcc, pathX) {
-//											const children = subAcc.children;
-//											return children[children.length - 1];
-//										}, output);
-//										let parentChildren = parentEl.children;
-//										if (type === 'open') {
-//											parentChildren.push(value);
-//										} else if (type === 'text') {
-//											const el = parentChildren[parentChildren.length - 1];
-//											el.textContent = value;
-//										}
-//									}
-//
-//									return {
-//										path: path,
-//										output: output
-//									};
-//								})
-//							})
-//						}, Observable.of({path: [], output: {textContent: '', children: []}}))
-//						//.mergeMap(x => x)
-//						.mergeAll()
-//						//.do(console.log, console.error)
-//						.map(acc => acc.output);
-//						//*/
-//
-//						//*
-//						.do(function(x) {
-//							console.log('x184');
-//							console.log(x);
-//						})
-//						.do(function(x) {
-//							x.subscribe(function(y) {
-//								console.log('y184');
-//								console.log(y);
-//							})
-//						})
-//						.mergeMap(function(o) {
-//							console.log('o182');
-//							console.log(o);
-//							let path = [];
-//							return o
-//								.reduce(function(acc, x: any) {
-//								//.scan(function(acc, x: any) {})
-//									const type = x.type;
-//									const value = x.value;
-//
-//									console.log('x178');
-//									console.log(x);
-//
-//									if (type === 'open') {
-//										const openTagName = value['tagName'];
-//										path.push(openTagName);
-//									} else if (type === 'close') {
-//										path.pop();
-//									}
-//
-//									let current;
-//									if (path.length === 1) {
-//										if (type === 'open') {
-//											const openTagName = value['tagName'];
-//											current = Array(4 * (path.length - 1) + 1).join(' ') + openTagName;
-//											//console.log();
-//											/*
-//											current = value;
-//											current.textContent = '';
-//											current.children = [];
-//											//*/
-//											acc.push(current);
-//										} else if (type === 'text') {
-//											/*
-//											current = acc[acc.length - 1];
-//											current.textContent += value;
-//											//*/
-//										}
-//									} else if (path.length > 1) {
-//										/*
-//										current = acc[acc.length - 1];
-//										const parentIndex = path.length - 2;
-//										let parentEl = path.slice(0, parentIndex).reduce(function(subAcc, pathX) {
-//											const children = subAcc.children;
-//											return children[children.length - 1];
-//										}, current);
-//										let parentChildren = parentEl.children;
-//										if (type === 'open') {
-//											parentChildren.push(value);
-//										} else if (type === 'text') {
-//											const el = parentChildren[parentChildren.length - 1];
-//											el.textContent = value;
-//										}
-//										//*/
-//									} else {
-//										//current = {textContent: '', children: []};
-//									}
-//
-//									console.log('acc226');
-//									console.log(acc);
-//									return acc;
-//								}, [])
-//						});
-//						//*/
-//
-//						/*
-//						.concatMap(function(o) {
-//							let path = [];
-//							return o
-//								.reduce(function(acc, x: any) {
-//								//.scan(function(acc, x: any) {})
-//									const type = x.type;
-//									const value = x.value;
-//
-//									if (type === 'open') {
-//										const openTagName = value['tagName'];
-//										path.push(openTagName);
-//									} else if (type === 'close') {
-//										path.pop();
-//									}
-//
-//									if (path.length === 1) {
-//										if (type === 'open') {
-//											acc = defaults(acc, value);
-//										} else if (type === 'text') {
-//											acc.textContent += value;
-//										}
-//									} else if (path.length > 1) {
-//										const parentIndex = path.length - 2;
-//										let parentEl = path.slice(0, parentIndex).reduce(function(subAcc, pathX) {
-//											const children = subAcc.children;
-//											return children[children.length - 1];
-//										}, acc);
-//										let parentChildren = parentEl.children;
-//										if (type === 'open') {
-//											parentChildren.push(value);
-//										} else if (type === 'text') {
-//											const el = parentChildren[parentChildren.length - 1];
-//											el.textContent = value;
-//										}
-//									} else {
-//										acc = {textContent: '', children: []};
-//									}
-//
-//									return acc;
-//								}, {textContent: '', children: []})
-//						});
-//						//*/
-//				});
-//
-//			console.log('acc315');
-//			console.log(acc);
-//			return acc;
-//		}, {});
+			return acc;
+		}, {});
 
 	return Observable.create(function(observer) {
 		outputSource.subscribe(observer);
