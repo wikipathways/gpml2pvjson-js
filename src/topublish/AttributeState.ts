@@ -26,11 +26,23 @@ export class AttributeState extends State {
 	 * Match this node?
 	 */
 	matches(node, depth) {
-		var match = this._matchesDepth(depth) && this._matchesAttribute(node);
+		console.log('AttributeState:29/node');
+		console.log(node);
+		console.log(`AttributeState:31/depth: ${depth}`)
+		console.log(`AttributeState:32/this.enteredDepth: ${this.enteredDepth}`)
+		var match = this._matchesName(node) &&
+			this._matchesAttribute(node);
+		if (match) {
+			this.enteredDepth = depth;
+		}
+		/*
+		var match = this._matchesDepth(depth) &&
+			this._matchesAttribute(node);
 		if (match) {
 			this.enteredDepth = depth;
 		}
 		return match;
+		//*/
 	};
 
 	/**
@@ -49,7 +61,11 @@ export class AttributeState extends State {
 
 	_matchesAttribute(node) {
 		var attribute = this.attribute;
-		return !attribute || attribute === "*" || !!node.attributes[attribute];
+		const matchesAttribute = !attribute || attribute === "*" || !!node.attributes[attribute];
+		console.log(`matchesAttribute: ${matchesAttribute}`)
+		console.log('AttributeState:57/node');
+		console.log(node);
+		return matchesAttribute;
 	};
 
 

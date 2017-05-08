@@ -28,7 +28,6 @@
     "he": "~0.4.1",
     "highland": "^2.10.5",
     "immutable-assign": "^1.0.29",
-    "javascript-state-machine": "^2.4.0",
     "lodash": "^4.17.4",
     "ndjson": "^1.5.0",
     "rgbcolor": "^1.0.0",

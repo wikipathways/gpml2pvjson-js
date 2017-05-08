@@ -34,10 +34,13 @@ export const EDGES = [
 	'GraphicalLine',
 ];
 
+export function convert(sourceStream: any, pathwayIri?: string) {
+};
+
 // TODO why was I getting an error in pvjs when I had sourceStream: Observable<string>?
 //export default function(sourceStream: Observable<string>) {
 //}
-export function toPvjson(sourceStream: any, selectors: any, pathwayIri?: string) {
+export function convertStreaming(sourceStream: any, pathwayIri?: string) {
 
 	// The top-level Pathway GPML element and all its children that represent entities.
   const PATHWAY_AND_CHILD_TARGET_ELEMENTS = NODES.concat(EDGES).concat([
@@ -133,6 +136,14 @@ export function toPvjson(sourceStream: any, selectors: any, pathwayIri?: string)
 		}
 	}
 
+	//const selector = '/Pathway/DataNode';
+	const selectors = [
+		//'/Pathway',
+		'/Pathway/@Name',
+		//'/Pathway/DataNode',
+		//'/Pathway/Label',
+	];
+
 	//* using rx-sax.ts
 	return parse(
 			sourceStream,
@@ -141,6 +152,17 @@ export function toPvjson(sourceStream: any, selectors: any, pathwayIri?: string)
 			//['/Pathway/@*']
 			//['/Pathway/DataNode']
 			//['//DataNode']
-	);
+	)
+  //.mergeMap(x => x[selectors[0]])
+  .mergeMap(function(x) {
+    const sources = selectors.reduce(function(acc, selector) {
+      acc.push(x[selector]);
+      return acc;
+    }, []);
+    return Observable.merge(sources);
+  })
+  .mergeAll()
+	.do(x => console.log('x164'))
+	.do(console.log)
 	//*/
 };

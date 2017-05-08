@@ -32,7 +32,7 @@ export class SelfOrDescendantState extends State {
 	 * Unmatch this node?
 	 */
 	unmatches(tag, depth) {
-		var unmatch = depth <= this.enteredDepth;
+		var unmatch = !!this.attribute || depth <= this.enteredDepth;
 		return unmatch;
 	};
 }

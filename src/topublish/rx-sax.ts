@@ -34,7 +34,6 @@ import 'rxjs/add/operator/withLatestFrom';
 import 'rx-extra/add/operator/throughNodeStream';
 import {async} from 'rxjs/scheduler/async';
 import {queue} from 'rxjs/scheduler/queue';
-import {StateMachine} from 'javascript-state-machine';
 import {create as createOpeningsClosingsSource} from './openingsClosingsSource';
 
 
@@ -49,60 +48,82 @@ s2: adding to level x>1   |  -   |s2,x+1|  s2  |s2,x-1 |
 s3: complete              |  -   |  -   |  -   |  -    |
 */
 
-function getParent(elements, path) {
-	const current = elements[elements.length - 1];
+function getParent(element, path) {
 	const parentIndex = path.length - 2;
-	return path.slice(0, parentIndex).reduce(function(elements, pathX) {
-		const children = elements.children;
+	return path.slice(0, parentIndex).reduce(function(el, pathX) {
+		const children = el.children;
 		return children[children.length - 1];
-	}, current);
+	}, element);
 }
 
-function getCurrent(elements) {
-	return elements[elements.length - 1];
-}
-
-function Stater() {
+function SaxState() {
 	let path = [];
-	let elements = [];
+	let element: any = {};
 	return {
 		init: function() {
-			return elements;
+			return element;
 		},
 		open: function(value) {
+			/*
+			console.log('path');
+			console.log(path);
+			console.log('value');
+			console.log(value);
+			//*/
 			path.push(value['tagName']);
-			let elementsOrChildren;
 			if (path.length > 1) {
-				let current = getCurrent(elements);
-				let parentEl = getParent(elements, path);
+				let parentEl = getParent(element, path);
 				let parentChildren = parentEl.children;
 				parentChildren.push(value);
 			} else {
-				elements.push(value);
+				defaults(element, value)
 			}
-			return elements;
+			return element;
 		},
-		text: function(value) {
-			let current = getCurrent(elements);
+		attribute: function(value) {
+			//path.push(value['tagName']);
 			if (path.length > 1) {
-				let parentEl = getParent(elements, path);
+				let parentEl = getParent(element, path);
+				let parentChildren = parentEl.children;
+				parentChildren.push(value);
+			} else {
+				defaults(element, value)
+			}
+			return element;
+		},
+		/*
+		attribute: function(value) {
+			if (path.length > 1) {
+				let parentEl = getParent(element, path);
+				let parentChildren = parentEl.children;
+				let child = parentChildren[parentChildren.length - 1];
+				child.attributes[value.attribute.name] = value.attribute.value;
+			} else {
+				element.attributes[value.attribute.name] = value.attribute.value;
+			}
+			return element;
+		},
+		//*/
+		text: function(value) {
+			if (path.length > 1) {
+				let parentEl = getParent(element, path);
 				let parentChildren = parentEl.children;
 				let child = parentChildren[parentChildren.length - 1];
 				child.textContent = value;
 			} else {
-				current.textContent += value;
+				element.textContent += value;
 			}
-			return elements;
+			return element;
 		},
 		close: function(value) {
 			path.pop();
-			return elements;
+			return element;
 		},
 	};
 }
 
 export function parse<ATTR_NAMES_AND_TYPES>(
-		sourceStream: Observable<string>,
+		inputSource: Observable<string>,
 		selectors: string[]
 ) {
 	// stream usage
@@ -120,13 +141,23 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 		});
 	}
 
-	const openTagStream = fromSAXEvent('opentag').share() as Observable<ATTR_NAMES_AND_TYPES>;
-	//const attributeStream = fromSAXEvent('attribute').share() as Observable<string>;
-	const textStream = fromSAXEvent('text').share() as Observable<string>;
-	const closeTagStream = fromSAXEvent('closetag').share() as Observable<string>;
+	const openTagSource = fromSAXEvent('opentag').share() as Observable<ATTR_NAMES_AND_TYPES>;
+	const attributeSource = fromSAXEvent('opentag').share() as Observable<ATTR_NAMES_AND_TYPES>;
+	/*
+	const attributeSource = fromSAXEvent('attribute')
+		.map(function(x: any) {
+			return {
+				name: saxStream['_parser']['tagName'],
+				attribute: x
+			};
+		})
+		.share() as Observable<{name: string, attribute: {name: string, value: string}}>;
+	//*/
+	const textSource = fromSAXEvent('text').share() as Observable<string>;
+	const closeTagSource = fromSAXEvent('closetag').share() as Observable<string>;
 
 	const saxSource =  Observable.merge(
-			openTagStream
+			openTagSource
 				.map(function(openTag: any) {
 					return {
 						type: 'open',
@@ -138,23 +169,26 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 						} 
 					};
 				}),
-			/* TODO this returns attributes before openTags, so we won't know which tag we're on
-			attributeStream
-				.map(function(attribute) {
+			//* TODO this returns attributes before openTags, so we won't know which tag we're on
+			attributeSource
+				.map(function(openTag) {
 					return {
 						type: 'attribute',
-						value: attribute
+						value: {
+							tagName: openTag['name'],
+							attributes: openTag['attributes'],
+						}
 					};
 				}),
 			//*/
-			textStream
+			textSource
 				.map(function(text) {
 					return {
 						type: 'text',
 						value: text
 					};
 				}),
-			closeTagStream
+			closeTagSource
 				.map(function(closeTag) {
 					return {
 						type: 'close',
@@ -169,10 +203,10 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 		// TODO add types for acc and output
 		.reduce(function(acc: any, selector: string) {
 			const startStopSource = createOpeningsClosingsSource(
-					openTagStream,
-					//attributeStream,
-					textStream,
-					closeTagStream,
+					openTagSource,
+					attributeSource,
+					textSource,
+					closeTagSource,
 					selector
 			)
 				.share();
@@ -183,11 +217,11 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 						.filter(x => !x);
 				})
 				.mergeMap(function(subO) {
-					let stater: any = Stater();
+					let saxState: any = SaxState();
 					return subO
 						.reduce(function(subAcc, {type, value}) {
-							return stater[type](value);
-						}, stater.init());
+							return saxState[type](value);
+						}, saxState.init());
 				});
 
 			return acc;
@@ -195,7 +229,7 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 
 	return Observable.create(function(observer) {
 		outputSource.subscribe(observer);
-		sourceStream.subscribe(function(x) {
+		inputSource.subscribe(function(x) {
 			saxStream.write(x);
 		}, function(err) {
 			saxStream.end();

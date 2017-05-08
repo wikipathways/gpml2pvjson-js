@@ -43,6 +43,7 @@ export function create(
 		.reduce(function(stack: GenericState[], {axis, namespace, name, predicates, attribute}) {
 			const previousState = stack[stack.length - 1];
 			let state;
+			//*
 			if (!!attribute) {
 				state = new AttributeState(axis, namespace, name, predicates, attribute);
 			} else if (axis === '/') {

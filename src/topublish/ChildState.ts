@@ -39,8 +39,7 @@ export class ChildState extends State {
 	 */
 	unmatches(tag, depth) {
 		//console.log(Array(4 * (depth - 1) + 1).join(' ') + '</' + tag + '>');
-		var unmatch = depth <= this.enteredDepth;
-		return unmatch;
+		return !!this.attribute || depth <= this.enteredDepth;
 	};
 
 

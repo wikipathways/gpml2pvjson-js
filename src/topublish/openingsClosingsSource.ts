@@ -8,6 +8,7 @@ import 'rxjs/add/observable/fromEventPattern';
 import 'rxjs/add/observable/merge';
 import 'rxjs/add/observable/zip';
 import 'rxjs/add/operator/concat';
+import 'rxjs/add/operator/delayWhen';
 import 'rxjs/add/operator/distinctUntilChanged';
 import 'rxjs/add/operator/do';
 import 'rxjs/add/operator/filter';
@@ -42,48 +43,23 @@ import {AttributeState} from './AttributeState';
 import {create as createStateStack} from './stateStack';
 
 export type GenericState = StartState | ChildState | SelfOrDescendantState | AttributeState;
+//export type GenericState = StartState | ChildState | SelfOrDescendantState;
 
 export function create<ATTR_NAMES_AND_TYPES>(
 		openTagSource: Observable<ATTR_NAMES_AND_TYPES>,
-		//attributeSource: Observable<string>,
+		attributeSource: Observable<any>,
 		textSource: Observable<string>,
 		closeTagSource: Observable<string>,
 		selector: string
 ): Observable<boolean> {
 
-	//const nonAttributeSource = Observable.merge(openTagSource, textSource, closeTagSource, queue).share();
-
 	const stateStack = createStateStack(selector);
 
-	const sharedOpenTagSource = openTagSource.share().do(function(x) {`openTag: ${x['tagName']}`});
+	const sharedOpenTagSource = openTagSource.share();
+	//const sharedAttributeSource = attributeSource.delayWhen(a => sharedOpenTagSource).share();
+	const sharedAttributeSource = attributeSource.share();
 	const sharedCloseTagSource = closeTagSource.share();
-
-	/*
-	const tagDepthSource = Observable.merge(
-			sharedOpenTagSource.mapTo(1),
-			sharedCloseTagSource.mapTo(-1),
-			//asap
-			//async
-			queue
-	)
-		.scan(function(acc, x) {
-			return acc + x;
-		}, 0)
-		.share();
-	//*/
-
-	/*
-	const tagDepthSource = Observable.merge(
-			Observable.of(true).concat(sharedOpenTagSource).mapTo(1),
-			sharedCloseTagSource.mapTo(-1),
-			queue
-	)
-		.pairwise()
-		.scan(function(acc, [previous, current]) {
-			return acc + current;
-		}, 0)
-		.share();
-	//*/
+	//const sharedCloseAttributeSource = Observable.merge(textSource, sharedCloseTagSource, queue).share();
 
   let currentDepth = 0;
 	sharedOpenTagSource/*.do(console.log)*/.subscribe(function(node) {
@@ -96,15 +72,12 @@ export function create<ATTR_NAMES_AND_TYPES>(
 		currentDepth -= 1
 	});
 
-	// TODO add type to the return of this. Using
-	// : Observable<boolean>
-	// was causing some conflicts between the types in here and in rx-sax.ts
 	function getOpenCloseSource(state, openCandidateSource, closeCandidateSource): Observable<boolean> {
 		return Observable.merge(
 				openCandidateSource.map(function(node) {
 					/*
-					console.log(`|>? name: ${node.name} depth: ${depth} enteredDepth: ${state.enteredDepth}`)
-					if (!node.name) {
+					console.log(`|>? name: ${node.name} currentDepth: ${currentDepth} enteredDepth: ${state.enteredDepth}`)
+					if (!node['name']) {
 						console.log(node);
 					}
 					//*/
@@ -116,7 +89,8 @@ export function create<ATTR_NAMES_AND_TYPES>(
 					//.do(x => console.log(`match`)),
 
 				closeCandidateSource.map(function(tag) {
-					//console.log(`||? name: ${tag} depth: ${depth} enteredDepth: ${state.enteredDepth}`)
+					//console.log(`||? name: ${tag} currentDepth: ${currentDepth} enteredDepth: ${state.enteredDepth}`)
+
 					// depth here is actually more like NEXT depth, because the first value from
 					// tagDepthSource is '1', but the last is '0'.
 					return state.unmatches.call(state, tag, currentDepth + 1);
@@ -137,10 +111,23 @@ export function create<ATTR_NAMES_AND_TYPES>(
 			let openCloseSource;
 			if (state instanceof StartState) {
 				openCloseSource = getOpenCloseSource(state, Observable.of(true), Observable.empty());
+			//*
 			} else if (state instanceof AttributeState) {
-				//openCloseSource = getOpenCloseSource(state, tagDepthSource, attributeSource, nonAttributeSource);
+				console.log('AttributeState');
+				//openCloseSource = getOpenCloseSource(state, sharedAttributeSource, Observable.merge(textSource, sharedCloseTagSource));
+				//openCloseSource = getOpenCloseSource(state, sharedOpenTagSource, Observable.merge(sharedOpenTagSource.skip(1), sharedCloseAttributeSource, queue));
+				//openCloseSource = getOpenCloseSource(state, sharedOpenTagSource, Observable.merge(sharedCloseAttributeSource, queue));
+				//openCloseSource = getOpenCloseSource(state, sharedOpenTagSource, Observable.merge(sharedCloseAttributeSource, queue));
+				openCloseSource = getOpenCloseSource(state, sharedAttributeSource, sharedOpenTagSource);
+			//*/
 			} else {
-				openCloseSource = getOpenCloseSource(state, sharedOpenTagSource, sharedCloseTagSource);
+				console.log('OtherState');
+				openCloseSource = getOpenCloseSource(state, Observable.of(true).concat(sharedOpenTagSource), sharedCloseTagSource);
+				/*
+				const closeSource = !!state['attribute'] ? Observable.merge(textSource, sharedCloseTagSource) : sharedCloseTagSource;
+				//const closeSource = !!state['attribute'] ? Observable.of(true).repeat() : sharedCloseTagSource;
+				openCloseSource = getOpenCloseSource(state, Observable.of(true).concat(sharedOpenTagSource), closeSource);
+				//*/
 
 				/*
 				openCloseSource = Observable.merge(
