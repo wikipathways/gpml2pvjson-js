@@ -55,8 +55,8 @@ export function create<ATTR_NAMES_AND_TYPES>(
 
 	const stateStack = createStateStack(selector);
 
-	const sharedOpenTagSource = openTagSource.share();
-	//const sharedAttributeSource = attributeSource.delayWhen(a => sharedOpenTagSource).share();
+	const sharedOpenTagSource = openTagSource.share()/*.do(x => console.log('openingsClosingsSource:58/openTag'))*/;
+	//const sharedAttributeSource = attributeSource.delayWhen(a => sharedOpenTagSource).share()/*.do(x => console.log('openingsClosingsSource:59/attribute'))*/;
 	const sharedAttributeSource = attributeSource.share();
 	const sharedCloseTagSource = closeTagSource.share();
 	//const sharedCloseAttributeSource = Observable.merge(textSource, sharedCloseTagSource, queue).share();
@@ -113,16 +113,17 @@ export function create<ATTR_NAMES_AND_TYPES>(
 				openCloseSource = getOpenCloseSource(state, Observable.of(true), Observable.empty());
 			//*
 			} else if (state instanceof AttributeState) {
-				console.log('AttributeState');
 				//openCloseSource = getOpenCloseSource(state, sharedAttributeSource, Observable.merge(textSource, sharedCloseTagSource));
 				//openCloseSource = getOpenCloseSource(state, sharedOpenTagSource, Observable.merge(sharedOpenTagSource.skip(1), sharedCloseAttributeSource, queue));
 				//openCloseSource = getOpenCloseSource(state, sharedOpenTagSource, Observable.merge(sharedCloseAttributeSource, queue));
 				//openCloseSource = getOpenCloseSource(state, sharedOpenTagSource, Observable.merge(sharedCloseAttributeSource, queue));
-				openCloseSource = getOpenCloseSource(state, sharedAttributeSource, sharedOpenTagSource);
+				//openCloseSource = getOpenCloseSource(state, sharedAttributeSource, sharedOpenTagSource);
+				openCloseSource = getOpenCloseSource(state, sharedAttributeSource.filter((x, i) => i % 2 === 0), sharedAttributeSource.filter((x, i) => i % 2 === 1))
+					//.do(x => console.log(`window: ${x}`))
 			//*/
 			} else {
-				console.log('OtherState');
-				openCloseSource = getOpenCloseSource(state, Observable.of(true).concat(sharedOpenTagSource), sharedCloseTagSource);
+				openCloseSource = getOpenCloseSource(state, sharedOpenTagSource, sharedCloseTagSource);
+				//openCloseSource = getOpenCloseSource(state, Observable.of(true).concat(sharedOpenTagSource), sharedCloseTagSource);
 				/*
 				const closeSource = !!state['attribute'] ? Observable.merge(textSource, sharedCloseTagSource) : sharedCloseTagSource;
 				//const closeSource = !!state['attribute'] ? Observable.of(true).repeat() : sharedCloseTagSource;

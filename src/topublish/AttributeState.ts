@@ -23,48 +23,27 @@ export class AttributeState extends State {
 	}
 
 	/**
-	 * Match this node?
+	 * Match this attribute?
 	 */
-	matches(node, depth) {
-		console.log('AttributeState:29/node');
-		console.log(node);
-		console.log(`AttributeState:31/depth: ${depth}`)
-		console.log(`AttributeState:32/this.enteredDepth: ${this.enteredDepth}`)
-		var match = this._matchesName(node) &&
-			this._matchesAttribute(node);
-		if (match) {
-			this.enteredDepth = depth;
-		}
-		/*
-		var match = this._matchesDepth(depth) &&
-			this._matchesAttribute(node);
-		if (match) {
-			this.enteredDepth = depth;
-		}
+	matches(attribute, depth) {
+		console.log(Array(4 * (depth - 1) + 1).join(' ') + attribute.name + '="' + attribute.value);
+		var match = this._matchesAttribute(attribute);
+		//console.log(`match: ${match}`);
 		return match;
-		//*/
 	};
 
 	/**
-	 * Unmatch this node?
+	 * Unmatch this attribute?
 	 */
-	unmatches(tag, depth) {
-		var unmatch = depth <= this.enteredDepth;
+	unmatches(attribute, depth) {
+		var unmatch = true;
+		console.log(Array(4 * (depth - 1) + 1).join(' ') + '"');
 		return unmatch;
 	};
 
-
-	_matchesDepth(depth) {
-		var parentDepth = this.previous.enteredDepth;
-		return depth === parentDepth + 1;
-	};
-
-	_matchesAttribute(node) {
-		var attribute = this.attribute;
-		const matchesAttribute = !attribute || attribute === "*" || !!node.attributes[attribute];
-		console.log(`matchesAttribute: ${matchesAttribute}`)
-		console.log('AttributeState:57/node');
-		console.log(node);
+	_matchesAttribute(attribute) {
+		var attributeToMatch = this.attribute;
+		const matchesAttribute = !attributeToMatch || attributeToMatch === "*" || attribute.name === attributeToMatch;
 		return matchesAttribute;
 	};
 
