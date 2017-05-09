@@ -163,12 +163,6 @@ function SaxState() {
 			return element;
 		},
 		open: function(value) {
-			/*
-			console.log('path');
-			console.log(path);
-			console.log('value');
-			console.log(value);
-			//*/
 			path.push(value['tagName']);
 			if (path.length > 1) {
 				let parentEl = getParent(element, path);
@@ -180,8 +174,7 @@ function SaxState() {
 			return element;
 		},
 		attribute: function(value) {
-			console.log('rx-sax:183/value');
-			console.log(value);
+			/*
 			//path.push(value['tagName']);
 			if (path.length > 1) {
 				let parentEl = getParent(element, path);
@@ -190,21 +183,10 @@ function SaxState() {
 			} else {
 				defaults(element, value)
 			}
+			//*/
+			defaults(element, value)
 			return element;
 		},
-		/*
-		attribute: function(value) {
-			if (path.length > 1) {
-				let parentEl = getParent(element, path);
-				let parentChildren = parentEl.children;
-				let child = parentChildren[parentChildren.length - 1];
-				child.attributes[value.attribute.name] = value.attribute.value;
-			} else {
-				element.attributes[value.attribute.name] = value.attribute.value;
-			}
-			return element;
-		},
-		//*/
 		text: function(value) {
 			if (path.length > 1) {
 				let parentEl = getParent(element, path);
@@ -242,47 +224,14 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 		});
 	}
 
-	/*
-	const attributeSource1 = fromSAXEvent('attribute')
-		.map(function(attribute: SAXAttribute, i): EnrichedSAXAttribute {
-			return {
-				id: i.toString(),
-				name: saxStream['_parser']['tagName'],
-				attribute: attribute
-			};
-		})
-		.share()
-		.mergeMap(function(x) {
-			return Observable.from([x, x]);
-		})
-		//.pairwise()
-		.subscribe(function(x) {
-			console.log('x256');
-			console.log(x);
-		}, console.error)
-	//*/
-
 	const openTagSource = fromSAXEvent('opentag').share() as Observable<SAXOpenTag<ATTR_NAMES_AND_TYPES>>;
-	//const attributeSource = fromSAXEvent('opentag').share() as Observable<ATTR_NAMES_AND_TYPES>;
-	//*
 	const attributeSource = fromSAXEvent('attribute')
-		/*
-		.map(function(attribute: SAXAttribute, i): EnrichedSAXAttribute {
-			return {
-				id: i.toString(),
-				name: saxStream['_parser']['tagName'],
-				attribute: attribute
-			};
-		})
-		//*/
 		.share()
 		.mergeMap(function(x) {
 			return Observable.from([x, x], queue);
 		})
 		.delayWhen(a => openTagSource)
 		.share()
-
-	//*/
 	const textSource = fromSAXEvent('text').share() as Observable<string>;
 	const closeTagSource = fromSAXEvent('closetag').share() as Observable<string>;
 
@@ -299,21 +248,13 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 						} 
 					};
 				}),
-			//* TODO this returns attributes before openTags, so we won't know which tag we're on
 			attributeSource
 				.map(function(attribute) {
 					return {
 						type: 'attribute',
 						value: attribute
-						/*
-						value: {
-							tagName: enrichedAttribute.name,
-							attribute: enrichedAttribute.attribute,
-						}
-						//*/
 					};
 				}),
-			//*/
 			textSource
 				.map(function(text) {
 					return {
@@ -345,18 +286,14 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 				.share();
 
 			acc[selector] = saxSource
-				.do(console.log)
-				.windowToggle(startStopSource.filter(x => x).do(x => console.log('start')), function(x) {
+				.windowToggle(startStopSource.filter(x => x), function(x) {
 					return startStopSource
 						.filter(x => !x)
-						.do(x => console.log('stop'))
 				})
 				.mergeMap(function(subO) {
 					let saxState = SaxState();
 					return subO
 						.reduce(function(subAcc, {type, value}) {
-							console.log(`type: ${type}`);
-							console.log(value);
 							return saxState[type](value);
 						}, saxState.init());
 				});

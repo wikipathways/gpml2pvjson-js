@@ -26,9 +26,13 @@ export class AttributeState extends State {
 	 * Match this attribute?
 	 */
 	matches(attribute, depth) {
-		console.log(Array(4 * (depth - 1) + 1).join(' ') + attribute.name + '="' + attribute.value);
-		var match = this._matchesAttribute(attribute);
-		//console.log(`match: ${match}`);
+		//console.log(Array(4 * (depth - 1) + 1).join(' ') + attribute.name + '="' + attribute.value);
+		//console.log(`AttributeState:30/depth: ${depth}`)
+		//console.log(`AttributeState:31/this.enteredDepth: ${this.enteredDepth}`)
+		var match = this._matchesDepth(depth) && this._matchesAttribute(attribute);
+		if (typeof this.enteredDepth === 'undefined' && match) {
+			this.enteredDepth = depth;
+		}
 		return match;
 	};
 
@@ -37,7 +41,7 @@ export class AttributeState extends State {
 	 */
 	unmatches(attribute, depth) {
 		var unmatch = true;
-		console.log(Array(4 * (depth - 1) + 1).join(' ') + '"');
+		//console.log(Array(4 * (depth - 1) + 1).join(' ') + '"');
 		return unmatch;
 	};
 
@@ -47,6 +51,10 @@ export class AttributeState extends State {
 		return matchesAttribute;
 	};
 
+	_matchesDepth(depth) {
+		var parentDepth = this.previous.enteredDepth;
+		return depth === parentDepth;
+	};
 
 	/*
 	 * toString

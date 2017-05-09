@@ -27,10 +27,11 @@ export class ChildState extends State {
 			this._matchesDepth(depth) &&
 			this._matchesPredicate(node);
 
-		console.log(Array(4 * (depth - 1) + 1).join(' ') + '<' + node.name + '>');
+		//console.log(Array(4 * (depth - 1) + 1).join(' ') + '<' + node.name + '>');
 		if (match) {
 			this.enteredDepth = depth;
 		}
+		//console.log(`ChildState:34/this.enteredDepth: ${this.enteredDepth}`)
 		return match;
 	};
 
@@ -38,7 +39,7 @@ export class ChildState extends State {
 	 * Unmatch this node?
 	 */
 	unmatches(tag, depth) {
-		console.log(Array(4 * (depth - 1) + 1).join(' ') + '</' + tag + '>');
+		//console.log(Array(4 * (depth - 1) + 1).join(' ') + '</' + tag + '>');
 		return !!this.attribute || depth <= this.enteredDepth;
 	};
 

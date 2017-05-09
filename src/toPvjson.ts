@@ -136,24 +136,20 @@ export function convertStreaming(sourceStream: any, pathwayIri?: string) {
 		}
 	}
 
-	//const selector = '/Pathway/DataNode';
 	const selectors = [
 		//'/Pathway',
-		'/Pathway/@Name',
-		//'/Pathway/DataNode',
-		//'/Pathway/Label',
+		//'/Pathway/@Name',
+		'/Pathway/@*',
+		'/Pathway/DataNode',
+		//'/Pathway/DataNode/@GraphId',
+		//'/Pathway/DataNode/@*',
+		'/Pathway/Label',
 	];
 
-	//* using rx-sax.ts
 	return parse(
 			sourceStream,
 			selectors
-			//['/Pathway']
-			//['/Pathway/@*']
-			//['/Pathway/DataNode']
-			//['//DataNode']
 	)
-  //.mergeMap(x => x[selectors[0]])
   .mergeMap(function(x) {
     const sources = selectors.reduce(function(acc, selector) {
       acc.push(x[selector]);
@@ -162,7 +158,4 @@ export function convertStreaming(sourceStream: any, pathwayIri?: string) {
     return Observable.merge(sources);
   })
   .mergeAll()
-	.do(x => console.log('x164'))
-	.do(console.log)
-	//*/
 };

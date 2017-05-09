@@ -25,6 +25,7 @@ export class SelfOrDescendantState extends State {
 		if (match) {
 			this.enteredDepth = depth;
 		}
+		console.log(`SelfOrDescendantState:28/this.enteredDepth: ${this.enteredDepth}`)
 		return match;
 	};
 
