@@ -36,6 +36,102 @@ import {async} from 'rxjs/scheduler/async';
 import {queue} from 'rxjs/scheduler/queue';
 import {create as createOpeningsClosingsSource} from './openingsClosingsSource';
 
+export interface SAXAttribute {
+	name: string;
+	value: string;
+}
+
+export interface EnrichedSAXAttribute {
+	name: string;
+	attribute: SAXAttribute;
+}
+
+export type StrippedAttribute = {
+	[key: string]: string;
+};
+
+export type StrippedNodePicked = Pick<Node, 'childNodes' | 'localName'>;
+export interface StrippedNode extends StrippedNodePicked {
+	attributes: StrippedAttribute;
+}
+
+export type StrippedXPathResultPicked = Pick<XPathResult, 'booleanValue' | 'numberValue' | 'stringValue' | 'invalidIteratorState' | 'singleNodeValue' | 'snapshotLength' | 'snapshotItem'>;
+export interface StrippedXPathResult extends StrippedXPathResultPicked {
+	iterateNext: () => StrippedNode;
+};
+
+export class XPathEvaluator {
+	/*
+	ANY_TYPE: any;
+	ANY_UNORDERED_NODE_TYPE: any;
+	BOOLEAN_TYPE: any;
+	FIRST_ORDERED_NODE_TYPE: any;
+	NUMBER_TYPE: any;
+	ORDERED_NODE_ITERATOR_TYPE: any;
+	UNORDERED_NODE_ITERATOR_TYPE: any;
+	ORDERED_NODE_SNAPSHOT_TYPE: any;
+	UNORDERED_NODE_SNAPSHOT_TYPE: any;
+	STRING_TYPE: any;
+	resultType: any;
+	//*/
+	booleanValue: boolean;
+	numberValue: number;
+	stringValue: string;
+	invalidIteratorState: boolean;
+	singleNodeValue: any;
+	snapshotLength: number;
+	snapshotItem: any;
+	private xpathExpression: string;
+	private data: StrippedNode[];
+	private i: number;
+	constructor(xpathExpression, contextNode, namespaceResolver, resultType, result) {
+		this.xpathExpression = xpathExpression;
+		this.data = [
+			{
+				childNodes: null,
+				localName: 'DIV',
+				attributes: {
+					id: 'wow',
+				}
+			}
+		];
+		this.i = 0;
+	}
+
+	iterateNext(): StrippedNode {
+		const {data, i} = this;
+		if (i >= data.length - 1) {
+			return null;
+		}
+		const next = data[i];
+		this.i += 1;
+		return next;
+	}
+}
+
+export class XPathEvaluatorMultiple {
+	source: Observable<string>;
+	outputs: any;
+	constructor(source) {
+		this.source = source;
+		this.outputs = {};
+	}
+	
+	evaluate(xpathExpression, contextNode, namespaceResolver, resultType, result) {
+		this.outputs[xpathExpression] = new XPathEvaluator(xpathExpression, contextNode, namespaceResolver, resultType, result);
+	}
+}
+
+const hey: StrippedNode = {
+	childNodes: null,
+	localName: 'DIV',
+	attributes: {
+		id: 'wow',
+	}
+}
+
+const wow = new XPathEvaluatorMultiple(Observable.of('wow'));
+//const wow: StrippedXPathResult = new XPathEvaluator('//Pathway');
 
 /*
 State
@@ -133,7 +229,7 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 		trim: true
 	});
 
-	function fromSAXEvent(eventName): Observable<any> {
+	function fromSAXEvent(eventName): Observable<SAXOpenTag<ATTR_NAMES_AND_TYPES>|SAXAttribute|string> {
 		return Observable.fromEventPattern(function(handler: SaxEventHandler<ATTR_NAMES_AND_TYPES>) {
 			saxStream.on(eventName, handler);
 		}, function(handler) {
@@ -141,24 +237,24 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 		});
 	}
 
-	const openTagSource = fromSAXEvent('opentag').share() as Observable<ATTR_NAMES_AND_TYPES>;
-	const attributeSource = fromSAXEvent('opentag').share() as Observable<ATTR_NAMES_AND_TYPES>;
-	/*
+	const openTagSource = fromSAXEvent('opentag').share() as Observable<SAXOpenTag<ATTR_NAMES_AND_TYPES>>;
+	//const attributeSource = fromSAXEvent('opentag').share() as Observable<ATTR_NAMES_AND_TYPES>;
+	//*
 	const attributeSource = fromSAXEvent('attribute')
-		.map(function(x: any) {
+		.map(function(attribute: SAXAttribute): EnrichedSAXAttribute {
 			return {
 				name: saxStream['_parser']['tagName'],
-				attribute: x
+				attribute: attribute
 			};
 		})
-		.share() as Observable<{name: string, attribute: {name: string, value: string}}>;
+		.share();
 	//*/
 	const textSource = fromSAXEvent('text').share() as Observable<string>;
 	const closeTagSource = fromSAXEvent('closetag').share() as Observable<string>;
 
 	const saxSource =  Observable.merge(
 			openTagSource
-				.map(function(openTag: any) {
+				.map(function(openTag) {
 					return {
 						type: 'open',
 						value: {
@@ -171,12 +267,12 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 				}),
 			//* TODO this returns attributes before openTags, so we won't know which tag we're on
 			attributeSource
-				.map(function(openTag) {
+				.map(function(enrichedAttribute) {
 					return {
 						type: 'attribute',
 						value: {
-							tagName: openTag['name'],
-							attributes: openTag['attributes'],
+							tagName: enrichedAttribute.name,
+							attribute: enrichedAttribute.attribute,
 						}
 					};
 				}),
@@ -201,7 +297,7 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 
 	const outputSource = Observable.from(selectors)
 		// TODO add types for acc and output
-		.reduce(function(acc: any, selector: string) {
+		.reduce(function(acc, selector: string) {
 			const startStopSource = createOpeningsClosingsSource(
 					openTagSource,
 					attributeSource,
@@ -217,7 +313,7 @@ export function parse<ATTR_NAMES_AND_TYPES>(
 						.filter(x => !x);
 				})
 				.mergeMap(function(subO) {
-					let saxState: any = SaxState();
+					let saxState = SaxState();
 					return subO
 						.reduce(function(subAcc, {type, value}) {
 							return saxState[type](value);
