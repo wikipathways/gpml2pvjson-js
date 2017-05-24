@@ -147,38 +147,29 @@ export function convertStreaming(inputStream: any, pathwayIri?: string) {
 		//'/Pathway/DataNode/@GraphId',
 		//'/Pathway/DataNode/@*',
 		'/Pathway/Label',
-		//'/Pathway/Label/@*',
+		'/Pathway/Label/@*',
 	];
 
 	const rxSax = new RxSax(inputStream);
 	return rxSax.parse(selectors)
-	/*
-  .mergeMap(function(x) {
-    const sources = selectors.reduce(function(acc, selector) {
-      acc.push(x[selector]);
-      return acc;
-    }, []);
-    return Observable.merge(sources);
-  })
-	//*/
-  .mergeMap(function(x) {
-    return Observable.merge([
-			x['/Pathway/@*']
-				.map(function(metadata) {
-					//console.log('metadata167');
-					//console.log(metadata);
-					return metadata;
-				}),
-			x['/Pathway/DataNode'],
-			//x['/Pathway/Label/@*'],
-			//x['/Pathway/Label'],
-		]);
-  })
-	//.do(x => console.log('next180'), console.error, x => console.log('complete180'))
-  .mergeAll()
-	//.do(x => console.log('next182'), console.error, x => console.log('complete182'))
-	//.do(console.log)
-	//.toArray()
+		.mergeMap(function(x) {
+			return Observable.merge([
+				x['/Pathway/@*']
+					.map(function(metadata) {
+						//console.log('metadata167');
+						//console.log(metadata);
+						return metadata;
+					}),
+				x['/Pathway/DataNode'],
+				x['/Pathway/Label/@*'],
+				x['/Pathway/Label'],
+			]);
+		})
+		//.do(x => console.log('next180'), console.error, x => console.log('complete180'))
+		.mergeAll()
+		//.do(x => console.log('next182'), console.error, x => console.log('complete182'))
+		//.do(console.log)
+		.toArray()
 
 //  .mergeMap(function(x) {
 //		//return x['/Pathway/@*']
