@@ -1,5 +1,3 @@
-/// <reference path="../../gpml2pvjson.d.ts" />
-
 import {map, reduce} from 'lodash';
 import {parse as parseXPath} from './xpath';
 import {State} from './State';

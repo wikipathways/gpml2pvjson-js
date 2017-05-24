@@ -13,12 +13,15 @@ import {Observable} from 'rxjs/Observable';
 import 'rxjs/add/observable/fromEventPattern';
 import 'rxjs/add/observable/merge';
 
-import {parse} from './topublish/rx-sax';
+//import {parse} from './topublish/rx-sax/rx-sax';
+import {RxSax} from './topublish/rx-sax/rx-sax';
 
 import 'rxjs/add/operator/do';
 import 'rxjs/add/operator/last';
 import 'rxjs/add/operator/let';
 import 'rxjs/add/operator/map';
+import 'rxjs/add/operator/takeUntil';
+import 'rxjs/add/operator/toArray';
 import 'rx-extra/add/operator/throughNodeStream';
 
 export const NODES = [
@@ -34,13 +37,13 @@ export const EDGES = [
 	'GraphicalLine',
 ];
 
-export function convert(sourceStream: any, pathwayIri?: string) {
+export function convert(inputStream: any, pathwayIri?: string) {
 };
 
-// TODO why was I getting an error in pvjs when I had sourceStream: Observable<string>?
-//export default function(sourceStream: Observable<string>) {
+// TODO why was I getting an error in pvjs when I had inputStream: Observable<string>?
+//export default function(inputStream: Observable<string>) {
 //}
-export function convertStreaming(sourceStream: any, pathwayIri?: string) {
+export function convertStreaming(inputStream: any, pathwayIri?: string) {
 
 	// The top-level Pathway GPML element and all its children that represent entities.
   const PATHWAY_AND_CHILD_TARGET_ELEMENTS = NODES.concat(EDGES).concat([
@@ -144,12 +147,12 @@ export function convertStreaming(sourceStream: any, pathwayIri?: string) {
 		//'/Pathway/DataNode/@GraphId',
 		//'/Pathway/DataNode/@*',
 		'/Pathway/Label',
+		//'/Pathway/Label/@*',
 	];
 
-	return parse(
-			sourceStream,
-			selectors
-	)
+	const rxSax = new RxSax(inputStream);
+	return rxSax.parse(selectors)
+	/*
   .mergeMap(function(x) {
     const sources = selectors.reduce(function(acc, selector) {
       acc.push(x[selector]);
@@ -157,5 +160,56 @@ export function convertStreaming(sourceStream: any, pathwayIri?: string) {
     }, []);
     return Observable.merge(sources);
   })
+	//*/
+  .mergeMap(function(x) {
+    return Observable.merge([
+			//*
+			x['/Pathway/@*']
+				.map(function(metadata) {
+					//console.log('metadata167');
+					//console.log(metadata);
+					return metadata;
+				})
+				//.takeUntil(x['/Pathway/DataNode'])
+				//.do(x => console.log('next171'), console.error, x => console.log('complete171'))
+				//.do(x => console.log('next173'), console.error, x => console.log('complete173'))
+				.reduce(function(acc, metadata) {
+					const {name, value} = metadata;
+					acc[name] = value;
+					//console.log('metadata173');
+					//console.log(metadata);
+					return acc;
+				}, {}),
+			//*/
+			x['/Pathway/DataNode'],
+			//x['/Pathway/Label/@*'],
+			x['/Pathway/Label'],
+		]);
+  })
+	//.do(x => console.log('next180'), console.error, x => console.log('complete180'))
   .mergeAll()
+	//.do(x => console.log('next182'), console.error, x => console.log('complete182'))
+	//.do(console.log)
+	//.toArray()
+
+//  .mergeMap(function(x) {
+//		//return x['/Pathway/@*']
+//		return x['/Pathway/DataNode']
+//			.do(x => console.log('next169'), console.error, x => console.log('complete169'))
+//			.map(function(metadata) {
+//				console.log('metadata167');
+//				console.log(metadata);
+//				return metadata;
+//			})
+//			.do(x => console.log('next171'), console.error, x => console.log('complete171'))
+//			.toArray()
+//			.do(x => console.log('next173'), console.error, x => console.log('complete173'))
+//			.map(function(metadata) {
+//				//console.log('metadata173');
+//				//console.log(metadata);
+//				return metadata;
+//			})
+//			.do(x => console.log('next205'), console.error, x => console.log('complete205'))
+//  })
+	//.do(x => console.log('next208'), console.error, x => console.log('complete208'))
 };

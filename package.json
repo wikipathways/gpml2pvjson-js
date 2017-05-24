@@ -8,8 +8,8 @@
   "scripts": {
     "compile:es5": "npm run compile:xpath && tsc --project tsconfig.json && echo ok || echo not ok",
     "compile:es51": "tsc --project tsconfig.json && echo ok || echo not ok",
-    "compile:xpathts": "pegjs src/topublish/XPathParser.pegjs && mv src/topublish/XPathParser.js src/topublish/XPathParser.ts && echo ok || echo not ok",
-    "compile:xpath": "touch lib/topublish/XPathParser.js && rm lib/topublish/XPathParser.js && pegjs -o lib/topublish/XPathParser.js src/topublish/XPathParser.pegjs && echo ok || echo not ok",
+    "compile:xpathts": "pegjs src/topublish/rx-sax/XPathParser.pegjs && mv src/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.ts && echo ok || echo not ok",
+    "compile:xpath": "mkdir -p lib/topublish/rx-sax && touch lib/topublish/rx-sax/XPathParser.js && rm lib/topublish/rx-sax/XPathParser.js && pegjs -o lib/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.pegjs && echo ok || echo not ok",
     "prepublish": "npm run compile:es5",
     "test": "echo 'Get more/better tests working, please!' && node ./test/node-test-streaming.js"
   },

@@ -26,6 +26,7 @@ export class AttributeState extends State {
 	 * Match this attribute?
 	 */
 	matches(attribute, depth) {
+		//console.log(`depth: ${depth}`);
 		//console.log(Array(4 * (depth - 1) + 1).join(' ') + attribute.name + '="' + attribute.value);
 		//console.log(`AttributeState:30/depth: ${depth}`)
 		//console.log(`AttributeState:31/this.enteredDepth: ${this.enteredDepth}`)
