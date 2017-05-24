@@ -1,5 +1,6 @@
 import {Observable} from 'rxjs/Observable';
 import 'rxjs/add/observable/empty';
+import 'rxjs/add/observable/of';
 import 'rxjs/add/observable/from';
 import 'rxjs/add/observable/merge';
 import 'rxjs/add/operator/concat';
@@ -16,10 +17,10 @@ import {parse as parseXPath} from './xpath';
 import {StartState} from './StartState';
 import {ChildState} from './ChildState';
 import {SelfOrDescendantState} from './SelfOrDescendantState';
-import {AttributeState} from './AttributeState';
+import {AttributeSetState} from './AttributeSetState';
 import {create as createStateStack} from './stateStack';
 
-export type GenericState = StartState | ChildState | SelfOrDescendantState | AttributeState;
+export type GenericState = StartState | ChildState | SelfOrDescendantState | AttributeSetState;
 
 export function create<ATTR_NAMES_AND_TYPES>(
 		openTagSource: Observable<ATTR_NAMES_AND_TYPES>,
@@ -70,7 +71,7 @@ export function create<ATTR_NAMES_AND_TYPES>(
 			let openCloseSource;
 			if (state instanceof StartState) {
 				openCloseSource = getOpenCloseSource(state, Observable.of(true), Observable.empty());
-			} else if (state instanceof AttributeState) {
+			} else if (state instanceof AttributeSetState) {
 				openCloseSource = getOpenCloseSource(state, sharedAttributesSource.filter((x, i) => i % 2 === 0), sharedAttributesSource.filter((x, i) => i % 2 === 1))
 				/*
 				const openCloseSourceNoStop = getOpenCloseSource(state, sharedAttributeSource.filter((x, i) => i % 2 === 0), sharedAttributeSource.filter((x, i) => i % 2 === 1))

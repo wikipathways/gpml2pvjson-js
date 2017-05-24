@@ -181,9 +181,9 @@ export function convertStreaming(inputStream: any, pathwayIri?: string) {
 					return acc;
 				}, {}),
 			//*/
-			x['/Pathway/DataNode'],
+			//x['/Pathway/DataNode'],
 			//x['/Pathway/Label/@*'],
-			x['/Pathway/Label'],
+			//x['/Pathway/Label'],
 		]);
   })
 	//.do(x => console.log('next180'), console.error, x => console.log('complete180'))

@@ -12,9 +12,11 @@ import 'rxjs/add/operator/observeOn';
 import 'rxjs/add/operator/reduce';
 import 'rxjs/add/operator/share';
 import 'rxjs/add/operator/takeUntil';
+import 'rxjs/add/operator/window';
 import 'rxjs/add/operator/windowToggle';
 import {queue} from 'rxjs/scheduler/queue';
 import {create as createOpeningsClosingsSource} from './openingsClosingsSource';
+import {create as createOpeningsClosingsSourceAttributes} from './openingsClosingsSourceAttributes';
 
 export interface SAXAttribute {
 	name: string;
@@ -107,7 +109,9 @@ class SaxState {
 		return element;
 	}
 
-	attribute(value) {
+	attributes(value) {
+		console.log('x113');
+		console.log(value);
 		let {element, path} = this;
 		defaults(element, value)
 		return element;
@@ -188,7 +192,14 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 		const {inputSource, endSource} = this;
 
 		const openTagStartSource = rxSax.fromSAXEvent('opentagstart').share() as Observable<string>;
-		const openTagSource = rxSax.fromSAXEvent('opentag').share() as Observable<SAXOpenTag<ATTR_NAMES_AND_TYPES>>;
+		const openTagMinSource = openTagStartSource
+			.map(function(openTag) {
+				return {
+					name: openTag
+				};
+			})
+			.share();
+		const openTagFullSource = rxSax.fromSAXEvent('opentag').share() as Observable<SAXOpenTag<ATTR_NAMES_AND_TYPES>>;
 		const textSource = rxSax.fromSAXEvent('text').share() as Observable<string>;
 		const closeTagSource = rxSax.fromSAXEvent('closetag').share() as Observable<string>;
 
@@ -200,12 +211,40 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 
 		// TODO end attribute source as soon as we can (before children). It emits on close tag right now.
 		const attributeSource = rxSax.fromSAXEvent('attribute')
-			.share()
+			.share();
+
+		const attributeSourceFast = attributeSource
+			// making open tag starts arrive before their attributes, unlike the default for sax.js
+			.delayWhen(a => openTagMinSource)
+			.share();
+
+		const attributeSourceSlow = attributeSource
+			// making open tag starts arrive before their attributes, unlike the default for sax.js
+			.delayWhen(a => openTagFullSource)
+			.share();
+
+		const attributeSourceSlowDoubled = attributeSourceSlow
 			.mergeMap(function(x) {
 				return Observable.from([x, x], queue);
 			})
-			// making open tags arrive before their attributes, unlike the default for sax.js
-			.delayWhen(a => openTagSource)
+			.share();
+
+		const attributesSource = attributeSourceFast
+			.window(openTagMinSource)
+			.mergeMap(function(subO) {
+				return subO.reduce(function(acc: any, {name, value}) {
+					acc[name] = value;
+					return acc;
+				}, {});
+			})
+			.do(x => console.log('x224'))
+			.do(console.log)
+			.share();
+
+		const attributesSourceDoubled = attributesSource
+			.mergeMap(function(x) {
+				return Observable.from([x, x], queue);
+			})
 			.share();
 
 //		// TODO end attribute source as soon as we can (before children). It emits on close tag right now.
@@ -215,11 +254,11 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 //				return Observable.from([x, x], queue);
 //			})
 //			// making open tags arrive before their attributes, unlike the default for sax.js
-//			.delayWhen(a => openTagSource)
+//			.delayWhen(a => openTagFullSource)
 //			.share();
 
 		const saxSource =  Observable.merge(
-				openTagSource
+				openTagFullSource
 					.map(function(openTag) {
 						return {
 							type: 'open',
@@ -231,11 +270,40 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 							} 
 						};
 					}),
-				attributeSource
-					.map(function(attribute) {
+				attributeSourceSlow,
+				textSource
+					.map(function(text) {
 						return {
-							type: 'attribute',
-							value: attribute
+							type: 'text',
+							value: text
+						};
+					}),
+				closeTagSource
+					.map(function(closeTag) {
+						return {
+							type: 'close',
+							value: closeTag
+						};
+					}),
+
+				queue
+		);
+
+		const saxSourceAttributes =  Observable.merge(
+				openTagMinSource
+					.map(function(openTag) {
+						return {
+							type: 'open',
+							value: {
+								tagName: openTag.name,
+							} 
+						};
+					}),
+				attributesSource
+					.map(function(attributes) {
+						return {
+							type: 'attributes',
+							value: attributes
 						};
 					}),
 				textSource
@@ -259,27 +327,53 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 		const outputSource = Observable.from(selectors)
 			// TODO add types for acc and output
 			.reduce(function(acc, selector: string) {
-				const openCloseSource = createOpeningsClosingsSource(
-						openTagSource,
-						attributeSource,
-						textSource,
-						closeTagSource,
-						selector
-				)
-					.share();
+				if (selector.match(/@\*$/)) {
+					console.log(`selector: ${selector}`)
+					const openCloseSource = createOpeningsClosingsSourceAttributes(
+							openTagMinSource,
+							attributesSourceDoubled,
+							textSource,
+							closeTagSource,
+							selector
+					)
+						.share();
 
-				acc[selector] = saxSource
-					.windowToggle(openCloseSource.filter(x => x), function(x) {
-						return openCloseSource
-							.filter(x => !x)
-					})
-					.mergeMap(function(subO) {
-						let saxState = new SaxState();
-						return subO
-							.reduce(function(subAcc, {type, value}) {
-								return saxState[type](value);
-							}, saxState.init());
-					})
+					acc[selector] = saxSourceAttributes
+						.windowToggle(openCloseSource.filter(x => x), function(x) {
+							return openCloseSource
+								.filter(x => !x)
+						})
+						.mergeMap(function(subO) {
+							let saxState = new SaxState();
+							return subO
+								.reduce(function(subAcc, {type, value}) {
+									console.log(`type: ${type}`);
+									return saxState[type](value);
+								}, saxState.init());
+						})
+				} else {
+					const openCloseSource = createOpeningsClosingsSource(
+							openTagFullSource,
+							attributeSourceSlowDoubled,
+							textSource,
+							closeTagSource,
+							selector
+					)
+						.share();
+
+					acc[selector] = saxSource
+						.windowToggle(openCloseSource.filter(x => x), function(x) {
+							return openCloseSource
+								.filter(x => !x)
+						})
+						.mergeMap(function(subO) {
+							let saxState = new SaxState();
+							return subO
+								.reduce(function(subAcc, {type, value}) {
+									return saxState[type](value);
+								}, saxState.init());
+						})
+				}
 				/*
 				const openCloseSourceNoStop = getOpenCloseSource(state, sharedAttributeSource.filter((x, i) => i % 2 === 0), sharedAttributeSource.filter((x, i) => i % 2 === 1))
 				const openSource = openCloseSourceNoStop.filter(x => x);
@@ -373,7 +467,7 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 //export class XPathEvaluatorMultiple<ATTR_NAMES_AND_TYPES> {
 //	xpathExpressions: string[] = [];
 //	inputSource: Observable<string>;
-//	openTagSource: Observable<any>;
+//	openTagFullSource: Observable<any>;
 //	attributeSource: Observable<any>;
 //	textSource: Observable<any>;
 //	closeTagSource: Observable<any>;
@@ -397,19 +491,19 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 //			});
 //		}
 //
-//		const openTagSource = this.openTagSource = fromSAXEvent('opentag').share() as Observable<SAXOpenTag<ATTR_NAMES_AND_TYPES>>;
+//		const openTagFullSource = this.openTagFullSource = fromSAXEvent('opentag').share() as Observable<SAXOpenTag<ATTR_NAMES_AND_TYPES>>;
 //		const attributeSource = this.attributeSource = fromSAXEvent('attribute')
 //			.share()
 //			.mergeMap(function(x) {
 //				return Observable.from([x, x], queue);
 //			})
-//			.delayWhen(a => openTagSource)
+//			.delayWhen(a => openTagFullSource)
 //			.share()
 //		const textSource = this.textSource = fromSAXEvent('text').share() as Observable<string>;
 //		const closeTagSource = this.closeTagSource = fromSAXEvent('closetag').share() as Observable<string>;
 //
 //		const saxSource = this.saxSource = Observable.merge(
-//				openTagSource
+//				openTagFullSource
 //					.map(function(openTag) {
 //						return {
 //							type: 'open',
@@ -452,9 +546,9 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 //	// TODO do something with the rest of the args
 //	evaluate(xpathExpression, contextNode, namespaceResolver, resultType, result) {
 //		this.xpathExpressions.push(xpathExpression);
-//		const {openTagSource, attributeSource, textSource, closeTagSource, saxSource} = this;
+//		const {openTagFullSource, attributeSource, textSource, closeTagSource, saxSource} = this;
 //		const openCloseSource = createOpeningsClosingsSource(
-//				openTagSource,
+//				openTagFullSource,
 //				attributeSource,
 //				textSource,
 //				closeTagSource,
