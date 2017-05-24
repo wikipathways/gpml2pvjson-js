@@ -163,24 +163,12 @@ export function convertStreaming(inputStream: any, pathwayIri?: string) {
 	//*/
   .mergeMap(function(x) {
     return Observable.merge([
-			//*
 			x['/Pathway/@*']
 				.map(function(metadata) {
 					//console.log('metadata167');
 					//console.log(metadata);
 					return metadata;
 				}),
-				//.takeUntil(x['/Pathway/DataNode'])
-				//.do(x => console.log('next171'), console.error, x => console.log('complete171'))
-				//.do(x => console.log('next173'), console.error, x => console.log('complete173'))
-//				.reduce(function(acc, metadata) {
-//					const {name, value} = metadata;
-//					acc[name] = value;
-//					//console.log('metadata173');
-//					//console.log(metadata);
-//					return acc;
-//				}, {}),
-			//*/
 			x['/Pathway/DataNode'],
 			//x['/Pathway/Label/@*'],
 			//x['/Pathway/Label'],
