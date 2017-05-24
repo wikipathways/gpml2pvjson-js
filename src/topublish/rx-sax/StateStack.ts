@@ -5,8 +5,9 @@ import {StartState} from './StartState';
 import {ChildState} from './ChildState';
 import {SelfOrDescendantState} from './SelfOrDescendantState';
 import {AttributeState} from './AttributeState';
+import {AttributeSetState} from './AttributeSetState';
 
-export type GenericState = StartState | ChildState | SelfOrDescendantState | AttributeState;
+export type GenericState = StartState | ChildState | SelfOrDescendantState | AttributeState | AttributeSetState;
 
 export function create(
 		selector: string
@@ -41,9 +42,12 @@ export function create(
 		.reduce(function(stack: GenericState[], {axis, namespace, name, predicates, attribute}) {
 			const previousState = stack[stack.length - 1];
 			let state;
-			//*
 			if (!!attribute) {
-				state = new AttributeState(axis, namespace, name, predicates, attribute);
+				if (attribute === '*') {
+					state = new AttributeSetState(axis, namespace, name, predicates, attribute);
+				} else {
+					state = new AttributeState(axis, namespace, name, predicates, attribute);
+				}
 			} else if (axis === '/') {
 				state = new ChildState(axis, namespace, name, predicates, attribute);
 			} else if (axis === '//') {

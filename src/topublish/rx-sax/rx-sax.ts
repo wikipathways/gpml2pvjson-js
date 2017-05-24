@@ -1,4 +1,4 @@
-import {defaults} from 'lodash';
+import {defaults, isEmpty} from 'lodash';
 import * as sax from 'sax';
 import {Observable} from 'rxjs/Observable';
 import 'rxjs/add/observable/from';
@@ -11,12 +11,12 @@ import 'rxjs/add/operator/mergeMap';
 import 'rxjs/add/operator/observeOn';
 import 'rxjs/add/operator/reduce';
 import 'rxjs/add/operator/share';
+import 'rxjs/add/operator/skip';
 import 'rxjs/add/operator/takeUntil';
 import 'rxjs/add/operator/window';
 import 'rxjs/add/operator/windowToggle';
 import {queue} from 'rxjs/scheduler/queue';
 import {create as createOpeningsClosingsSource} from './openingsClosingsSource';
-import {create as createOpeningsClosingsSourceAttributes} from './openingsClosingsSourceAttributes';
 
 export interface SAXAttribute {
 	name: string;
@@ -109,11 +109,25 @@ class SaxState {
 		return element;
 	}
 
-	attributes(value) {
-		console.log('x113');
-		console.log(value);
+	attribute(value) {
 		let {element, path} = this;
 		defaults(element, value)
+		/*
+		if (!element.hasOwnProperty('attributes')) {
+			defaults(element, value)
+		}
+		//*/
+		return element;
+	}
+
+	attributeSet(value) {
+		let {element, path} = this;
+		defaults(element, value)
+		/*
+		if (!element.hasOwnProperty('attributes')) {
+			defaults(element, value)
+		}
+		//*/
 		return element;
 	}
 
@@ -192,13 +206,6 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 		const {inputSource, endSource} = this;
 
 		const openTagStartSource = rxSax.fromSAXEvent('opentagstart').share() as Observable<string>;
-		const openTagMinSource = openTagStartSource
-			.map(function(openTag) {
-				return {
-					name: openTag
-				};
-			})
-			.share();
 		const openTagFullSource = rxSax.fromSAXEvent('opentag').share() as Observable<SAXOpenTag<ATTR_NAMES_AND_TYPES>>;
 		const textSource = rxSax.fromSAXEvent('text').share() as Observable<string>;
 		const closeTagSource = rxSax.fromSAXEvent('closetag').share() as Observable<string>;
@@ -209,53 +216,40 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 		openCloseSource = openCloseSourceNoStop.takeUntil(sharedOpenTagSource.skipUntil(openSource));
 		//*/
 
-		// TODO end attribute source as soon as we can (before children). It emits on close tag right now.
 		const attributeSource = rxSax.fromSAXEvent('attribute')
-			.share();
-
-		const attributeSourceFast = attributeSource
-			// making open tag starts arrive before their attributes, unlike the default for sax.js
-			.delayWhen(a => openTagMinSource)
-			.share();
-
-		const attributeSourceSlow = attributeSource
-			// making open tag starts arrive before their attributes, unlike the default for sax.js
-			.delayWhen(a => openTagFullSource)
-			.share();
-
-		const attributeSourceSlowDoubled = attributeSourceSlow
-			.mergeMap(function(x) {
-				return Observable.from([x, x], queue);
+			.mergeMap(function(subO) {
+				return Observable.merge([subO, subO], queue)
 			})
 			.share();
 
-		const attributesSource = attributeSourceFast
-			.window(openTagMinSource)
+		//*
+		const attributeSetSource = openTagFullSource
+			.map(x => x.attributes)
 			.mergeMap(function(subO) {
-				return subO.reduce(function(acc: any, {name, value}) {
+				return Observable.merge([subO, subO], queue)
+			})
+			.share();
+		//*/
+
+		/*
+		const attributeSetSource = attributeSource
+			.window(openTagStartSource)
+//			.windowToggle(openTagStartSource, function() {
+//				return Observable.merge(openTagStartSource.skip(1), textSource, closeTagSource);
+//			})
+			.do(x => console.log('attributeSet starting'))
+			.mergeMap(function(subO) {
+				return subO
+				.reduce(function(acc: any, {name, value}) {
 					acc[name] = value;
 					return acc;
 				}, {});
 			})
-			.do(x => console.log('x224'))
+			.filter(x => !isEmpty(x))
+			.do(x => console.log('attributeSet'))
 			.do(console.log)
 			.share();
-
-		const attributesSourceDoubled = attributesSource
-			.mergeMap(function(x) {
-				return Observable.from([x, x], queue);
-			})
-			.share();
-
-//		// TODO end attribute source as soon as we can (before children). It emits on close tag right now.
-//		const attributeSource = rxSax.fromSAXEvent('attribute')
-//			.share()
-//			.mergeMap(function(x) {
-//				return Observable.from([x, x], queue);
-//			})
-//			// making open tags arrive before their attributes, unlike the default for sax.js
-//			.delayWhen(a => openTagFullSource)
-//			.share();
+		//*/
 
 		const saxSource =  Observable.merge(
 				openTagFullSource
@@ -270,40 +264,18 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 							} 
 						};
 					}),
-				attributeSourceSlow,
-				textSource
-					.map(function(text) {
+				attributeSource
+					.map(function(attribute) {
 						return {
-							type: 'text',
-							value: text
+							type: 'attribute',
+							value: attribute
 						};
 					}),
-				closeTagSource
-					.map(function(closeTag) {
+				attributeSetSource
+					.map(function(attributeSet) {
 						return {
-							type: 'close',
-							value: closeTag
-						};
-					}),
-
-				queue
-		);
-
-		const saxSourceAttributes =  Observable.merge(
-				openTagMinSource
-					.map(function(openTag) {
-						return {
-							type: 'open',
-							value: {
-								tagName: openTag.name,
-							} 
-						};
-					}),
-				attributesSource
-					.map(function(attributes) {
-						return {
-							type: 'attributes',
-							value: attributes
+							type: 'attributeSet',
+							value: attributeSet
 						};
 					}),
 				textSource
@@ -327,53 +299,45 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 		const outputSource = Observable.from(selectors)
 			// TODO add types for acc and output
 			.reduce(function(acc, selector: string) {
-				if (selector.match(/@\*$/)) {
-					console.log(`selector: ${selector}`)
-					const openCloseSource = createOpeningsClosingsSourceAttributes(
-							openTagMinSource,
-							attributesSourceDoubled,
-							textSource,
-							closeTagSource,
-							selector
-					)
-						.share();
+				const openCloseSource = createOpeningsClosingsSource(
+						openTagStartSource,
+						openTagFullSource,
+						attributeSource,
+						attributeSetSource,
+						textSource,
+						closeTagSource,
+						selector
+				)
+					.share();
 
-					acc[selector] = saxSourceAttributes
-						.windowToggle(openCloseSource.filter(x => x), function(x) {
-							return openCloseSource
-								.filter(x => !x)
-						})
-						.mergeMap(function(subO) {
-							let saxState = new SaxState();
-							return subO
-								.reduce(function(subAcc, {type, value}) {
-									console.log(`type: ${type}`);
-									return saxState[type](value);
-								}, saxState.init());
-						})
-				} else {
-					const openCloseSource = createOpeningsClosingsSource(
-							openTagFullSource,
-							attributeSourceSlowDoubled,
-							textSource,
-							closeTagSource,
-							selector
-					)
-						.share();
+				acc[selector] = saxSource
+					//.do(x => console.log(`ln302`))
+					//.do(console.log)
+					.windowToggle(openCloseSource.filter(x => x), function(x) {
+						return openCloseSource
+							.filter(x => !x)
+					})
+					//.do(x => console.log(`ln310`))
+					//.do(console.log)
+					.mergeMap(function(subO) {
+						let saxState = new SaxState();
+						return subO
+							// NOTE this filter is needed so that we don't add attributes to elements when
+							// the attributes are already in the 'attributes' property of the element.
+							// TODO it would probably be cleaner for this logic to go into the openingsClosingsSource
+							// instead of here, maybe by refactoring stateStack to only accept attributes and
+							// attributeSets when the selector ends in "@*" or "@MY_ATTR_NAME".
+							.filter(function({type, value}, i) {
+								return i === 0 || ['attribute', 'attributeSet'].indexOf(type) === -1;
+							})
+							.reduce(function(subAcc, {type, value}, i) {
+								//console.log(`type: ${type}`);
+								return saxState[type](value);
+							}, saxState.init());
+					})
+					//.do(x => console.log(`ln318`))
+					//.do(console.log)
 
-					acc[selector] = saxSource
-						.windowToggle(openCloseSource.filter(x => x), function(x) {
-							return openCloseSource
-								.filter(x => !x)
-						})
-						.mergeMap(function(subO) {
-							let saxState = new SaxState();
-							return subO
-								.reduce(function(subAcc, {type, value}) {
-									return saxState[type](value);
-								}, saxState.init());
-						})
-				}
 				/*
 				const openCloseSourceNoStop = getOpenCloseSource(state, sharedAttributeSource.filter((x, i) => i % 2 === 0), sharedAttributeSource.filter((x, i) => i % 2 === 1))
 				const openSource = openCloseSourceNoStop.filter(x => x);
