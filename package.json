@@ -11,7 +11,8 @@
     "compile:xpathts": "pegjs src/topublish/rx-sax/XPathParser.pegjs && mv src/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.ts && echo ok || echo not ok",
     "compile:xpath": "mkdir -p lib/topublish/rx-sax && touch lib/topublish/rx-sax/XPathParser.js && rm lib/topublish/rx-sax/XPathParser.js && pegjs -o lib/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.pegjs && echo ok || echo not ok",
     "prepublish": "npm run compile:es5",
-    "test": "echo 'Get more/better tests working, please!' && node ./test/node-test-streaming.js"
+    "test": "echo 'Get more/better tests working, please!' && node ./test/node-test-streaming.js",
+    "test:rx-sax": "mocha ./src/topublish/rx-sax/test/spec/api.js"
   },
   "keywords": [
     "gpml",
@@ -42,16 +43,19 @@
     "JSONStream": "~0.9.0",
     "adm-zip": "^0.4.7",
     "bridgedb": "^6.0.0-14",
+    "chai": "^3.5.0",
     "colors": "~0.6.2",
     "deep-diff": "~0.2.0",
     "event-stream": "~3.1.7",
     "figlet": "~1.0.8",
     "mkdirp": "^0.5.1",
+    "mocha": "^3.4.2",
     "npm-run-all": "^4.0.2",
     "pegjs": "^0.10.0",
     "pretty-data": "~0.40.0",
     "pretty-error": "^1.2.0",
     "rdflib": "git://github.com/ckristo/rdflib.js.git#a5395dd5249ce383d0ecf6e087c36aa77cb3964f",
+    "sinon": "^2.3.1",
     "typescript": "^2.2.2",
     "webpack": "^2.4.1",
     "xmldom": "^0.1.19"

@@ -1,5 +1,3 @@
-/// <reference path="../gpml2pvjson.d.ts" />
-
 import {keys, merge} from 'lodash';
 import * as He from 'he';
 import {generatePublicationXrefId, supportedNamespaces} from './gpml-utilities';
@@ -13,7 +11,6 @@ import {Observable} from 'rxjs/Observable';
 import 'rxjs/add/observable/fromEventPattern';
 import 'rxjs/add/observable/merge';
 
-//import {parse} from './topublish/rx-sax/rx-sax';
 import {RxSax} from './topublish/rx-sax/rx-sax';
 
 import 'rxjs/add/operator/do';
@@ -142,18 +139,19 @@ export function convertStreaming(inputStream: any, pathwayIri?: string) {
 	const selectors = [
 		//'/Pathway',
 		//'/Pathway/@Name',
-		'/Pathway/@*',
-		'/Pathway/DataNode',
-		//'/Pathway/DataNode/@GraphId',
+		//'/Pathway/@*',
+		//'/Pathway/DataNode',
+		'/Pathway/DataNode/@GraphId',
 		//'/Pathway/DataNode/@*',
-		'/Pathway/Label',
-		'/Pathway/Label/@*',
+		//'/Pathway/Label',
+		//'/Pathway/Label/@*',
 	];
 
 	const rxSax = new RxSax(inputStream);
 	return rxSax.parse(selectors)
 		.mergeMap(function(x) {
 			return Observable.merge([
+				/*
 				x['/Pathway/@*']
 					.map(function(metadata) {
 						//console.log('metadata167');
@@ -163,12 +161,14 @@ export function convertStreaming(inputStream: any, pathwayIri?: string) {
 				x['/Pathway/DataNode'],
 				x['/Pathway/Label/@*'],
 				x['/Pathway/Label'],
+				//*/
+				x['/Pathway/DataNode/@GraphId'],
 			]);
 		})
-		//.do(x => console.log('next180'), console.error, x => console.log('complete180'))
+		.do(x => console.log('next180'), console.error, x => console.log('complete180'))
 		.mergeAll()
-		//.do(x => console.log('next182'), console.error, x => console.log('complete182'))
-		//.do(console.log)
+		.do(x => console.log('next182'), console.error, x => console.log('complete182'))
+		.do(console.log)
 		.toArray()
 
 //  .mergeMap(function(x) {

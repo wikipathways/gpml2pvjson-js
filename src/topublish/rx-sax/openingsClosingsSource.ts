@@ -82,14 +82,6 @@ export function create<ATTR_NAMES_AND_TYPES>(
 				openCloseSource = getOpenCloseSource(state, sharedAttributeSource.filter((x, i) => i % 2 === 0), sharedAttributeSource.filter((x, i) => i % 2 === 1))
 			} else if (state instanceof AttributeSetState) {
 				openCloseSource = getOpenCloseSource(state, sharedAttributeSetSource.filter((x, i) => i % 2 === 0), sharedAttributeSetSource.filter((x, i) => i % 2 === 1))
-				//openCloseSource = getOpenCloseSource(state, sharedAttributeSetSource, sharedAttributeSetSource.mapTo(true))
-				//openCloseSource = getOpenCloseSource(state, sharedOpenTagFullSource.delayWhen(x => sharedAttributeSetSource), sharedAttributeSetSource.mapTo(true))
-				//openCloseSource = getOpenCloseSource(state, sharedAttributeSetSource, sharedAttributeSetSource.mapTo(true))
-				/*
-				const openCloseSourceNoStop = getOpenCloseSource(state, sharedAttributeSource.filter((x, i) => i % 2 === 0), sharedAttributeSource.filter((x, i) => i % 2 === 1))
-				const openSource = openCloseSourceNoStop.filter(x => x);
-				openCloseSource = openCloseSourceNoStop.takeUntil(sharedOpenTagFullSource.skipUntil(openSource));
-				//*/
 			} else {
 				openCloseSource = getOpenCloseSource(state, sharedOpenTagFullSource, sharedCloseTagSource);
 			}

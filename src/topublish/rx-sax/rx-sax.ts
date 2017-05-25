@@ -158,10 +158,12 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 		const closeTagSource = rxSax.fromSAXEvent('closetag').share() as Observable<string>;
 
 		const attributeSource = rxSax.fromSAXEvent('attribute')
+			// NOTE openingsClosingsSource needs openTagFull before attribute
+			.delayWhen(x => openTagFullSource)
 			.mergeMap(function(subO) {
 				return Observable.merge([subO, subO], queue)
 			})
-			.share();
+			.share() as Observable<SAXAttribute>;
 
 		const attributeSetSource = openTagFullSource
 			.map(x => x.attributes)
@@ -184,10 +186,12 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 						};
 					}),
 				attributeSource
-					.map(function(attribute) {
+					.map(function({name, value}) {
 						return {
 							type: 'attribute',
-							value: attribute
+							value: {
+								[name]: value
+							}
 						};
 					}),
 				attributeSetSource
@@ -246,7 +250,6 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 								return i === 0 || ['attribute', 'attributeSet'].indexOf(type) === -1;
 							})
 							.reduce(function(subAcc, {type, value}, i) {
-								//console.log(`type: ${type}`);
 								return saxState[type](value);
 							}, saxState.init());
 					})
