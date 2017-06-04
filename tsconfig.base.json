@@ -10,11 +10,11 @@
 		"pretty": true
 	},
 	"files": [
-		"src/index.ts",
-		"src/topublish/rx-sax/XPathParser.d.ts",
+		"gpml2pvjson.d.ts",
 		"rgbcolor.d.ts",
 		"sax.d.ts",
-		"gpml2pvjson.d.ts"
+		"src/index.ts",
+		"src/topublish/rx-sax/XPathParser.d.ts"
 	],
 	"exclude": [
 		"dist/**/*",

@@ -58,33 +58,29 @@ export let supportedNamespaces = [
 	'http://genmapp.org/GPML/2007'
 ];
 
-export function extendDefaults(gpmlElement, defaults) {
-	return gpmlElement;
-};
-
 export function applyDefaults(gpmlElement, defaultsArray) {
 	var defaultsArrayClone = cloneDeep(defaultsArray);
 	// from http://lodash.com/docs#partialRight
 	return reduce(defaultsArrayClone, function(accumulator, defaults) {
-		return defaultsDeep(accumulator, defaults);
+		defaultsDeep(accumulator.attributes, defaults);
+		return accumulator;
 	}, gpmlElement);
 };
 
 export function convertAttributesToJson(gpmlElement, dataElement, converter, attributeDependencyOrder) {
-	var converterKeys = keys(converter);
-	var attributeList, attributes;
-	attributes = gpmlElement.attributes;
-	var attributeKeys = keys(attributes);
-	var handledAttributeKeys = intersection(converterKeys, attributeKeys);
+	const converterKeys = keys(converter);
+	const attributes = gpmlElement.attributes;
+	const attributeKeys = keys(attributes);
+	const handledAttributeKeys = intersection(converterKeys, attributeKeys);
 	if (handledAttributeKeys.length < attributes.length) {
 		var unhandledAttributeKeys = difference(converterKeys, attributeKeys);
-		console.warn('No handler for attribute(s) "' + unhandledAttributeKeys.join(', ') + '" for element "' + gpmlElement.name + '"');
+		console.warn('No handler for attribute(s) "' + unhandledAttributeKeys.join(', ') + '" for element "' + gpmlElement.tagName + '"');
 	}
 
-	attributeList = map(handledAttributeKeys, function(attributeKey) {
+	const attributeList = map(handledAttributeKeys, function(attributeKey) {
 		return {
 			name: attributeKey,
-			value: attributes[attributeKey].value,
+			value: attributes[attributeKey],
 			dependencyOrder: attributeDependencyOrder.indexOf(attributeKey),
 		};
 	});
@@ -96,6 +92,10 @@ export function convertAttributesToJson(gpmlElement, dataElement, converter, att
 			})
 			.filter(function(attribute) {
 				return typeof attribute.value !== 'undefined' && !isNaN(attribute.value) && attribute.value !== null;
+				//const [key, value] = toPairs(attribute);
+				//return typeof value !== 'undefined' && value !== null;
+				// TODO should we check for !isNaN?
+				//return typeof value !== 'undefined' && !isNaN(value) && value !== null;
 			});
 		}
 		attributeList.forEach(function(attributeListItem) {

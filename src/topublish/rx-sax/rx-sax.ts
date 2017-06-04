@@ -1,3 +1,5 @@
+// TODO review namespace handling. Is it correct?
+
 import {defaults, isEmpty} from 'lodash';
 import * as sax from 'sax';
 import {Observable} from 'rxjs/Observable';
@@ -21,6 +23,17 @@ export interface SAXAttribute {
 	name: string;
 	value: string;
 }
+
+export type SimpleAttributeMap = {
+	[key: string]: string;
+};
+
+export type SimpleElementPicked = Pick<Element, 'tagName' | 'textContent'>;
+export interface SimpleElement extends SimpleElementPicked {
+	attributes: SimpleAttributeMap;
+	children: SimpleElement[];
+}
+export type SimpleNode = SimpleElement | SimpleAttributeMap;
 
 /*
 State
@@ -103,6 +116,7 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 	inputSource: Observable<string>;
 	endSource: any;
 	saxStream: any;
+	_parser: any;
 	constructor(inputSource: Observable<string>) {
 		this.inputSource = inputSource;
 		// stream usage
@@ -112,6 +126,7 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 			trim: true
 		});
 		this.endSource = this.fromSAXEventNoStop('end');
+		this._parser = saxStream._parser;
 	}
 
 	fromSAXEventNoStop(eventName): Observable<SAXOpenTag<ATTR_NAMES_AND_TYPES>|SAXAttribute|string> {
@@ -148,7 +163,7 @@ export class RxSax<ATTR_NAMES_AND_TYPES> {
 		this.saxStream.end();
 	}
 
-	parse(selectors: string[]) {
+	parse(selectors: string[]): Observable<SimpleNode> {
 		const rxSax = this;
 		const {inputSource, endSource} = this;
 

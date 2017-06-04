@@ -6,12 +6,17 @@
   "typings": "lib/index.d.ts",
   "bin": "./bin/gpml2pvjson",
   "scripts": {
-    "compile:es5": "npm run compile:xpath && tsc --project tsconfig.json && echo ok || echo not ok",
+    "compile:es5": "npm run copyJSON && npm run compile:xpath && tsc --project tsconfig.json && echo ok || echo not ok",
     "compile:es51": "tsc --project tsconfig.json && echo ok || echo not ok",
     "compile:xpathts": "pegjs src/topublish/rx-sax/XPathParser.pegjs && mv src/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.ts && echo ok || echo not ok",
     "compile:xpath": "mkdir -p lib/topublish/rx-sax && touch lib/topublish/rx-sax/XPathParser.js && rm lib/topublish/rx-sax/XPathParser.js && pegjs -o lib/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.pegjs && echo ok || echo not ok",
+    "compile:xsd": "rm -rf cache/* xmlns/* && node node_modules/cxsd/cxsd-cli.js http://0.0.0.0:8080/GPML2013a.xsd && npm run compile:xsd:mv",
+    "compile:xsd:mv": "mv ./xmlns/www.biopax.org/release/biopax-level3.owl_.d.ts ./xmlns/www.biopax.org/release/biopax-level3.owl.d.ts && mv ./xmlns/www.biopax.org/release/biopax-level3.owl_.js ./xmlns/www.biopax.org/release/biopax-level3.owl.js",
+    "compile:test": "tsc cxml-playground.ts",
+    "copyJSON": "cp src/*.json lib/ && echo ok || echo not ok",
     "prepublish": "npm run compile:es5",
     "test": "echo 'Get more/better tests working, please!' && node ./test/node-test-streaming.js",
+    "test:parse": "node ./cxml-playground.js",
     "test:rx-sax": "mocha ./src/topublish/rx-sax/test/spec/api.js"
   },
   "keywords": [
@@ -23,12 +28,14 @@
   "dependencies": {
     "@typed/hashmap": "^1.0.1",
     "@types/highland": "^1.14.30",
-    "@types/state-machine": "^2.3.30",
+    "circular-json": "^0.3.1",
     "commander": "^2.9.0",
+    "cxml": "^0.1.1",
+    "cxsd": "^0.1.1",
     "deep-freeze": "0.0.1",
     "he": "~0.4.1",
     "highland": "^2.10.5",
-    "immutable-assign": "^1.0.29",
+    "immutable-assign": "^1.0.34",
     "lodash": "^4.17.4",
     "ndjson": "^1.5.0",
     "rgbcolor": "^1.0.0",
@@ -56,8 +63,10 @@
     "pretty-error": "^1.2.0",
     "rdflib": "git://github.com/ckristo/rdflib.js.git#a5395dd5249ce383d0ecf6e087c36aa77cb3964f",
     "sinon": "^2.3.1",
+    "source-map-support": "^0.4.15",
     "typescript": "^2.2.2",
     "webpack": "^2.4.1",
+    "xml-js": "^1.3.2",
     "xmldom": "^0.1.19"
   },
   "repository": {

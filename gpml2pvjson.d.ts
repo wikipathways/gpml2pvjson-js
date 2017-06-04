@@ -2,6 +2,11 @@
 /// <reference path="sax.d.ts" />
 /// <reference path="src/topublish/rx-sax/XPathParser.d.ts" />
 
+declare module "*.json" {
+    const value: any;
+    export default value;
+}
+
 /* GPML */
 
 type GPMLAttributeNames = 'xmlns' |
@@ -37,11 +42,13 @@ type GPMLAttributeNames = 'xmlns' |
 													'Version';
 
 type GPMLClassNames = 'PublicationXref' |
+											'OpenControlledVocabulary' |
 											'Anchor' |
 											'Point' |
 											'Interaction' |
 											'GraphicalLine' |
 											'DataNode' |
+											'Label' |
 											'Shape' |
 											'Group' |
 											'InfoBox' |
@@ -137,7 +144,7 @@ type DataElementStringProperties = 'author' |
 																		'lastModified' |
 																		'license' |
 																		'maintainer' |
-																		'name' |
+																		'tagName' |
 																		'organism' |
 																		'kaavioType' |
 																		'standardName' |
@@ -214,7 +221,7 @@ declare type DataElementMap = {
 
 declare type DataManual = {
 	'@context'?: string | any;
-	name: string;
+	tagName: string;
 	organism: string;
 	type: string | string[];
 	// NOTE that data.elementMap may have more entries than data.elements.
@@ -237,6 +244,22 @@ declare type DataManual = {
 	height: number;
 	backgroundColor: string;
 };
+
+declare type Container = {
+	// NOTE that data.elementMap may have more entries than data.elements.
+	// For example, if the source GPML has one or more empty Groups, these
+	// Groups will be in data.elementMap but not in data.elements.
+	elementMap: DataElementMap,
+	elements: DataElement[],
+	GraphIdToGroupId: {
+		[key: string]: string
+	},
+	containedIdsByGroupId: {
+		[key: string]: string[]
+	},
+	node: string[];
+	edge: string[];
+} & {[K in GPMLClassNames]?: string[]};
 
 declare type Data = DataElementsByClass & DataManual;
 

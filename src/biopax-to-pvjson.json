@@ -1,0 +1,8 @@
+{
+	"bp:ID": "dbId",
+	"bp:DB": "dbName",
+	"bp:TITLE": "title",
+	"bp:SOURCE": "source",
+	"bp:YEAR": "year",
+	"bp:AUTHORS": "author"
+}

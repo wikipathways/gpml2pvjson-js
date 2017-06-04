@@ -4,12 +4,22 @@ module.exports = {
   entry: "./src/index.ts",
   output: {
     path: path.join(__dirname, "dist"),
-    filename: "wikipathways-api-client.js"
+    filename: "gpml2pvjson.js"
   },
   resolve: {
-    extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js", ".jsx", "json"]
+    extensions: [
+      ".webpack.js",
+      ".web.js",
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".json"
+    ]
   },
   module: {
-    loaders: [{ test: /\.ts(x?)/, loaders: ["shebang-loader", "ts-loader"] }]
+    loaders: [
+      { test: /(\.ts(x?))(|\.json)/, loaders: ["shebang-loader", "ts-loader"] }
+    ]
   }
 };

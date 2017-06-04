@@ -3,22 +3,10 @@ import { applyDefaults as baseApplyDefaults, intersectsLSV, unionLSV } from './g
 
 let INTERACTION_DEFAULTS = {
 	attributes: {
-		Color: {
-			name: 'Color',
-			value: '000000'
-		},
-		ConnectorType: {
-			name: 'ConnectorType',
-			value: 'Straight'
-		},
-		FillColor: {
-			name: 'FillColor',
-			value: 'Transparent'
-		},
-		LineThickness: {
-			name: 'LineThickness',
-			value: 1
-		}
+		Color: '000000',
+		ConnectorType: 'Straight',
+		FillColor: 'Transparent',
+		LineThickness: 1,
 	}
 };
 

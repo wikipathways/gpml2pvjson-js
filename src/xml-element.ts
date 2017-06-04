@@ -37,15 +37,12 @@ function parseAsNonNaNNumber(i: number | string): number {
 
 const DEFAULTS = {
 	attributes: {
-		FillColor: {
-			name: 'FillColor',
-			value: 'ffffff'
-		}
+		FillColor: 'ffffff',
 	}
 };
 
 export function applyDefaults(gpmlElement) {
-	const gpmlElementName = gpmlElement.name;
+	const gpmlElementName = gpmlElement.tagName;
 	if (defaultsAppliers.hasOwnProperty(gpmlElementName)) {
 		return defaultsAppliers[gpmlElementName](gpmlElement, DEFAULTS);
 	} else {
@@ -55,7 +52,7 @@ export function applyDefaults(gpmlElement) {
 
 export function fromGPML(data: Data, dataElement: DataElement & Data, inputGPMLElement: GPMLElement) {
 	const gpmlElement = applyDefaults(inputGPMLElement);
-	const gpmlElementName = dataElement.gpmlElementName = gpmlElement.name;
+	const gpmlElementName = dataElement.gpmlElementName = gpmlElement.tagName;
 
 	// Note side-effects required for these values,
 	// because subsequent values depend on them.
@@ -440,7 +437,7 @@ export function fromGPML(data: Data, dataElement: DataElement & Data, inputGPMLE
 		},
 		Name: function(nameValue) {
 			if (nameValue) {
-				dataElement.name = decode(nameValue);
+				dataElement.tagName = decode(nameValue);
 				const splitName = nameValue.split(' (');
 				if (!!splitName &&
 						splitName.length === 2 &&
@@ -571,9 +568,6 @@ export function fromGPML(data: Data, dataElement: DataElement & Data, inputGPMLE
 		}
 	};
 
-	dataElement.type = dataElement.type || [];
-	dataElement.type.push(gpmlElementName);
-
 	dataElement = convertAttributesToJson(
 			gpmlElement,
 			dataElement,
@@ -581,9 +575,18 @@ export function fromGPML(data: Data, dataElement: DataElement & Data, inputGPMLE
 			ATTRIBUTE_DEPENDENCY_ORDER
 	);
 
+	console.log('data');
+	console.log(data);
+
+	console.log('dataElement');
+	console.log(dataElement);
+
+	console.log('inputGPMLElement');
+	console.log(inputGPMLElement);
+
 	data[gpmlElementName].push(dataElement.id);
 
-	if (gpmlElement.name !== 'Pathway') {
+	if (gpmlElement.tagName !== 'Pathway') {
 		data.elementMap[dataElement.id] = dataElement;
 	} else {
 		data = dataElement;
