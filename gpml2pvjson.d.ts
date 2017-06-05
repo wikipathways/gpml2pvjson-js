@@ -1,11 +1,7 @@
 /// <reference path="rgbcolor.d.ts" />
 /// <reference path="sax.d.ts" />
 /// <reference path="src/topublish/rx-sax/XPathParser.d.ts" />
-
-declare module "*.json" {
-    const value: any;
-    export default value;
-}
+/// <reference path="src/json.d.ts" />
 
 /* GPML */
 

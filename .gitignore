@@ -5,3 +5,4 @@ data-input
 data-output
 node_modules
 config.json
+cache/

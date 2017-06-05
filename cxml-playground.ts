@@ -1,11 +1,190 @@
-import {assignInWith} from 'lodash';
+/// <reference path="src/json.d.ts" />
+
+import {assignInWith, isArray} from 'lodash';
 import {defaultsDeepAll} from 'lodash/fp';
 import * as cxml from "cxml";
 import * as example from "./xmlns/pathvisio.org/GPML/2013a";
+import * as GPMLDefaults from "./src/GPMLDefaults.json";
+import * as BIOPAX_TO_PVJSON from './src/biopax-to-pvjson.json';
 var fs = require("fs");
 var path = require("path");
 
 var parser = new cxml.Parser();
+
+function customizer(objValue, srcValue) {
+	if (typeof objValue !== 'object') {
+		return objValue;
+	} else {
+		if (isArray(objValue)) {
+			return objValue
+				.filter(x => typeof x !== 'object' || !x.hasOwnProperty('_exists'))
+				.map(function(x) {
+					return assignInWith(x, srcValue, customizer);
+				});
+		} else if (objValue.hasOwnProperty('_exists') && objValue['_exists'] === false) {
+			return srcValue;
+		} else {
+			return assignInWith(objValue, srcValue, customizer);
+		}
+	}
+}
+
+const FontAttributesDefaults = GPMLDefaults['FontAttributes'];
+const ShapeStyleAttributesDefaults = GPMLDefaults['ShapeStyleAttributes'];
+const DataNodeDefaults = defaultsDeepAll([
+	GPMLDefaults['DataNode'],
+	{
+		Graphics: defaultsDeepAll([FontAttributesDefaults, ShapeStyleAttributesDefaults])
+	}
+]);
+const StateDefaults = defaultsDeepAll([
+	GPMLDefaults['State'],
+	{
+		Graphics: defaultsDeepAll([ShapeStyleAttributesDefaults])
+	}
+]);
+const GraphicalLineDefaults = defaultsDeepAll([
+	GPMLDefaults['GraphicalLine'],
+	{
+		Graphics: defaultsDeepAll([ShapeStyleAttributesDefaults])
+	}
+]);
+const InteractionDefaults = defaultsDeepAll([
+	GPMLDefaults['Interaction'],
+	{
+		Graphics: defaultsDeepAll([ShapeStyleAttributesDefaults])
+	}
+]);
+const LabelDefaults = defaultsDeepAll([
+	GPMLDefaults['Label'],
+	{
+		Graphics: defaultsDeepAll([FontAttributesDefaults, ShapeStyleAttributesDefaults])
+	}
+]);
+const ShapeDefaults = defaultsDeepAll([
+	GPMLDefaults['Shape'],
+	{
+		Graphics: defaultsDeepAll([FontAttributesDefaults, ShapeStyleAttributesDefaults])
+	}
+]);
+const GroupDefaults = GPMLDefaults['Group'];
+
+parser.attach(
+  class DataNodeHandler extends example.document.DataNode.constructor {
+		constructor() {
+			super();
+		}
+
+    _before() {
+    }
+
+    _after() {
+			assignInWith(this, DataNodeDefaults, customizer)
+    }
+	}
+);
+
+parser.attach(
+  class StateHandler extends example.document.State.constructor {
+		constructor() {
+			super();
+		}
+
+    _before() {
+    }
+
+    _after() {
+			assignInWith(this, StateDefaults, customizer)
+    }
+	}
+);
+
+parser.attach(
+  class GraphicalLineHandler extends example.document.GraphicalLine.constructor {
+		constructor() {
+			super();
+		}
+
+    _before() {
+    }
+
+    _after() {
+			assignInWith(this, GraphicalLineDefaults, customizer)
+    }
+	}
+);
+
+parser.attach(
+  class InteractionHandler extends example.document.Interaction.constructor {
+		constructor() {
+			super();
+		}
+
+    _before() {
+    }
+
+    _after() {
+			assignInWith(this, InteractionDefaults, customizer)
+    }
+	}
+);
+
+parser.attach(
+  class LabelHandler extends example.document.Label.constructor {
+		constructor() {
+			super();
+		}
+
+    _before() {
+    }
+
+    _after() {
+			assignInWith(this, LabelDefaults, customizer)
+    }
+	}
+);
+
+parser.attach(
+  class ShapeHandler extends example.document.Shape.constructor {
+		constructor() {
+			super();
+		}
+
+    _before() {
+    }
+
+    _after() {
+			assignInWith(this, ShapeDefaults, customizer)
+    }
+	}
+);
+
+parser.attach(
+  class GroupHandler extends example.document.Group.constructor {
+		constructor() {
+			super();
+		}
+
+    _before() {
+    }
+
+    _after() {
+			assignInWith(this, GroupDefaults, customizer)
+    }
+	}
+);
+
+var result = parser.parse(
+  //fs.createReadStream(path.resolve(__dirname, "simple.gpml")),
+  fs.createReadStream(path.resolve(__dirname, "test/input/WP554_77712.gpml")),
+  //fs.createReadStream(path.resolve(__dirname, "test/input/WP1_73346.gpml")),
+  example.document
+);
+
+result.then(doc => {
+  console.log("\n=== Final Result ===\n");
+  console.log(JSON.stringify(doc, null, 2));
+});
 
 /*
 var CircularJSON = require('circular-json');
@@ -58,236 +237,6 @@ console.log(CircularJSON.stringify(dataNodeType, null, '  '));
 //  }
 //);
 
-function customizer(objValue, srcValue) {
-	if (typeof objValue !== 'object') {
-		return objValue;
-	} else {
-		if (objValue.hasOwnProperty('_exists') && objValue['_exists'] === false) {
-			return srcValue;
-		} else {
-			return assignInWith(objValue, srcValue, customizer);
-		}
-	}
-  //return objValue.hasOwnProperty('_exists') && objValue['_exists'] === false ? srcValue : objValue;
-}
-
-const FontAttributesDefaults = {
-	FontName: 'Arial',
-	FontStyle: 'Normal',
-	FontDecoration: 'Normal',
-	FontStrikethru: 'Normal',
-	FontWeight: 'Normal',
-	FontSize: 12,
-	Align: 'Center',
-	Valign: 'Top',
-};
-
-const ShapeStyleAttributesDefaults = {
-	Color: 'Black',
-	LineStyle: 'Solid',
-	LineThickness: 1,
-};
-
-const DataNodeDefaults = {
-	Type: 'Unknown',
-	Graphics: defaultsDeepAll([{
-		FillColor: 'White',
-		ShapeType: 'Rectangle',
-		//ZOrder: 0,
-	}, FontAttributesDefaults, ShapeStyleAttributesDefaults])
-};
-
-const StateDefaults = {
-	StateType: 'Unknown',
-	Graphics: defaultsDeepAll([{
-		FillColor: 'White',
-		ShapeType: 'Rectangle',
-		//ZOrder: 0,
-	}, ShapeStyleAttributesDefaults])
-};
-
-const GraphicalLineDefaults = {
-	Graphics: defaultsDeepAll([{
-		Color: 'Black',
-		LineStyle: 'Solid',
-		ConnectorType: 'Straight',
-		//ZOrder: 0,
-	}, ShapeStyleAttributesDefaults])
-};
-
-const GraphicalLinePointDefaults = {
-	ArrowHead: 'Line',
-};
-
-const GraphicalLineAnchorDefaults = {
-	Shape: 'None',
-};
-
-const InteractionDefaults = {
-	Graphics: defaultsDeepAll([{
-		Color: 'Black',
-		LineStyle: 'Solid',
-		ConnectorType: 'Straight',
-		//ZOrder: 0,
-	}, ShapeStyleAttributesDefaults])
-};
-
-const InteractionPointDefaults = {
-	ArrowHead: 'Line',
-};
-
-const InteractionAnchorDefaults = {
-	Shape: 'None',
-};
-
-const LabelDefaults = {
-	Graphics: defaultsDeepAll([{
-		FillColor: 'Transparent',
-		ShapeType: 'None',
-		//ZOrder: 0,
-	}, FontAttributesDefaults, ShapeStyleAttributesDefaults])
-};
-
-const ShapeDefaults = {
-	Graphics: defaultsDeepAll([{
-		FillColor: 'Transparent',
-		Rotation: 'Top',
-		//ZOrder: 0,
-	}, FontAttributesDefaults, ShapeStyleAttributesDefaults])
-};
-
-const GroupDefaults = {
-	Style: 'None',
-};
-
-parser.attach(
-  class DataNodeHandler extends example.document.DataNode.constructor {
-		constructor() {
-			super();
-		}
-
-    _before() {
-    }
-
-    _after() {
-			assignInWith(this, DataNodeDefaults, customizer)
-    }
-	}
-);
-
-parser.attach(
-  class StateHandler extends example.document.State.constructor {
-		constructor() {
-			super();
-		}
-
-    _before() {
-    }
-
-    _after() {
-			assignInWith(this, StateDefaults, customizer)
-    }
-	}
-);
-
-parser.attach(
-  class GraphicalLineHandler extends example.document.GraphicalLine.constructor {
-		constructor() {
-			super();
-		}
-
-    _before() {
-    }
-
-    _after() {
-			assignInWith(this, GraphicalLineDefaults, customizer)
-			this.Graphics.Point.forEach(function(Point) {
-				assignInWith(Point, GraphicalLinePointDefaults, customizer)
-			});
-			this.Graphics.Anchor.forEach(function(Anchor) {
-				assignInWith(Anchor, GraphicalLineAnchorDefaults, customizer)
-			});
-    }
-	}
-);
-
-parser.attach(
-  class InteractionHandler extends example.document.Interaction.constructor {
-		constructor() {
-			super();
-		}
-
-    _before() {
-    }
-
-    _after() {
-			assignInWith(this, InteractionDefaults, customizer)
-			this.Graphics.Point.forEach(function(Point) {
-				assignInWith(Point, InteractionPointDefaults, customizer)
-			});
-			this.Graphics.Anchor.forEach(function(Anchor) {
-				assignInWith(Anchor, InteractionAnchorDefaults, customizer)
-			});
-    }
-	}
-);
-
-parser.attach(
-  class LabelHandler extends example.document.Label.constructor {
-		constructor() {
-			super();
-		}
-
-    _before() {
-    }
-
-    _after() {
-			assignInWith(this, LabelDefaults, customizer)
-    }
-	}
-);
-
-parser.attach(
-  class ShapeHandler extends example.document.Shape.constructor {
-		constructor() {
-			super();
-		}
-
-    _before() {
-    }
-
-    _after() {
-			assignInWith(this, ShapeDefaults, customizer)
-    }
-	}
-);
-
-parser.attach(
-  class GroupHandler extends example.document.Group.constructor {
-		constructor() {
-			super();
-		}
-
-    _before() {
-    }
-
-    _after() {
-			assignInWith(this, GroupDefaults, customizer)
-    }
-	}
-);
-
-var result = parser.parse(
-  //fs.createReadStream(path.resolve(__dirname, "simple.gpml")),
-  //fs.createReadStream(path.resolve(__dirname, "test/input/WP554_77712.gpml")),
-  fs.createReadStream(path.resolve(__dirname, "test/input/WP1_73346.gpml")),
-  example.document
-);
-
-result.then(doc => {
-  console.log("\n=== Final Result ===\n");
-  console.log(JSON.stringify(doc, null, 2));
-});
 
 /*
 var xsd = require('xsd');
