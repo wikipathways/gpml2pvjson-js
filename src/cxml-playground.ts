@@ -1,6 +1,6 @@
 /// <reference path="./json.d.ts" />
 
-import {assignInWith, isArray} from 'lodash';
+import {assignInWith, isArray, values} from 'lodash';
 import {defaultsDeepAll} from 'lodash/fp';
 import * as cxml from "cxml";
 import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
@@ -9,27 +9,60 @@ import * as BIOPAX_TO_PVJSON from './biopax-to-pvjson.json';
 var fs = require("fs");
 var path = require("path");
 
+import {Observable} from 'rxjs/Observable';
+import 'rxjs/add/observable/from';
+import 'rxjs/add/operator/mergeAll';
+import 'rxjs/add/operator/mergeMap';
+
 import {CXMLRx} from './topublish/cxml-rx';
 var cXMLRx = new CXMLRx(
 		fs.createReadStream(path.resolve(__dirname, "../simple.gpml")),
 		GPML2013a
 );
-var wow = cXMLRx.parse(['/Pathway/DataNode']);
-wow['/Pathway/DataNode']
+const parsed = cXMLRx.parse([
+	'/Pathway/@Name',
+	'/Pathway',
 	/*
-	.mergeMap(function(x) {
-		return x['/Pathway/DataNode'];
-	})
+	'/Pathway/@Name',
+	'/Pathway/@*',
+	'/Pathway/Label/Graphics',
+	'/Pathway/Label/Graphics',
+	'/Pathway/DataNode',
+	'/Pathway/Label',
 	//*/
+]);
+
+Observable.from(values(parsed) as Observable<any>[])
+	.mergeMap(function(obs) {
+		return obs;
+	})
+	//.mergeAll()
 	.subscribe(function(x) {
-		console.log('x20');
-		console.log(x);
+		console.log('All23');
+		console.log(JSON.stringify(x, null, '  '));
 	}, function(err) {
-		console.log('err23');
 		throw err;
+	}, function() {
+		console.log('complete All')
 	});
 
-wow.init();
+/*
+parsed['/Pathway/DataNode']
+	.subscribe(function(x) {
+		console.log('DataNode23');
+		console.log(x);
+	}, function(err) {
+		throw err;
+	}, (x) => console.log('complete DataNode'));
+
+parsed['/Pathway/Label']
+	.subscribe(function(x) {
+		console.log('Label33');
+		console.log(x);
+	}, function(err) {
+		throw err;
+	}, (x) => console.log('complete Label'));
+//*/
 
 //var parser = new cxml.Parser();
 //

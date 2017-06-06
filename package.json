@@ -12,11 +12,11 @@
     "compile:xpath": "mkdir -p lib/topublish/rx-sax && touch lib/topublish/rx-sax/XPathParser.js && rm lib/topublish/rx-sax/XPathParser.js && pegjs -o lib/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.pegjs && echo ok || echo not ok",
     "compile:xsd": "rm -rf cache/* xmlns/* && node node_modules/cxsd/cxsd-cli.js http://0.0.0.0:8080/GPML2013a.xsd && npm run compile:xsd:mv",
     "compile:xsd:mv": "mv ./xmlns/www.biopax.org/release/biopax-level3.owl_.d.ts ./xmlns/www.biopax.org/release/biopax-level3.owl.d.ts && mv ./xmlns/www.biopax.org/release/biopax-level3.owl_.js ./xmlns/www.biopax.org/release/biopax-level3.owl.js",
-    "compile:test": "cp src/GPMLDefaults.json lib/ && tsc cxml-playground.ts",
+    "compile:test": "cp src/GPMLDefaults.json lib/ && tsc -p tsconfig.cxmlplayground.json",
     "copyJSON": "cp src/*.json lib/ && echo ok || echo not ok",
     "prepublish": "npm run compile:es5",
     "test": "echo 'Get more/better tests working, please!' && node ./test/node-test-streaming.js",
-    "test:parse": "node ./cxml-playground.js",
+    "test:parse": "node ./lib/cxml-playground.js",
     "test:rx-sax": "mocha ./src/topublish/rx-sax/test/spec/api.js"
   },
   "keywords": [

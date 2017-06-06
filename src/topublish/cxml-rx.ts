@@ -48,31 +48,46 @@ export class CXMLRx {
 		this._input = input;
 	}
 
-	parse(selectors) {
+	parse(selectors: string[]): Map<string, Observable<any>> {
 		const {_input, _parser, _schema} = this;
-		const outputSource = selectors
+
+		var result = _parser.parse(
+			_input,
+			_schema.document
+		);
+
+		return selectors
 			.reduce(function(acc, selector) {
-				console.log('ln55');
 				const subject = new Subject();
 				const parsedXPathItems = parseXPath(selector);
-				parsedXPathItems.shift();
-				const Extendible = parsedXPathItems
+				const attribute = parsedXPathItems[parsedXPathItems.length - 1].attribute;
+				const names = parsedXPathItems
 					.map(x => x.name)
+					.filter(x => x !== null);
+				const nameCount = names.length;
+//				if (names.length > 1) {
+//					// We apparently sometimes need to skip the first tagName, because it is equivalent to the document.
+//					// TODO why do we need to remove it for '/Pathway/DataNode' but not for just '/Pathway'?
+//					names.shift();
+//				}
+				const Extendible = names.slice(nameCount > 1 ? 1 : 0, nameCount)
 					.reduce(function(subAcc: typeof GPML2013a.document.DataNode, name) {
 						return subAcc[name];
 					}, _schema.document) as typeof GPML2013a.document.DataNode;
 
-				const attribute = parsedXPathItems[parsedXPathItems.length - 1].attribute;
 				_parser.attach(class CustomHandler extends Extendible.constructor {
 					constructor() {
 						super();
-						console.log('ln66');
 					}
 
 					_before() {
 						console.log('before');
-						if (attribute) {
+						if (attribute === '*') {
 							subject.next(this);
+						} else if (attribute) {
+							subject.next({
+								[attribute]: this[attribute]
+							});
 						}
 					}
 
@@ -88,26 +103,13 @@ export class CXMLRx {
 				acc[selector] = subject;
 					//.observeOn(queue)
 					//.takeUntil(result);
+				/*
+				result.then(function(data) {
+					subject.complete();
+				});
+				//*/
 
 				return acc;
-			}, {
-				init: function() {
-					console.log('ln97');
-					var result = _parser.parse(
-						_input,
-						_schema.document
-					);
-					//*
-					result.then(function(data) {
-						 console.log('data');
-						 console.log(data);
-						 //subject.complete();
-					});
-					//*/
-				}
-			});
-
-		//result.then(console.log);
-		return outputSource;
+			}, {}) as Map<string, Observable<any>>;
 	}
 }
