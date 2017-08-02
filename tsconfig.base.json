@@ -1,23 +1,23 @@
 {
-	"compilerOptions": {
-		"declaration": true,
-		"experimentalDecorators": true,
-		"inlineSourceMap": true,
-		"jsx": "react",
-		"moduleResolution": "node",
-		"noEmitOnError": true,
-		"noImplicitAny": false,
-		"pretty": true
-	},
-	"files": [
-		"gpml2pvjson.d.ts",
-		"rgbcolor.d.ts",
-		"sax.d.ts",
-		"src/index.ts",
-		"src/topublish/rx-sax/XPathParser.d.ts"
-	],
-	"exclude": [
-		"dist/**/*",
-		"tmp/**/*"
-    ]
+  "compilerOptions": {
+    "declaration": true,
+    "experimentalDecorators": true,
+    "inlineSourceMap": true,
+    "jsx": "react",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "noImplicitAny": false,
+    "pretty": true
+  },
+  "files": [
+    "gpml2pvjson.d.ts",
+    "highland.d.ts",
+    "rgbcolor.d.ts",
+    "sax.d.ts",
+    "src/index.ts"
+  ],
+  "exclude": [
+    "dist/**/*",
+    "tmp/**/*"
+  ]
 }

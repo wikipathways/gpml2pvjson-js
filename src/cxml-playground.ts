@@ -1,50 +1,59 @@
 /// <reference path="./json.d.ts" />
-
-import {assignInWith, isArray, values} from 'lodash';
-import {defaultsDeepAll} from 'lodash/fp';
-import * as cxml from "cxml";
+import "source-map-support/register";
+import { assignInWith, isArray, values } from "lodash";
+import { defaultsDeepAll } from "lodash/fp";
+import * as cxml from "@wikipathways/cxml";
 import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 import * as GPMLDefaults from "./GPMLDefaults.json";
-import * as BIOPAX_TO_PVJSON from './biopax-to-pvjson.json';
+import * as BIOPAX_TO_PVJSON from "./biopax-to-pvjson.json";
 var fs = require("fs");
 var path = require("path");
 
-import {Observable} from 'rxjs/Observable';
-import 'rxjs/add/observable/from';
-import 'rxjs/add/operator/mergeAll';
-import 'rxjs/add/operator/mergeMap';
+import { Observable } from "rxjs/Observable";
+import "rxjs/add/observable/from";
+import "rxjs/add/operator/mergeMap";
 
-import {CXMLRx} from './topublish/cxml-rx';
+import { CXMLRx } from "./topublish/cxml-rx";
 var cXMLRx = new CXMLRx(
-		fs.createReadStream(path.resolve(__dirname, "../simple.gpml")),
-		GPML2013a
+  fs.createReadStream(path.resolve(__dirname, "../simple.gpml")),
+  //fs.createReadStream(path.resolve(__dirname, "../test/input/WP554_77712.gpml")),
+  //fs.createReadStream(path.resolve(__dirname, "../test/input/WP1_73346.gpml")),
+  GPML2013a
 );
 const parsed = cXMLRx.parse([
+  "/Pathway/Label/Comment"
+  /*
+	'/Pathway/Graphics',
+	'/Pathway/Interaction/Graphics',
+	'/Pathway/Comment',
+	'/Pathway/Interaction/Graphics',
+	'/Pathway/Interaction/Graphics/Point',
+	'/Pathway/Label',
+	'/Pathway/DataNode',
 	'/Pathway/@Name',
 	'/Pathway',
-	/*
-	'/Pathway/@Name',
 	'/Pathway/@*',
 	'/Pathway/Label/Graphics',
 	'/Pathway/Label/Graphics',
-	'/Pathway/DataNode',
-	'/Pathway/Label',
 	//*/
 ]);
 
 Observable.from(values(parsed) as Observable<any>[])
-	.mergeMap(function(obs) {
-		return obs;
-	})
-	//.mergeAll()
-	.subscribe(function(x) {
-		console.log('All23');
-		console.log(JSON.stringify(x, null, '  '));
-	}, function(err) {
-		throw err;
-	}, function() {
-		console.log('complete All')
-	});
+  .mergeMap(function(obs) {
+    return obs;
+  })
+  .subscribe(
+    function(x) {
+      console.log("All23");
+      console.log(JSON.stringify(x, null, "  "));
+    },
+    function(err) {
+      throw err;
+    },
+    function() {
+      console.log("complete All");
+    }
+  );
 
 /*
 parsed['/Pathway/DataNode']

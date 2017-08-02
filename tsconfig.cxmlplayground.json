@@ -1,31 +1,31 @@
 {
-	"compilerOptions": {
-		"declaration": true,
-		"experimentalDecorators": true,
-		"inlineSourceMap": true,
-		"jsx": "react",
-		"moduleResolution": "node",
-		"noEmitOnError": true,
-		"noImplicitAny": false,
-		"pretty": true,
-		"lib": [
-			"dom",
-			"dom.iterable",
-			"es5",
-			"es6",
-			"scripthost"
-		],
-		"module": "commonjs",
-		"outDir": "./lib/",
-		"target": "es5"
-	},
-	"files": [
-		"./src/cxml-playground.ts",
-		"rgbcolor.d.ts",
-		"gpml2pvjson.d.ts"
-	],
-	"exclude": [
-		"dist/**/*",
-		"tmp/**/*"
-        ]
+  "compilerOptions": {
+    "declaration": true,
+    "experimentalDecorators": true,
+    "inlineSourceMap": true,
+    "jsx": "react",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "noImplicitAny": false,
+    "pretty": true,
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "es5",
+      "es6",
+      "scripthost"
+    ],
+    "module": "commonjs",
+    "outDir": "./lib/",
+    "target": "es5"
+  },
+  "files": [
+    "./src/cxml-playground.ts",
+    "rgbcolor.d.ts",
+    "gpml2pvjson.d.ts"
+  ],
+  "exclude": [
+    "dist/**/*",
+    "tmp/**/*"
+  ]
 }
