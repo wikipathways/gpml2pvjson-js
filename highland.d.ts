@@ -862,7 +862,7 @@ declare namespace Highland {
 		 *
 		 * _([1, 2, 3, 4]).scan1(add) // => 1, 3, 6, 10
 		 */
-    scan1<U>(memo: U, x: (memo: U, x: R) => U): Stream<U>;
+    scan1<U>(x: (memo: U, x: R) => U): Stream<U>;
 
     /**
 		 * Like the [errors](#errors) method, but emits a Stream end marker after

@@ -1,1 +1,1 @@
-export { convertStreaming } from "./toPvjson";
+export { GPML2013aToPVJSON } from "./toPvjson";
