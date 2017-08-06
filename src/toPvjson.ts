@@ -264,30 +264,142 @@ function processKV(gpmlElement, [gpmlKey, gpmlValue]) {
   }
 }
 
-function process(gpmlElementName, gpmlElement) {
-  const processed = fromPairs(
-    toPairs(gpmlElement).reduce(
-      (acc, x) => concat(acc, processKV(gpmlElement, x)),
-      []
-    )
-  );
-  processed.type = unionLSV(processed.type, gpmlElementName);
+// see
+// https://github.com/PathVisio/pathvisio/blob/3cb194f120de550ef2e102877965bed3c54a6a75/modules/org.pathvisio.core/src/org/pathvisio/core/biopax/BiopaxElement.java#L245
+export class GraphIdManager {
+  greatestAsInt: number;
+  constructor() {
+    this.greatestAsInt = parseInt("0xa00", 16);
+  }
 
-  return processed;
+  generateAndRecord() {
+    this.greatestAsInt += 1;
+    return this.greatestAsInt.toString(16);
+  }
+
+  recordExisting(graphIdAsHex) {
+    const { greatestAsInt } = this;
+    const graphIdAsInt = parseInt(graphIdAsHex, 16);
+    if (graphIdAsInt > greatestAsInt) {
+      this.greatestAsInt = graphIdAsInt;
+    }
+  }
 }
 
-//mutableAssign(GPML2013a.document.Pathway.Label[0].Graphics.constructor.prototype, new GPMLDefaults.Label().Graphics);
-//console.log("new GPMLDefaults.Label().Graphics");
-//console.log(new GPMLDefaults.Label().Graphics);
-//GPML2013a.document.Pathway.Label[0].Graphics.constructor.prototype.Color = new GPMLDefaults.Label().Graphics.Color;
-//GPML2013a.document.Pathway.Label[0].Graphics.constructor.prototype.ShapeType = new GPMLDefaults.Label().Graphics.ShapeType;
-//extendDeep(GPML2013a.document.Pathway.Label[0], GPMLDefaults.Label);
-/*
-GPML2013a.LabelType.prototype.Graphics.constructor.prototype.Color =
-  GPMLDefaults.Label.Graphics.Color;
-GPML2013a.document.Pathway.Label[0].Graphics.constructor.prototype.ShapeType =
-  GPMLDefaults.Label.Graphics.ShapeType;
-//*/
+export class Processor {
+  graphIdManager: GraphIdManager;
+  graphIdsByGraphRef: any;
+  graphIdsByGroupRef: any;
+  promisedGraphIdByGroupId: any;
+  promisedPvjsonElementByGraphId: any;
+  pvjsonElementsByGraphIdStream: Highland.Stream<any>;
+  groupIdToGraphIdStream: Highland.Stream<any>;
+  constructor() {
+    this.graphIdManager = new GraphIdManager();
+
+    this.graphIdsByGraphRef = {};
+    this.graphIdsByGroupRef = {};
+
+    this.promisedGraphIdByGroupId = {};
+    this.promisedPvjsonElementByGraphId = {};
+
+    this.pvjsonElementsByGraphIdStream = hl();
+    this.groupIdToGraphIdStream = hl();
+  }
+
+  cachePvjsonElementByGraphId = pvjsonElement => {
+    const { id } = pvjsonElement;
+    const { promisedPvjsonElementByGraphId } = this;
+    if (!promisedPvjsonElementByGraphId.hasOwnProperty(id)) {
+      promisedPvjsonElementByGraphId[id] = Promise.resolve(pvjsonElement);
+    }
+  };
+
+  getByGraphId = graphId => {
+    const promisedPvjsonElement = this.promisedPvjsonElementByGraphId[graphId];
+    if (promisedPvjsonElement) {
+      return promisedPvjsonElement;
+    } else {
+      const { pvjsonElementsByGraphIdStream } = this;
+      const promisedPvjsonElement = new Promise(function(resolve, reject) {
+        pvjsonElementsByGraphIdStream
+          .filter(pvjsonElement => pvjsonElement.id === graphId)
+          .head()
+          .each(resolve);
+      });
+
+      this.promisedPvjsonElementByGraphId[graphId] = promisedPvjsonElement;
+      return promisedPvjsonElement;
+    }
+  };
+
+  getByGroupId = targetGroupId => {
+    const { getByGraphId, groupIdToGraphIdStream } = this;
+    let promisedGraphId = this.promisedGraphIdByGroupId[targetGroupId];
+    if (!promisedGraphId) {
+      promisedGraphId = new Promise(function(resolve, reject) {
+        groupIdToGraphIdStream
+          .filter(([groupId, graphId]) => groupId === targetGroupId)
+          .head()
+          .each(function([groupId, graphId]) {
+            resolve(graphId);
+          });
+      });
+      this.promisedGraphIdByGroupId[targetGroupId] = promisedGraphId;
+    }
+
+    return promisedGraphId.then(getByGraphId);
+  };
+
+  process = (gpmlElementName, gpmlElement) => {
+    const { graphIdManager } = this;
+    const { GraphRef, GroupId, GroupRef } = gpmlElement;
+
+    let GraphId = gpmlElement.GraphId;
+    // Does the schema allow the element to have a GraphId?
+    if (!!GraphId) {
+      // Does it actually have one?
+      if (gpmlElement.GraphId._exists === false) {
+        // NOTE: we are making sure that elements that CAN have a GraphId
+        // always DO have a GraphId. GraphIds are optional in GPML for Groups,
+        // so we will add one if it's not already specified. But Pathway
+        // elements never have GraphIds, so we don't add one for them.
+        GraphId = gpmlElement.GraphId = graphIdManager.generateAndRecord();
+      } else {
+        graphIdManager.recordExisting(GraphId);
+      }
+    }
+
+    if (!!GraphRef && GraphRef._exists !== false) {
+      this.graphIdsByGraphRef[GraphRef] =
+        this.graphIdsByGraphRef[GraphRef] || [];
+      this.graphIdsByGraphRef[GraphRef].push(GraphId);
+    }
+
+    if (!!GroupRef && GroupRef._exists !== false) {
+      this.graphIdsByGroupRef[GroupRef] =
+        this.graphIdsByGroupRef[GroupRef] || [];
+      this.graphIdsByGroupRef[GroupRef].push(GraphId);
+    }
+
+    if (!!GroupId && GroupId._exists !== false) {
+      this.groupIdToGraphIdStream.write([GroupId, gpmlElement.GraphId]);
+      this.promisedGraphIdByGroupId[GroupId] = Promise.resolve(
+        gpmlElement.GraphId
+      );
+    }
+
+    const processed = fromPairs(
+      toPairs(gpmlElement).reduce(
+        (acc, x) => concat(acc, processKV(gpmlElement, x)),
+        []
+      )
+    );
+    processed.type = unionLSV(processed.type, gpmlElementName);
+
+    return processed;
+  };
+}
 
 function extendDeep(targetOrTargetArray, source) {
   const target = isArray(targetOrTargetArray)
@@ -319,7 +431,9 @@ export function GPML2013aToPVJSON(
   inputStream: NodeJS.ReadableStream,
   pathwayIri?: string
 ) {
-  let output = {} as {
+  let output = {
+    entities: []
+  } as {
     comment: any[];
     entities: any[];
   };
@@ -346,11 +460,13 @@ export function GPML2013aToPVJSON(
 
   const result = cxmlXPath.parse(selectorToCXML);
 
+  const processor = new Processor();
+
   hl([result["/Pathway/@*"], result["/Pathway/Graphics/@*"]])
     .merge()
     .each(function(metadata) {
       output = iassign(output, function(o) {
-        const processed = process("Pathway", metadata);
+        const processed = processor.process("Pathway", metadata);
 
         const { name } = processed;
         if (!!name) {
@@ -398,10 +514,21 @@ export function GPML2013aToPVJSON(
     const { Type } = DataNode;
     const wpType = Type["_exists"] === false ? "Unknown" : Type;
     output = iassign(output, function(o) {
-      o.entities = iassign(o.entities || [], function(l) {
-        const processed = process("DataNode", DataNode);
+      o.entities = iassign(o.entities, function(l) {
+        const processed = processor.process("DataNode", DataNode);
         processed.type = unionLSV(processed.type, wpType);
         processed.wpType = wpType;
+        processor.cachePvjsonElementByGraphId(processed);
+        //*
+        if (DataNode.GroupRef && !DataNode.GroupRef.hasOwnProperty("_exists")) {
+          console.log("DataNode w/ GroupRef");
+          console.log(DataNode);
+          processor.getByGroupId(DataNode.GroupRef).then(function(group) {
+            console.log("awaited group");
+            console.log(group);
+          });
+        }
+        //*/
         return l.concat([processed]);
       });
       return o;
@@ -412,8 +539,8 @@ export function GPML2013aToPVJSON(
 
   hl(result["/Pathway/Shape"]).each(function(Shape) {
     output = iassign(output, function(o) {
-      o.entities = iassign(o.entities || [], function(l) {
-        const processed = process("Shape", Shape);
+      o.entities = iassign(o.entities, function(l) {
+        const processed = processor.process("Shape", Shape);
 
         const { cellularComponent } = processed;
         // CellularComponent is not a BioPAX term, but "PhysicalEntity" is.
@@ -426,6 +553,7 @@ export function GPML2013aToPVJSON(
           );
         }
 
+        processor.cachePvjsonElementByGraphId(processed);
         return l.concat([processed]);
       });
       return o;
@@ -436,8 +564,9 @@ export function GPML2013aToPVJSON(
 
   hl(result["/Pathway/Label"]).each(function(Label) {
     output = iassign(output, function(o) {
-      o.entities = iassign(o.entities || [], function(l) {
-        const processed = process("Label", Label);
+      o.entities = iassign(o.entities, function(l) {
+        const processed = processor.process("Label", Label);
+        processor.cachePvjsonElementByGraphId(processed);
         return l.concat([processed]);
       });
       return o;
@@ -448,8 +577,23 @@ export function GPML2013aToPVJSON(
 
   hl(result["/Pathway/Interaction"]).each(function(Interaction) {
     output = iassign(output, function(o) {
-      o.entities = iassign(o.entities || [], function(l) {
-        const processed = process("Interaction", Interaction);
+      o.entities = iassign(o.entities, function(l) {
+        const processed = processor.process("Interaction", Interaction);
+        processor.cachePvjsonElementByGraphId(processed);
+        const { Graphics } = Interaction;
+        //*
+        const PointWithGraphRef = Graphics.Point
+          .filter(P => P.GraphRef && !P.GraphRef.hasOwnProperty("_exists"))
+          .forEach(function(P) {
+            console.log("P w/ GraphRef");
+            console.log(P);
+            processor.getByGraphId(P.GraphRef).then(function(pvjsonElement) {
+              console.log("pvjsonElement referenced by Point");
+              console.log(pvjsonElement);
+            });
+          });
+        //*/
+
         return l.concat([processed]);
       });
       return o;
@@ -460,8 +604,9 @@ export function GPML2013aToPVJSON(
 
   hl(result["/Pathway/GraphicalLine"]).each(function(GraphicalLine) {
     output = iassign(output, function(o) {
-      o.entities = iassign(o.entities || [], function(l) {
-        const processed = process("GraphicalLine", GraphicalLine);
+      o.entities = iassign(o.entities, function(l) {
+        const processed = processor.process("GraphicalLine", GraphicalLine);
+        processor.cachePvjsonElementByGraphId(processed);
         return l.concat([processed]);
       });
       return o;
@@ -471,22 +616,45 @@ export function GPML2013aToPVJSON(
   });
 
   hl(result["/Pathway/Group"]).each(function(Group) {
-    const { Style } = Group;
+    const { GroupId, Style } = Group;
 
-    output = iassign(output, function(o) {
-      o.entities = iassign(o.entities || [], function(l) {
-        const processed = process("Interaction", Group);
+    const groupedElementIds = processor.graphIdsByGroupRef[Group.GroupId];
+    if (groupedElementIds) {
+      const processed = processor.process("Group", Group);
 
-        processed["gpml:Style"] = Style;
-        delete processed.style;
+      processed["gpml:Style"] = Style;
+      delete processed.style;
+      delete processed.groupId;
 
-        processed.type = unionLSV(processed.type, ["Group" + Style]);
-        return l.concat([processed]);
-      });
-      return o;
-    });
+      processed.type = unionLSV(processed.type, ["Group" + Style]);
 
-    outputStream.write(output);
+      hl(groupedElementIds)
+        .flatMap(function(id) {
+          return hl(processor.getByGraphId(id));
+        })
+        .map(function(pvjsonElement: any) {
+          pvjsonElement.isPartOf = processed.id;
+          delete pvjsonElement.groupRef;
+          return pvjsonElement;
+        })
+        .toArray(function(groupedElements) {
+          processed.groupContents = groupedElements;
+          processor.cachePvjsonElementByGraphId(processed);
+          output = iassign(output, function(o) {
+            o.entities = iassign(
+              o.entities.filter(
+                entity => groupedElementIds.indexOf(entity.id) === -1
+              ),
+              function(l) {
+                return l.concat([processed]);
+              }
+            );
+            return o;
+          });
+
+          outputStream.write(output);
+        });
+    }
   });
 
   return outputStream.debounce(17);
