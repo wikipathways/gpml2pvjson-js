@@ -865,6 +865,49 @@ declare namespace Highland {
     scan1<U>(x: (memo: U, x: R) => U): Stream<U>;
 
     /**
+		 * Collects all values together then emits each value individually in sorted
+		 * order. The method for sorting the elements is defined by the comparator
+		 * function supplied as a parameter.
+		 *
+		 * The comparison function takes two arguments `a` and `b` and should return
+		 *
+		 * - a negative number if `a` should sort before `b`.
+		 * - a positive number if `a` should sort after `b`.
+		 * - zero if `a` and `b` may sort in any order (i.e., they are equal).
+		 *
+		 * This function must also define a [partial
+		 * order](https://en.wikipedia.org/wiki/Partially_ordered_set). If it does not,
+		 * the resulting ordering is undefined.
+		 *
+		 * @id sortBy
+		 * @section Transforms
+		 * @name Stream.sortBy(f)
+		 * @param {Function} f - the comparison function
+		 * @api public
+		 *
+		 * var sorts = _([3, 1, 4, 2]).sortBy(function (a, b) {
+		 *     return b - a;
+		 * }).toArray(_.log);
+		 *
+		 * //=> [4, 3, 2, 1]
+		 */
+    sortBy<U>(this: Stream<U>, f: (a: U, b: U) => -1 | 1 | 0): Stream<U>;
+
+    /**
+		 * Collects all values together then emits each value individually but in sorted order.
+		 * The method for sorting the elements is ascending lexical.
+		 *
+		 * @id sort
+		 * @section Transforms
+		 * @name Stream.sort()
+		 * @api public
+		 *
+		 * var sorted = _(['b', 'z', 'g', 'r']).sort().toArray(_.log);
+		 * // => ['b', 'g', 'r', 'z']
+		 */
+    sort<U>(this: Stream<U>): Stream<U>;
+
+    /**
 		 * Like the [errors](#errors) method, but emits a Stream end marker after
 		 * an Error is encountered.
 		 *
@@ -1023,7 +1066,7 @@ declare namespace Highland {
 		 * _([txt, md]).merge();
 		 * // => contents of foo.txt, bar.txt and baz.txt in the order they were read
 		 */
-    merge(ys?: Stream<Stream<R>>): Stream<R>;
+    merge<R>(this: Stream<Stream<R>>): Stream<R>;
 
     /**
 		 * Takes a Stream of Streams and merges their values and errors into a
@@ -1052,7 +1095,7 @@ declare namespace Highland {
 		 * // they were read, but bosh.js is not read until either foo.txt and bar.txt
 		 * // has completely been read or baz.md has been read
 		 */
-    mergeWithLimit(n: number): Stream<R>;
+    mergeWithLimit<R>(this: Stream<Stream<R>>, n: number): Stream<R>;
 
     /**
 		 * Observes a stream, allowing you to handle values as they are emitted, without
@@ -1116,6 +1159,68 @@ declare namespace Highland {
 		 */
     // TODO figure out typing
     series<U>(): Stream<U>;
+
+    /**
+		 * Transforms a stream using an arbitrary target transform.
+		 *
+		 * If `target` is a function, this transform passes the current Stream to it,
+		 * returning the result.
+		 *
+		 * If `target` is a [Duplex
+		 * Stream](https://nodejs.org/api/stream.html#stream_class_stream_duplex_1),
+		 * this transform pipes the current Stream through it. It will always return a
+		 * Highland Stream (instead of the piped to target directly as in
+		 * [pipe](#pipe)). Any errors emitted will be propagated as Highland errors.
+		 *
+		 * **TIP**: Passing a function to `through` is a good way to implement complex
+		 * reusable stream transforms. You can even construct the function dynamically
+		 * based on certain inputs. See examples below.
+		 *
+		 * @id through
+		 * @section Higher-order Streams
+		 * @name Stream.through(target)
+		 * @param {Function | Duplex Stream} target - the stream to pipe through or a
+		 * function to call.
+		 * @api public
+		 *
+		 * // This is a static complex transform.
+		 * function oddDoubler(s) {
+		 *     return s.filter(function (x) {
+		 *         return x % 2; // odd numbers only
+		 *     })
+		 *     .map(function (x) {
+		 *         return x * 2;
+		 *     });
+		 * }
+		 *
+		 * // This is a dynamically-created complex transform.
+		 * function multiplyEvens(factor) {
+		 *     return function (s) {
+		 *         return s.filter(function (x) {
+		 *             return x % 2 === 0;
+		 *         })
+		 *         .map(function (x) {
+		 *             return x * factor;
+		 *         });
+		 *     };
+		 * }
+		 *
+		 * _([1, 2, 3, 4]).through(oddDoubler); // => 2, 6
+		 *
+		 * _([1, 2, 3, 4]).through(multiplyEvens(5)); // => 10, 20
+		 *
+		 * // Can also be used with Node Through Streams
+		 * _(filenames).through(jsonParser).map(function (obj) {
+		 *     // ...
+		 * });
+		 *
+		 * // All errors will be propagated as Highland errors
+		 * _(['zz{"a": 1}']).through(jsonParser).errors(function (err) {
+		 *   console.log(err); // => SyntaxError: Unexpected token z
+		 * });
+		 */
+    through<I, O>(f: (target: I) => Stream<O>): Stream<O>;
+    through<I, O>(this: I, target: NodeJS.ReadWriteStream): Stream<O>;
 
     /**
 		 * Takes two Streams and returns a Stream of corresponding pairs.

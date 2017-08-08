@@ -5,6 +5,7 @@ import {
   isEmpty,
   isNaN,
   kebabCase,
+  map,
   toLower
 } from "lodash/fp";
 import {
@@ -183,149 +184,148 @@ export function ConnectorType(gpmlElement) {
   return ConnectorType + "Line";
 }
 
-// ******* OLD ********
-
-import { applyDefaults as applyAnchorDefaults } from "./anchor";
-import { applyDefaults as applyPathwayDefaults } from "./pathway";
-import { applyDefaults as applyGroupDefaults } from "./group";
-import { applyDefaults as applyDataNodeDefaults } from "./data-node";
-import { applyDefaults as applyGraphicalLineDefaults } from "./graphical-line";
-import { applyDefaults as applyInteractionDefaults } from "./interaction";
-import { applyDefaults as applyLabelDefaults } from "./label";
-import { applyDefaults as applyShapeDefaults } from "./shape";
-import { applyDefaults as applyStateDefaults } from "./state";
-
-const defaultsAppliers = {
-  Anchor: applyAnchorDefaults,
-  Pathway: applyPathwayDefaults,
-  Group: applyGroupDefaults,
-  DataNode: applyDataNodeDefaults,
-  GraphicalLine: applyGraphicalLineDefaults,
-  Interaction: applyInteractionDefaults,
-  Label: applyLabelDefaults,
-  Shape: applyShapeDefaults,
-  State: applyStateDefaults
-};
-
-const DEFAULTS = {
-  attributes: {
-    FillColor: "ffffff"
-  }
-};
-
-export function applyDefaults(gpmlElement) {
-  const gpmlElementName = gpmlElement.tagName;
-  if (defaultsAppliers.hasOwnProperty(gpmlElementName)) {
-    return defaultsAppliers[gpmlElementName](gpmlElement, DEFAULTS);
-  } else {
-    return baseApplyDefaults(gpmlElement, DEFAULTS);
-  }
-}
-
-export function fromGPML(
-  data: Data,
-  dataElement: DataElement & Data,
-  inputGPMLElement: GPMLElement
-) {
-  const gpmlElement = applyDefaults(inputGPMLElement);
-  const gpmlElementName = (dataElement.gpmlElementName = gpmlElement.tagName);
-
-  // Note side-effects required for these values,
-  // because subsequent values depend on them.
-  let gpmlRotation: number;
-
-  const ATTRIBUTE_DEPENDENCY_ORDER: GPMLAttributeNames[] = [
-    "GraphId",
-    "GroupId",
-    "GraphRef",
-    "GroupRef",
-    "Name",
-    "TextLabel",
-    "Type",
-    "CellularComponent",
-    "Rotation",
-    "LineStyle",
-    "Shape",
-    "ShapeType",
-    "Attribute",
-    "FillColor",
-    "Color",
-    "LineThickness",
-    "Width",
-    "Height",
-    "RelX",
-    "RelY",
-    "CenterX",
-    "CenterY",
-    "ConnectorType",
-    "Point",
-    "Organism",
-    "Database",
-    "ID",
-    "Data-Source",
-    "Version"
-  ];
-
-  let gpmlToDataConverter = {
-    BiopaxRef: function(gpmlValue: string[]) {
-      // NOTE: BiopaxRefs come into here grouped into an array.
-      //       See SUPPLEMENTAL_ELEMENTS_WITH_TEXT in toPvjson.ts
-      if (!isEmpty(gpmlValue)) {
-        dataElement.citation = gpmlValue.map(generatePublicationXrefId);
-      }
-    },
-    GroupId: function(gpmlValue: string) {
-      data.GraphIdToGroupId[dataElement.id] = gpmlValue;
-    },
-    GroupRef: function(gpmlValue) {
-      let groupContents = (data.containedIdsByGroupId[gpmlValue] =
-        data.containedIdsByGroupId[gpmlValue] || []);
-      groupContents.push(dataElement.id);
-    },
-    Padding: function(gpmlPaddingValue) {
-      dataElement.padding = gpmlPaddingValue;
-    },
-    Point: function(gpmlValue) {
-      // Saving this to fully convert later (after every appropriate element has been put into data.elementMap).
-      dataElement["gpml:Point"] = gpmlValue;
-    },
-    Position: function(gpmlPositionValue) {
-      dataElement.attachmentDisplay = {
-        position: [parseAsNonNaNNumber(gpmlPositionValue)]
-      };
-    },
-    RelX: function(gpmlValue) {
-      let attachmentDisplay = (dataElement.attachmentDisplay =
-        dataElement.attachmentDisplay || ({} as attachmentDisplay));
-      let position = (attachmentDisplay.position =
-        attachmentDisplay.position || []);
-      const gpmlRelX = parseAsNonNaNNumber(gpmlValue);
-      position[0] = (gpmlRelX + 1) / 2;
-    },
-    RelY: function(gpmlValue) {
-      let attachmentDisplay = (dataElement.attachmentDisplay =
-        dataElement.attachmentDisplay || ({} as attachmentDisplay));
-      let position = (attachmentDisplay.position =
-        attachmentDisplay.position || []);
-      const gpmlRelY = parseAsNonNaNNumber(gpmlValue);
-      position[1] = (gpmlRelY + 1) / 2;
-    }
-  };
-
-  dataElement = convertAttributesToJson(
-    gpmlElement,
-    dataElement,
-    gpmlToDataConverter,
-    ATTRIBUTE_DEPENDENCY_ORDER
-  );
-
-  data[gpmlElementName].push(dataElement.id);
-
-  if (gpmlElement.tagName !== "Pathway") {
-    data.elementMap[dataElement.id] = dataElement;
-  } else {
-    data = dataElement;
-  }
-
-  return data;
-}
+//// ******* OLD ********
+//import { applyDefaults as applyAnchorDefaults } from "./anchor";
+//import { applyDefaults as applyPathwayDefaults } from "./pathway";
+//import { applyDefaults as applyGroupDefaults } from "./group";
+//import { applyDefaults as applyDataNodeDefaults } from "./data-node";
+//import { applyDefaults as applyGraphicalLineDefaults } from "./graphical-line";
+//import { applyDefaults as applyInteractionDefaults } from "./interaction";
+//import { applyDefaults as applyLabelDefaults } from "./label";
+//import { applyDefaults as applyShapeDefaults } from "./shape";
+//import { applyDefaults as applyStateDefaults } from "./state";
+//
+//const defaultsAppliers = {
+//  Anchor: applyAnchorDefaults,
+//  Pathway: applyPathwayDefaults,
+//  Group: applyGroupDefaults,
+//  DataNode: applyDataNodeDefaults,
+//  GraphicalLine: applyGraphicalLineDefaults,
+//  Interaction: applyInteractionDefaults,
+//  Label: applyLabelDefaults,
+//  Shape: applyShapeDefaults,
+//  State: applyStateDefaults
+//};
+//
+//const DEFAULTS = {
+//  attributes: {
+//    FillColor: "ffffff"
+//  }
+//};
+//
+//export function applyDefaults(gpmlElement) {
+//  const gpmlElementName = gpmlElement.tagName;
+//  if (defaultsAppliers.hasOwnProperty(gpmlElementName)) {
+//    return defaultsAppliers[gpmlElementName](gpmlElement, DEFAULTS);
+//  } else {
+//    return baseApplyDefaults(gpmlElement, DEFAULTS);
+//  }
+//}
+//
+//export function fromGPML(
+//  data: Data,
+//  dataElement: DataElement & Data,
+//  inputGPMLElement: GPMLElement
+//) {
+//  const gpmlElement = applyDefaults(inputGPMLElement);
+//  const gpmlElementName = (dataElement.gpmlElementName = gpmlElement.tagName);
+//
+//  // Note side-effects required for these values,
+//  // because subsequent values depend on them.
+//  let gpmlRotation: number;
+//
+//  const ATTRIBUTE_DEPENDENCY_ORDER: GPMLAttributeNames[] = [
+//    "GraphId",
+//    "GroupId",
+//    "GraphRef",
+//    "GroupRef",
+//    "Name",
+//    "TextLabel",
+//    "Type",
+//    "CellularComponent",
+//    "Rotation",
+//    "LineStyle",
+//    "Shape",
+//    "ShapeType",
+//    "Attribute",
+//    "FillColor",
+//    "Color",
+//    "LineThickness",
+//    "Width",
+//    "Height",
+//    "RelX",
+//    "RelY",
+//    "CenterX",
+//    "CenterY",
+//    "ConnectorType",
+//    "Point",
+//    "Organism",
+//    "Database",
+//    "ID",
+//    "Data-Source",
+//    "Version"
+//  ];
+//
+//  let gpmlToDataConverter = {
+//    BiopaxRef: function(gpmlValue: string[]) {
+//      // NOTE: BiopaxRefs come into here grouped into an array.
+//      //       See SUPPLEMENTAL_ELEMENTS_WITH_TEXT in toPvjson.ts
+//      if (!isEmpty(gpmlValue)) {
+//        dataElement.citation = gpmlValue.map(generatePublicationXrefId);
+//      }
+//    },
+//    GroupId: function(gpmlValue: string) {
+//      data.GraphIdToGroupId[dataElement.id] = gpmlValue;
+//    },
+//    GroupRef: function(gpmlValue) {
+//      let groupContents = (data.containedIdsByGroupId[gpmlValue] =
+//        data.containedIdsByGroupId[gpmlValue] || []);
+//      groupContents.push(dataElement.id);
+//    },
+//    Padding: function(gpmlPaddingValue) {
+//      dataElement.padding = gpmlPaddingValue;
+//    },
+//    Point: function(gpmlValue) {
+//      // Saving this to fully convert later (after every appropriate element has been put into data.elementMap).
+//      dataElement["gpml:Point"] = gpmlValue;
+//    },
+//    Position: function(gpmlPositionValue) {
+//      dataElement.attachmentDisplay = {
+//        position: [parseAsNonNaNNumber(gpmlPositionValue)]
+//      };
+//    },
+//    RelX: function(gpmlValue) {
+//      let attachmentDisplay = (dataElement.attachmentDisplay =
+//        dataElement.attachmentDisplay || ({} as attachmentDisplay));
+//      let position = (attachmentDisplay.position =
+//        attachmentDisplay.position || []);
+//      const gpmlRelX = parseAsNonNaNNumber(gpmlValue);
+//      position[0] = (gpmlRelX + 1) / 2;
+//    },
+//    RelY: function(gpmlValue) {
+//      let attachmentDisplay = (dataElement.attachmentDisplay =
+//        dataElement.attachmentDisplay || ({} as attachmentDisplay));
+//      let position = (attachmentDisplay.position =
+//        attachmentDisplay.position || []);
+//      const gpmlRelY = parseAsNonNaNNumber(gpmlValue);
+//      position[1] = (gpmlRelY + 1) / 2;
+//    }
+//  };
+//
+//  dataElement = convertAttributesToJson(
+//    gpmlElement,
+//    dataElement,
+//    gpmlToDataConverter,
+//    ATTRIBUTE_DEPENDENCY_ORDER
+//  );
+//
+//  data[gpmlElementName].push(dataElement.id);
+//
+//  if (gpmlElement.tagName !== "Pathway") {
+//    data.elementMap[dataElement.id] = dataElement;
+//  } else {
+//    data = dataElement;
+//  }
+//
+//  return data;
+//}

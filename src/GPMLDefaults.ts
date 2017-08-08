@@ -80,7 +80,10 @@ export const GraphicalLine = {
     },
     Anchor: {
       Shape: "None"
-    }
+    },
+    // these aren't explicitly set in the XSD but maybe should be.
+    FillColor: "Transparent",
+    LineThickness: 1
   }
 };
 
@@ -94,7 +97,10 @@ export const Interaction = {
     },
     Anchor: {
       Shape: "None"
-    }
+    },
+    // these aren't explicitly set in the XSD but maybe should be.
+    FillColor: "Transparent",
+    LineThickness: 1
   }
 };
 

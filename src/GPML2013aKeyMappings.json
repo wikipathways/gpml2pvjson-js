@@ -20,6 +20,7 @@
   "FontName": "fontFamily",
   "org.pathvisio.CellularComponentProperty": "cellularComponent",
   "org.pathvisio.DoubleLineProperty": "lineStyle",
+  "Anchor": "pvjson:delete",
   "Xref": "pvjson:lift",
   "Database": "dbName",
   "ID": "dbId"
