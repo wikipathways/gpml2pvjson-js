@@ -1,16 +1,10 @@
 import {
-  cloneDeep,
-  defaultsDeep,
-  difference,
-  find,
   flatten,
   intersection,
   isArray,
   isEmpty,
   keys,
   map,
-  reduce,
-  toPairs,
   union
 } from "lodash";
 
@@ -77,73 +71,6 @@ export let supportedNamespaces = [
   "http://genmapp.org/GPML/2008a",
   "http://genmapp.org/GPML/2007"
 ];
-
-export function applyDefaults(gpmlElement, defaultsArray) {
-  var defaultsArrayClone = cloneDeep(defaultsArray);
-  // from http://lodash.com/docs#partialRight
-  return reduce(
-    defaultsArrayClone,
-    function(accumulator, defaults) {
-      defaultsDeep(accumulator.attributes, defaults);
-      return accumulator;
-    },
-    gpmlElement
-  );
-}
-
-export function convertAttributesToJson(
-  gpmlElement,
-  dataElement,
-  converter,
-  attributeDependencyOrder
-) {
-  const converterKeys = keys(converter);
-  const attributes = gpmlElement.attributes;
-  const attributeKeys = keys(attributes);
-  const handledAttributeKeys = intersection(converterKeys, attributeKeys);
-  if (handledAttributeKeys.length < attributes.length) {
-    var unhandledAttributeKeys = difference(converterKeys, attributeKeys);
-    console.warn(
-      'No handler for attribute(s) "' +
-        unhandledAttributeKeys.join(", ") +
-        '" for element "' +
-        gpmlElement.tagName +
-        '"'
-    );
-  }
-
-  const attributeList = map(handledAttributeKeys, function(attributeKey) {
-    return {
-      name: attributeKey,
-      value: attributes[attributeKey],
-      dependencyOrder: attributeDependencyOrder.indexOf(attributeKey)
-    };
-  });
-
-  if (!!attributeList && attributeList.length > 0) {
-    if (attributeList.length > 1) {
-      attributeList
-        .sort(function(a, b) {
-          return a.dependencyOrder - b.dependencyOrder;
-        })
-        .filter(function(attribute) {
-          return (
-            typeof attribute.value !== "undefined" &&
-            !isNaN(attribute.value) &&
-            attribute.value !== null
-          );
-          //const [key, value] = toPairs(attribute);
-          //return typeof value !== 'undefined' && value !== null;
-          // TODO should we check for !isNaN?
-          //return typeof value !== 'undefined' && !isNaN(value) && value !== null;
-        });
-    }
-    attributeList.forEach(function(attributeListItem) {
-      converter[attributeListItem.name](attributeListItem.value);
-    });
-  }
-  return dataElement;
-}
 
 // see http://blog.acipo.com/matrix-inversion-in-javascript/
 /**

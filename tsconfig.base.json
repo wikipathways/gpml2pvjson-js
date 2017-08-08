@@ -10,10 +10,11 @@
     "pretty": true
   },
   "files": [
-    "gpml2pvjson.d.ts",
     "highland.d.ts",
     "rgbcolor.d.ts",
     "sax.d.ts",
+    "src/json.d.ts",
+    "src/gpml2pvjson.d.ts",
     "src/index.ts"
   ],
   "exclude": [

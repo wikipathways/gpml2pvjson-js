@@ -9,8 +9,6 @@ import {
   toLower
 } from "lodash/fp";
 import {
-  applyDefaults as baseApplyDefaults,
-  convertAttributesToJson,
   generatePublicationXrefId,
   transform,
   unionLSV

@@ -22,7 +22,7 @@
   "files": [
     "./src/cxml-playground.ts",
     "rgbcolor.d.ts",
-    "gpml2pvjson.d.ts"
+    "src/gpml2pvjson.d.ts"
   ],
   "exclude": [
     "dist/**/*",

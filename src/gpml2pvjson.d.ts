@@ -1,9 +1,12 @@
 /// <reference path="rgbcolor.d.ts" />
-/// <reference path="sax.d.ts" />
 //// <reference path="src/topublish/rx-sax/XPathParser.d.ts" />
 /// <reference path="src/json.d.ts" />
 
 /* GPML */
+
+// TODO compile this as part of the build step for this package
+//import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
+import * as GPML2013a from "../cxml/test/xmlns/pathvisio.org/GPML/2013a";
 
 type GPMLAttributeNames =
   | "xmlns"
@@ -56,7 +59,14 @@ declare type GPML_ATTRIBUTE_NAMES_AND_TYPES = {
   [K in GPMLAttributeNames]?: string
 };
 
-interface GPMLElement extends SAXOpenTag<GPML_ATTRIBUTE_NAMES_AND_TYPES> {}
+declare type GPMLElement = typeof GPML2013a.document.Pathway &
+  typeof GPML2013a.DataNodeType.prototype &
+  typeof GPML2013a.GraphicalLineType.prototype &
+  typeof GPML2013a.GroupType.prototype &
+  typeof GPML2013a.InteractionType.prototype &
+  typeof GPML2013a.LabelType.prototype &
+  typeof GPML2013a.ShapeType.prototype &
+  typeof GPML2013a.StateType.prototype;
 
 /* pvjson */
 

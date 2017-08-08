@@ -1,10 +1,6 @@
-import { isNumber, isString, map, omit } from "lodash/fp";
+import { defaultsDeep, isNumber, isString, map, omit } from "lodash/fp";
 import * as hl from "highland";
-import {
-  convertAttributesToJson,
-  intersectsLSV,
-  unionLSV
-} from "./gpml-utilities";
+import { intersectsLSV, unionLSV } from "./gpml-utilities";
 // TODO compile this as part of the build step for this package
 //import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
@@ -751,7 +747,7 @@ function getDataPositionAndOrientationMapping(
 }
 
 function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
-  const { point, drawAs } = pvjsonEdge;
+  const { points, drawAs } = pvjsonEdge;
 
   const explicitPoints = map(function(p, index) {
     const { ArrowHead, GraphRef, RelX, RelY, X, Y } = p;
@@ -906,7 +902,7 @@ function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
     }
 
     return explicitPoint;
-  }, point);
+  }, points);
 
   let pvjsonPoints;
   if (drawAs === "StraightLine") {
@@ -945,7 +941,7 @@ function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
   // Do we need to? GPML currently does not specify implicit intermediate points, but
   // pvjson does.
 
-  pvjsonEdge.point = pvjsonPoints;
+  pvjsonEdge.points = pvjsonPoints;
 
   return pvjsonEdge;
 }
@@ -1070,6 +1066,18 @@ export function createEdgeTransformStream(
                   const pvjsonAnchor = processor.process("Anchor", gpmlAnchor);
                   pvjsonAnchor.isAttachedTo = processed.id;
                   pvjsonAnchor.type.push("Burr");
+                  const drawAnchorAs = pvjsonAnchor.drawAs;
+                  if (drawAnchorAs === "None") {
+                    defaultsDeep(pvjsonAnchor, {
+                      Height: 4,
+                      Width: 4
+                    });
+                  } else if (drawAnchorAs === "Circle") {
+                    defaultsDeep(pvjsonAnchor, {
+                      Height: 8,
+                      Width: 8
+                    });
+                  }
                   pvjsonAnchors.push(pvjsonAnchor);
                 });
               }

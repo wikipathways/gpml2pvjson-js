@@ -1,5 +1,6 @@
-/// <reference path="./json.d.ts" />
 /// <reference path="../highland.d.ts" />
+/// <reference path="./json.d.ts" />
+/// <reference path="./gpml2pvjson.d.ts" />
 import "source-map-support/register";
 // TODO should I get rid of the lib above for production browser build?
 
@@ -339,14 +340,15 @@ export class Processor {
     this.promisedPvjsonElementByGraphId = {};
     const promisedPvjsonElementByGraphId = this.promisedPvjsonElementByGraphId;
 
+    let wow: DataElement;
     const pvjsonElementStream = hl();
     this.pvjsonElementStream = pvjsonElementStream;
-    pvjsonElementStream.each(function(pvjsonElement: any) {
+    pvjsonElementStream.each(function(pvjsonElement) {
       const { isAttachedTo, id } = pvjsonElement;
       promisedPvjsonElementByGraphId[id] = Promise.resolve(pvjsonElement);
 
       if (!!isAttachedTo) {
-        arrayify(isAttachedTo).forEach(function(graphRef) {
+        arrayify(isAttachedTo).forEach(function(graphRef: string) {
           graphIdsByGraphRef[graphRef] = graphIdsByGraphRef[graphRef] || [];
           graphIdsByGraphRef[graphRef].push(id);
         });
@@ -462,6 +464,10 @@ function extendDeep(targetOrTargetArray, source) {
   mutableAssign(target.constructor.prototype, source);
 }
 
+extendDeep(
+  GPML2013a.document.Pathway.constructor.prototype,
+  GPMLDefaults.Pathway
+);
 extendDeep(GPML2013a.DataNodeType.prototype, GPMLDefaults.DataNode);
 extendDeep(GPML2013a.GraphicalLineType.prototype, GPMLDefaults.GraphicalLine);
 extendDeep(GPML2013a.GroupType.prototype, GPMLDefaults.Group);

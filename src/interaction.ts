@@ -172,27 +172,28 @@ function convertCatalysisToGenericInteraction(interaction) {
 }
 
 export function process(referencedEntities, interaction) {
-  let points;
   let targetId;
-  let targetNode;
   let sourceId;
-  let sourceNode;
-
   let marker;
+
+  const points = interaction.points;
+
+  console.log("interaction");
+  console.log(interaction);
   if (interaction.markerStart) {
     marker = interaction.markerStart;
     // sometimes the graphical terminology (startMarker, endMarker) won't line up
     // with the graph terminology.
-    sourceId = interaction.point[interaction.point.length - 1].isAttachedTo;
-    targetId = interaction.point[0].isAttachedTo;
+    sourceId = points[points.length - 1].isAttachedTo;
+    targetId = points[0].isAttachedTo;
   } else if (interaction.markerEnd) {
     marker = interaction.markerEnd;
-    sourceId = interaction.point[0].isAttachedTo;
-    targetId = interaction.point[interaction.point.length - 1].isAttachedTo;
+    sourceId = points[0].isAttachedTo;
+    targetId = points[points.length - 1].isAttachedTo;
   } else {
     marker = "none";
-    sourceId = interaction.point[0].isAttachedTo;
-    targetId = interaction.point[interaction.point.length - 1].isAttachedTo;
+    sourceId = points[0].isAttachedTo;
+    targetId = points[points.length - 1].isAttachedTo;
   }
 
   if (!sourceId || !targetId) {
@@ -200,12 +201,12 @@ export function process(referencedEntities, interaction) {
     return interaction;
   }
 
-  sourceNode = referencedEntities[sourceId];
-  targetNode = referencedEntities[targetId];
+  const sourceNode = referencedEntities[sourceId];
+  const targetNode = referencedEntities[targetId];
 
   if (marker === "Arrow") {
-    const sourceIsEdge = !!sourceNode.point;
-    const targetIsEdge = !!targetNode.point;
+    const sourceIsEdge = !!sourceNode.points;
+    const targetIsEdge = !!targetNode.points;
     const sourceIsBiopaxPhysicalEntity = intersectsLSV(
       biopaxPhysicalEntityTypesPrefixed,
       sourceNode.type

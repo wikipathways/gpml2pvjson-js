@@ -54,6 +54,11 @@ export class DataNode extends GPML2013a.document.Pathway.DataNode[0]
 }
 //*/
 
+export const Pathway = {
+  BoardHeight: 500,
+  Name: "Untitle Pathway"
+};
+
 export const DataNode = {
   Type: "Unknown",
   Graphics: defaultsDeepAll([
@@ -67,7 +72,21 @@ export const DataNode = {
 };
 
 export const Group = {
+  // these aren't explicitly set in the XSD but maybe should be.
+  Align: "Center",
+  Color: "808080",
+  Valign: "Middle",
+  FontSize: 1,
+  FontWeight: "Bold",
+  LineThickness: 1,
+  FillOpacity: 0.1,
   Style: "None"
+};
+
+const Anchor = {
+  Shape: "None",
+  // this isn't explicitly set in the XSD but maybe should be.
+  LineThickness: 0
 };
 
 export const GraphicalLine = {
@@ -78,9 +97,7 @@ export const GraphicalLine = {
     Point: {
       ArrowHead: "Line"
     },
-    Anchor: {
-      Shape: "None"
-    },
+    Anchor: Anchor,
     // these aren't explicitly set in the XSD but maybe should be.
     FillColor: "Transparent",
     LineThickness: 1
@@ -95,9 +112,7 @@ export const Interaction = {
     Point: {
       ArrowHead: "Line"
     },
-    Anchor: {
-      Shape: "None"
-    },
+    Anchor: Anchor,
     // these aren't explicitly set in the XSD but maybe should be.
     FillColor: "Transparent",
     LineThickness: 1
