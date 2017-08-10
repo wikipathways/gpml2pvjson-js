@@ -1,6 +1,3 @@
-/// <reference path="../highland.d.ts" />
-/// <reference path="./json.d.ts" />
-/// <reference path="./gpml2pvjson.d.ts" />
 import "source-map-support/register";
 // TODO should I get rid of the lib above for production browser build?
 
@@ -19,6 +16,7 @@ import {
   isString,
   keysIn,
   map,
+  orderBy,
   toPairs,
   toPairsIn,
   reduce,
@@ -49,6 +47,16 @@ import * as hl from "highland";
 
 import { createEdgeTransformStream } from "./edge";
 import { process as processInteraction } from "./Interaction";
+import { addressPathVisioShapeRenderingBugs } from "./Shape";
+
+export type GPMLElement = GPML2013a.PathwayType &
+  typeof GPML2013a.DataNodeType.prototype &
+  typeof GPML2013a.GraphicalLineType.prototype &
+  typeof GPML2013a.GroupType.prototype &
+  typeof GPML2013a.InteractionType.prototype &
+  typeof GPML2013a.LabelType.prototype &
+  typeof GPML2013a.ShapeType.prototype &
+  typeof GPML2013a.StateType.prototype;
 
 iassign.setOption({
   // Deep freeze both input and output. Used in development to make sure they don't change.
@@ -59,161 +67,6 @@ iassign.setOption({
 
 function liftProperties(target, source) {
   return assign(target, source);
-}
-
-function addressPathVisioShapeRenderingBugs(gpmlElement, pvjsonElement) {
-  const { Rotation, ShapeType } = gpmlElement.Graphics;
-  let transformationSequence = [];
-
-  // Correct GPML position and size values.
-  //
-  // Some GPML elements with ShapeTypes have Graphics values that
-  // do not match what is visually displayed in PathVisio-Java.
-  // Below are corrections for the GPML so that the display in
-  // pvjs matches the display in PathVisio-Java.
-
-  let xTranslation;
-  let yTranslation;
-  let xScale;
-  let yScale;
-
-  if (ShapeType === "Triangle") {
-    // NOTE: the numbers below come from visually experimenting with different widths
-    // in PathVisio-Java and making linear approximations of the translation
-    // scaling required to make x, y, width and height values match what is visually
-    // displayed in PathVisio-Java.
-    xScale = (pvjsonElement.width + 0.04) / 1.07 / pvjsonElement.width;
-    yScale = (pvjsonElement.height - 0.14) / 1.15 / pvjsonElement.height;
-    xTranslation = 0.28 * pvjsonElement.width - 2.0;
-    yTranslation = 0;
-
-    if (typeof Rotation === "number" && Rotation !== 0) {
-      transformationSequence.push({
-        key: "rotate",
-        value: Rotation
-      });
-    }
-
-    transformationSequence.push({
-      key: "translate",
-      value: [xTranslation, yTranslation]
-    });
-
-    if (typeof Rotation === "number" && Rotation !== 0) {
-      transformationSequence.push({
-        key: "rotate",
-        value: -1 * Rotation
-      });
-    }
-
-    transformationSequence.push({
-      key: "scale",
-      value: [xScale, yScale]
-    });
-  } else if (ShapeType === "Hexagon") {
-    xScale = 1;
-    yScale = 0.88;
-    transformationSequence.push({
-      key: "scale",
-      value: [xScale, yScale]
-    });
-  } else if (ShapeType === "Pentagon") {
-    xScale = 0.9;
-    yScale = 0.95;
-    xTranslation = 0.047 * pvjsonElement.width + 0.01;
-    yTranslation = 0;
-
-    if (typeof Rotation === "number" && Rotation !== 0) {
-      transformationSequence.push({
-        key: "rotate",
-        value: Rotation
-      });
-    }
-
-    transformationSequence.push({
-      key: "translate",
-      value: [xTranslation, yTranslation]
-    });
-
-    if (typeof Rotation === "number" && Rotation !== 0) {
-      transformationSequence.push({
-        key: "rotate",
-        value: -1 * Rotation
-      });
-    }
-
-    transformationSequence.push({
-      key: "scale",
-      value: [xScale, yScale]
-    });
-  } else if (ShapeType === "Arc") {
-    xScale = 1;
-    yScale = 0.5;
-    xTranslation = 0;
-    yTranslation = pvjsonElement.height * yScale / 2;
-
-    if (typeof Rotation === "number" && Rotation !== 0) {
-      transformationSequence.push({
-        key: "rotate",
-        value: Rotation
-      });
-    }
-
-    transformationSequence.push({
-      key: "translate",
-      value: [xTranslation, yTranslation]
-    });
-
-    if (typeof Rotation === "number" && Rotation !== 0) {
-      transformationSequence.push({
-        key: "rotate",
-        value: -1 * Rotation
-      });
-    }
-
-    transformationSequence.push({
-      key: "scale",
-      value: [xScale, yScale]
-    });
-  }
-  /*
-		else if (ShapeType === 'Sarcoplasmic Reticulum') {
-		// TODO: enable this after comparing results from old converter
-			xScale = 0.76;
-			yScale = 0.94;
-			xTranslation = 0.043 * pvjsonElement.width + 0.01;
-			yTranslation = 0.009 * pvjsonElement.height - 15.94;
-
-			if (typeof Rotation === 'number' && Rotation !== 0) {
-				transformationSequence.push({
-					key: 'rotate',
-					value: Rotation
-				});
-			}
-
-			transformationSequence.push({
-				key: 'translate',
-				value: [xTranslation, yTranslation]
-			});
-
-			if (typeof Rotation === 'number' && Rotation !== 0) {
-				transformationSequence.push({
-					key: 'rotate',
-					value: (-1) * Rotation
-				});
-			}
-
-			transformationSequence.push({
-				key: 'scale',
-				value: [xScale, yScale]
-			});
-		}
-		//*/
-
-  return transform({
-    element: pvjsonElement,
-    transformationSequence: transformationSequence
-  });
 }
 
 function processKV(gpmlElement, [gpmlKey, gpmlValue]) {
@@ -317,13 +170,13 @@ export class GraphIdManager {
 export class Processor {
   graphIdManager: GraphIdManager;
 
-  graphIdsByGraphRef: any;
-  graphIdsByGroupRef: any;
+  graphIdsByGraphRef: Record<string, string[]>;
+  graphIdsByGroupRef: Record<string, string[]>;
 
-  promisedGraphIdByGroupId: any;
-  promisedPvjsonElementByGraphId: any;
+  promisedGraphIdByGroupId: Record<string, Promise<string>>;
+  promisedPvjsonElementByGraphId: Record<string, Promise<PvjsonEntity>>;
 
-  pvjsonElementStream: Highland.Stream<any>;
+  pvjsonElementStream: Highland.Stream<PvjsonEntity>;
   groupIdToGraphIdStream: Highland.Stream<any>;
 
   constructor() {
@@ -340,10 +193,9 @@ export class Processor {
     this.promisedPvjsonElementByGraphId = {};
     const promisedPvjsonElementByGraphId = this.promisedPvjsonElementByGraphId;
 
-    let wow: DataElement;
-    const pvjsonElementStream = hl();
+    const pvjsonElementStream = hl() as Highland.Stream<PvjsonEntity>;
     this.pvjsonElementStream = pvjsonElementStream;
-    pvjsonElementStream.each(function(pvjsonElement) {
+    pvjsonElementStream.each(function(pvjsonElement: PvjsonEntity) {
       const { isAttachedTo, id } = pvjsonElement;
       promisedPvjsonElementByGraphId[id] = Promise.resolve(pvjsonElement);
 
@@ -483,12 +335,17 @@ export function GPML2013aToPVJSON(
   inputStream: NodeJS.ReadableStream,
   pathwayIri?: string
 ) {
+  let entityIdToZIndex: string[] = [];
   let output = {
-    entities: []
+    metadata: {},
+    entityMap: {},
+    zIndices: []
   } as {
-    comment: any[];
-    entities: any[];
+    metadata: Record<string, any>;
+    entityMap: PvjsonEntityMap;
+    zIndices: string[];
   };
+
   const outputStream = hl();
 
   const selectorToCXML = {
@@ -524,30 +381,36 @@ export function GPML2013aToPVJSON(
       throw err;
     })
     .each(function(metadata) {
-      output = iassign(output, function(o) {
-        const processed = processor.process("Pathway", metadata);
+      output = iassign(
+        output,
+        function(o) {
+          return o.metadata;
+        },
+        function(outputMetadata) {
+          const processed = processor.process("Pathway", metadata);
 
-        const { name } = processed;
-        if (!!name) {
-          const splitName = name.split(" (");
-          if (
-            !!splitName &&
-            splitName.length === 2 &&
-            !!name.match(/\(/g) &&
-            name.match(/\(/g).length === 1 &&
-            !!name.match(/\)/g) &&
-            name.match(/\)/g).length === 1
-          ) {
-            processed.standardName = splitName[0];
-            processed.displayName = splitName[1].replace(")", "");
-          } else {
-            processed.standardName = name;
-            processed.displayName = name;
+          const { name } = processed;
+          if (!!name) {
+            const splitName = name.split(" (");
+            if (
+              !!splitName &&
+              splitName.length === 2 &&
+              !!name.match(/\(/g) &&
+              name.match(/\(/g).length === 1 &&
+              !!name.match(/\)/g) &&
+              name.match(/\)/g).length === 1
+            ) {
+              processed.standardName = splitName[0];
+              processed.displayName = splitName[1].replace(")", "");
+            } else {
+              processed.standardName = name;
+              processed.displayName = name;
+            }
           }
-        }
 
-        return assign(o, processed);
-      });
+          return assign(outputMetadata, processed);
+        }
+      );
       outputStream.write(output);
     });
 
@@ -556,19 +419,28 @@ export function GPML2013aToPVJSON(
       throw err;
     })
     .each(function(Comment) {
-      output = iassign(output, function(o) {
-        o.comment = iassign(o.comment || [], function(l) {
-          return l.concat([
-            fromPairs(
-              toPairs(Comment).reduce(
-                (acc, x) => concat(acc, processKV(Comment, x)),
-                []
-              )
-            )
-          ]);
-        });
-        return o;
-      });
+      output = iassign(
+        output,
+        function(o) {
+          return o.metadata;
+        },
+        function(outputMetadata) {
+          outputMetadata.comment = iassign(
+            outputMetadata.comment || [],
+            function(l) {
+              return l.concat([
+                fromPairs(
+                  toPairs(Comment).reduce(
+                    (acc, x) => concat(acc, processKV(Comment, x)),
+                    []
+                  )
+                )
+              ]);
+            }
+          );
+          return outputMetadata;
+        }
+      );
 
       outputStream.write(output);
     });
@@ -578,171 +450,219 @@ export function GPML2013aToPVJSON(
       throw err;
     })
     .each(function(DataNode) {
+      const processed = processor.process("DataNode", DataNode);
       const { Type } = DataNode;
       const wpType = Type["_exists"] === false ? "Unknown" : Type;
-      output = iassign(output, function(o) {
-        o.entities = iassign(o.entities, function(l) {
-          const processed = processor.process("DataNode", DataNode);
-          processed.type = unionLSV(processed.type, wpType);
-          processed.wpType = wpType;
-          processor.pvjsonElementStream.write(processed);
-          /*
-				// TODO should we update pvjsonElement here or as part of processing result["/Pathway/Group"]?
-        if (DataNode.GroupRef && !DataNode.GroupRef.hasOwnProperty("_exists")) {
-          console.log("DataNode w/ GroupRef");
-          console.log(DataNode);
-          processor.getByGroupId(DataNode.GroupRef).then(function(group) {
-            console.log("awaited group");
-            console.log(group);
-          });
+      processed.type = unionLSV(processed.type, wpType);
+      processed.wpType = wpType;
+      processor.pvjsonElementStream.write(processed);
+      const processedId = processed.id;
+      const processedZIndex = processed.zIndex;
+      /*
+			// TODO should we update pvjsonElement here or as part of processing result["/Pathway/Group"]?
+			if (DataNode.GroupRef && !DataNode.GroupRef.hasOwnProperty("_exists")) {
+			console.log("DataNode w/ GroupRef");
+			console.log(DataNode);
+			processor.getByGroupId(DataNode.GroupRef).then(function(group) {
+			console.log("awaited group");
+			console.log(group);
+			});
+			}
+			//*/
+      output = iassign(
+        output,
+        function(o) {
+          return o.entityMap;
+        },
+        function(entityMap) {
+          entityMap[processedId] = processed;
+          return entityMap;
         }
-        //*/
-          return l.concat([processed]);
-        });
-        return o;
-      });
+      );
 
-      outputStream.write(output);
-    });
+      output = iassign(
+        output,
+        function(o) {
+          return o.zIndices;
+        },
+        function(zIndices) {
+          zIndices;
+          zIndices.push("101");
+          return zIndices;
+        }
+      );
 
-  hl(result["/Pathway/Shape"])
-    .errors(function(err) {
-      throw err;
-    })
-    .each(function(Shape) {
       output = iassign(output, function(o) {
-        o.entities = iassign(o.entities, function(l) {
-          const processed = processor.process("Shape", Shape);
-
-          const { cellularComponent } = processed;
-          // CellularComponent is not a BioPAX term, but "PhysicalEntity" is.
-          if (!!cellularComponent) {
-            processed.type = unionLSV(
-              processed.type,
-              "PhysicalEntity",
-              "CellularComponent",
-              cellularComponent
-            );
+        //*
+        const zIndices = o.zIndices.reduce(function(acc, entityId) {
+          const currentZIndex = entityIdToZIndex[entityId];
+          if (currentZIndex < processedZIndex) {
+            acc.push(entityId);
+          } else {
+            acc.push(entityId);
+            acc.push(processedId);
           }
-
-          processor.pvjsonElementStream.write(processed);
-          return l.concat([processed]);
-        });
+          return acc;
+        }, []);
+        // TODO
+        console.log("zIndices651");
+        console.log(zIndices);
+        //*/
+        o.zIndices = ["1", "2"];
         return o;
       });
 
       outputStream.write(output);
     });
 
-  hl(result["/Pathway/Label"])
-    .errors(function(err) {
-      throw err;
-    })
-    .each(function(Label) {
-      output = iassign(output, function(o) {
-        o.entities = iassign(o.entities, function(l) {
-          const processed = processor.process("Label", Label);
-          processor.pvjsonElementStream.write(processed);
-          return l.concat([processed]);
-        });
-        return o;
-      });
-
-      outputStream.write(output);
-    });
-
-  const InteractionStream = hl(result["/Pathway/Interaction"])
-    .errors(function(err) {
-      throw err;
-    })
-    .through(createEdgeTransformStream(processor, "Interaction"))
-    .each(function({ edge, anchors, referencedEntities }) {
-      processor.pvjsonElementStream.write(edge);
-      anchors.forEach(function(anchor) {
-        processor.pvjsonElementStream.write(anchor);
-      });
-      output = iassign(output, function(o) {
-        o.entities = iassign(o.entities, function(l) {
-          return l
-            .concat([processInteraction(referencedEntities, edge)])
-            .concat(anchors);
-        });
-        return o;
-      });
-
-      outputStream.write(output);
-    });
-
-  hl(result["/Pathway/GraphicalLine"])
-    .errors(function(err) {
-      throw err;
-    })
-    .through(createEdgeTransformStream(processor, "GraphicalLine"))
-    .each(function({ edge, anchors }) {
-      processor.pvjsonElementStream.write(edge);
-      anchors.forEach(function(anchor) {
-        processor.pvjsonElementStream.write(anchor);
-      });
-      output = iassign(output, function(o) {
-        o.entities = iassign(o.entities, function(l) {
-          return l.concat([edge]).concat(anchors);
-        });
-        return o;
-      });
-
-      outputStream.write(output);
-    });
-
-  hl(result["/Pathway/Group"])
-    .errors(function(err) {
-      throw err;
-    })
-    .each(function(Group) {
-      const { GroupId, Style } = Group;
-
-      const groupedElementIds = processor.graphIdsByGroupRef[Group.GroupId];
-      if (groupedElementIds) {
-        const processed = processor.process("Group", Group);
-
-        processed["gpml:Style"] = Style;
-        delete processed.style;
-        delete processed.groupId;
-
-        processed.type = unionLSV(processed.type, ["Group" + Style]);
-
-        hl(groupedElementIds)
-          .flatMap(function(id) {
-            return hl(processor.getByGraphId(id));
-          })
-          .map(function(pvjsonElement: any) {
-            pvjsonElement.isPartOf = processed.id;
-            delete pvjsonElement.groupRef;
-            return pvjsonElement;
-          })
-          .errors(function(err) {
-            throw err;
-          })
-          .toArray(function(groupedElements) {
-            // TODO add zIndex, etc. to group.
-            // TODO update coordinates of groupedElements to be relative to group.
-            processed.groupContents = groupedElements;
-            processor.pvjsonElementStream.write(processed);
-            output = iassign(output, function(o) {
-              o.entities = iassign(
-                o.entities.filter(
-                  entity => groupedElementIds.indexOf(entity.id) === -1
-                ),
-                function(l) {
-                  return l.concat([processed]);
-                }
-              );
-              return o;
-            });
-
-            outputStream.write(output);
-          });
-      }
-    });
+  //  hl(result["/Pathway/Shape"])
+  //    .errors(function(err) {
+  //      throw err;
+  //    })
+  //    .each(function(Shape) {
+  //      output = iassign(output, function(o) {
+  //        o.entities = iassign(o.entities, function(l) {
+  //          const processed = addressPathVisioShapeRenderingBugs(
+  //            processor.process("Shape", Shape)
+  //          );
+  //
+  //          const { cellularComponent } = processed;
+  //          // CellularComponent is not a BioPAX term, but "PhysicalEntity" is.
+  //          if (!!cellularComponent) {
+  //            processed.type = unionLSV(
+  //              processed.type,
+  //              "PhysicalEntity",
+  //              "CellularComponent",
+  //              cellularComponent
+  //            ) as string[];
+  //          }
+  //
+  //          processor.pvjsonElementStream.write(processed);
+  //          return l.concat([processed]);
+  //        });
+  //        return o;
+  //      });
+  //
+  //      outputStream.write(output);
+  //    });
+  //
+  //  hl(result["/Pathway/Label"])
+  //    .errors(function(err) {
+  //      throw err;
+  //    })
+  //    .each(function(Label) {
+  //      output = iassign(output, function(o) {
+  //        o.entities = iassign(o.entities, function(l) {
+  //          const processed = processor.process("Label", Label);
+  //          processor.pvjsonElementStream.write(processed);
+  //          return l.concat([processed]);
+  //        });
+  //        return o;
+  //      });
+  //
+  //      outputStream.write(output);
+  //    });
+  //
+  //  const InteractionStream = hl(result["/Pathway/Interaction"])
+  //    .errors(function(err) {
+  //      throw err;
+  //    })
+  //    .through(createEdgeTransformStream(processor, "Interaction"))
+  //    .each(function({
+  //      edge,
+  //      anchors,
+  //      referencedEntities
+  //    }: {
+  //      edge: PvjsonEdge;
+  //      anchors: PvjsonNode[];
+  //      referencedEntities: any;
+  //    }) {
+  //      processor.pvjsonElementStream.write(edge);
+  //      anchors.forEach(function(anchor) {
+  //        processor.pvjsonElementStream.write(anchor);
+  //      });
+  //      output = iassign(output, function(o) {
+  //        o.entities = iassign(o.entities, function(l) {
+  //          return l
+  //            .concat([processInteraction(referencedEntities, edge)])
+  //            .concat(anchors);
+  //        });
+  //        return o;
+  //      });
+  //
+  //      outputStream.write(output);
+  //    });
+  //
+  //  hl(result["/Pathway/GraphicalLine"])
+  //    .errors(function(err) {
+  //      throw err;
+  //    })
+  //    .through(createEdgeTransformStream(processor, "GraphicalLine"))
+  //    .each(function({ edge, anchors }) {
+  //      processor.pvjsonElementStream.write(edge);
+  //      anchors.forEach(function(anchor) {
+  //        processor.pvjsonElementStream.write(anchor);
+  //      });
+  //      output = iassign(output, function(o) {
+  //        o.entities = iassign(o.entities, function(l) {
+  //          return l.concat([edge]).concat(anchors);
+  //        });
+  //        return o;
+  //      });
+  //
+  //      outputStream.write(output);
+  //    });
+  //
+  //  hl(result["/Pathway/Group"])
+  //    .errors(function(err) {
+  //      throw err;
+  //    })
+  //    .each(function(Group) {
+  //      const { GroupId, Style } = Group;
+  //
+  //      const groupedElementIds = processor.graphIdsByGroupRef[Group.GroupId];
+  //      if (groupedElementIds) {
+  //        const processed = processor.process("Group", Group);
+  //
+  //        processed["gpml:Style"] = Style;
+  //        delete processed.style;
+  //        delete processed.groupId;
+  //
+  //        processed.type = unionLSV(processed.type, ["Group" + Style]);
+  //
+  //        hl(groupedElementIds)
+  //          .flatMap(function(id) {
+  //            return hl(processor.getByGraphId(id));
+  //          })
+  //          .map(function(pvjsonElement: any) {
+  //            pvjsonElement.isPartOf = processed.id;
+  //            delete pvjsonElement.groupRef;
+  //            return pvjsonElement;
+  //          })
+  //          .errors(function(err) {
+  //            throw err;
+  //          })
+  //          .toArray(function(groupedElements) {
+  //            // TODO add zIndex, etc. to group.
+  //            // TODO update coordinates of groupedElements to be relative to group.
+  //            processed.groupContents = groupedElements;
+  //            processor.pvjsonElementStream.write(processed);
+  //            output = iassign(output, function(o) {
+  //              o.entities = iassign(
+  //                o.entities.filter(
+  //                  entity => groupedElementIds.indexOf(entity.id) === -1
+  //                ),
+  //                function(l) {
+  //                  return l.concat([processed]);
+  //                }
+  //              );
+  //              return o;
+  //            });
+  //
+  //            outputStream.write(output);
+  //          });
+  //      }
+  //    });
 
   return outputStream.debounce(17);
   //return outputStream.last();
