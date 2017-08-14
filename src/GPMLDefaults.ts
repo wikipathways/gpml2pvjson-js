@@ -34,8 +34,7 @@ export class DataNode extends GPML2013a.DataNodeType {
   ]);
 }
 //*/
-
-/* TODO look at using something like this:
+/* or this:
 import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
 export class DataNode extends GPML2013a.document.Pathway.DataNode[0]
   .constructor {
@@ -55,14 +54,17 @@ export class DataNode extends GPML2013a.document.Pathway.DataNode[0]
 //*/
 
 export const Pathway = {
+  // These not in the XSD
   BoardHeight: 500,
-  Name: "Untitle Pathway"
+  Name: "Untitled Pathway"
 };
 
 export const DataNode = {
   Type: "Unknown",
   Graphics: defaultsDeepAll([
     {
+      // Padding not in the XSD
+      Padding: 1,
       FillColor: "White",
       ShapeType: "Rectangle"
     },
@@ -89,35 +91,25 @@ const Anchor = {
   LineThickness: 0
 };
 
-export const GraphicalLine = {
+export const GPMLEdge = {
   Graphics: {
     Color: "Black",
     LineStyle: "Solid",
     ConnectorType: "Straight",
+    // This is part of the XSD, but it's equivalent to no Arrowhead.
+    /*
     Point: {
       ArrowHead: "Line"
     },
+		//*/
     Anchor: Anchor,
     // these aren't explicitly set in the XSD but maybe should be.
     FillColor: "Transparent",
     LineThickness: 1
   }
 };
-
-export const Interaction = {
-  Graphics: {
-    Color: "Black",
-    LineStyle: "Solid",
-    ConnectorType: "Straight",
-    Point: {
-      ArrowHead: "Line"
-    },
-    Anchor: Anchor,
-    // these aren't explicitly set in the XSD but maybe should be.
-    FillColor: "Transparent",
-    LineThickness: 1
-  }
-};
+export const GraphicalLine = GPMLEdge;
+export const Interaction = GPMLEdge;
 
 export const Label = {
   Graphics: defaultsDeepAll([

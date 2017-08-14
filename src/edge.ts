@@ -15,7 +15,7 @@ interface Combination {
   sideComparison: string;
   reroutingRequired: boolean;
   expectedPointCount: number;
-  sidesToRouteAround?: any;
+  sidesToRouteAround?: Sides[];
 }
 
 interface Sides {
@@ -29,6 +29,14 @@ const HYPEREDGE_RECURSION_LIMIT = 5;
 // a stub is a short path segment that is used for the first and/or last segment(s) of a path
 const DEFAULT_STUB_LENGTH = 20;
 
+function attachedToCompleteAttachmentDisplay(point: Point): boolean {
+  return (
+    point.hasOwnProperty("attachmentDisplay") &&
+    isNumber(point.attachmentDisplay.orientation[0]) &&
+    isNumber(point.attachmentDisplay.orientation[1])
+  );
+}
+
 /**
  * calculateImplicitPoints
  *
@@ -38,8 +46,8 @@ const DEFAULT_STUB_LENGTH = 20;
  */
 function calculateImplicitPoints(
   explicitPoints: Point[],
-  sourceEntity?: { [key: string]: any },
-  targetEntity?: { [key: string]: any }
+  sourceEntity?: PvjsonNode | PvjsonEdge,
+  targetEntity?: PvjsonNode | PvjsonEdge
 ): Point[] {
   const firstExplicitPoint = explicitPoints[0];
   const lastExplicitPoint = explicitPoints[explicitPoints.length - 1];
@@ -52,14 +60,13 @@ function calculateImplicitPoints(
   // this stub is used to make the edge emanate away from the source (or target) node, even though that means initially moving away from the target (or source) node
   let sidesToRouteAround;
 
+  // TODO check whether it's correct to specify <PvjsonEdge> as the type for
+  // sourceEntity/targetEntity when running getSideEquivalentForLine below
+
   // if first and last points are not attached to other attachmentDisplay entities
   if (
-    firstExplicitPoint.hasOwnProperty("attachmentDisplay") &&
-    isNumber(firstExplicitPoint.attachmentDisplay.orientation[0]) &&
-    isNumber(firstExplicitPoint.attachmentDisplay.orientation[1]) &&
-    lastExplicitPoint.hasOwnProperty("attachmentDisplay") &&
-    isNumber(lastExplicitPoint.attachmentDisplay.orientation[0]) &&
-    isNumber(lastExplicitPoint.attachmentDisplay.orientation[1])
+    attachedToCompleteAttachmentDisplay(firstExplicitPoint) &&
+    attachedToCompleteAttachmentDisplay(lastExplicitPoint)
   ) {
     firstPoint = firstExplicitPoint;
     lastPoint = lastExplicitPoint;
@@ -67,30 +74,26 @@ function calculateImplicitPoints(
 
     // if first point is not attached to another attachmentDisplay entity and last point is attached to an attachmentDisplay (not a group)
   } else if (
-    firstExplicitPoint.hasOwnProperty("attachmentDisplay") &&
-    isNumber(firstExplicitPoint.attachmentDisplay.orientation[0]) &&
-    isNumber(firstExplicitPoint.attachmentDisplay.orientation[1]) &&
+    attachedToCompleteAttachmentDisplay(firstExplicitPoint) &&
     lastExplicitPoint.hasOwnProperty("attachmentDisplay")
   ) {
     firstPoint = firstExplicitPoint;
     lastPoint = getSideEquivalentForLine(
       firstExplicitPoint,
       lastExplicitPoint,
-      targetEntity
+      <PvjsonEdge>targetEntity
     );
     sideCombination = getSideCombination(firstPoint, lastPoint);
 
     // if last point is not attached to another attachmentDisplay entity and first point is attached to an attachmentDisplay (not a group)
   } else if (
-    lastExplicitPoint.hasOwnProperty("attachmentDisplay") &&
-    isNumber(lastExplicitPoint.attachmentDisplay.orientation[0]) &&
-    isNumber(lastExplicitPoint.attachmentDisplay.orientation[1]) &&
+    attachedToCompleteAttachmentDisplay(lastExplicitPoint) &&
     firstExplicitPoint.hasOwnProperty("attachmentDisplay")
   ) {
     firstPoint = getSideEquivalentForLine(
       lastExplicitPoint,
       firstExplicitPoint,
-      sourceEntity
+      <PvjsonEdge>sourceEntity
     );
     lastPoint = lastExplicitPoint;
     sideCombination = getSideCombination(firstPoint, lastPoint);
@@ -103,12 +106,12 @@ function calculateImplicitPoints(
     firstPoint = getSideEquivalentForLine(
       lastExplicitPoint,
       firstExplicitPoint,
-      sourceEntity
+      <PvjsonEdge>sourceEntity
     );
     lastPoint = getSideEquivalentForLine(
       firstExplicitPoint,
       lastExplicitPoint,
-      targetEntity
+      <PvjsonEdge>targetEntity
     );
     sideCombination = getSideCombination(firstPoint, lastPoint);
     /*
@@ -429,7 +432,8 @@ function getSideCombination(firstPoint: Point, lastPoint: Point): Combination {
 function getSideEquivalentForLine(
   pointOnShape: Point,
   pointOnEdge: Point,
-  referencedEdge: { [key: string]: any }
+  //referencedEdge: PvjsonEntity
+  referencedEdge: PvjsonEdge
 ): Point {
   var riseFromPointOnEdgeToPointOnShape = pointOnShape.y - pointOnEdge.y;
   var runFromPointOnEdgeToPointOnShape = pointOnShape.x - pointOnEdge.x;
@@ -707,15 +711,15 @@ function getSide(explicitPoint: Point): "top" | "right" | "bottom" | "left" {
 
 function getDataPositionAndOrientationMapping(
   relValue: number,
-  identifier: string,
-  referencedEntity
+  identifier: "RelX" | "RelY",
+  referencedEntity: PvjsonNode
 ): DataPositionAndOrientationMapping {
   // orientation here refers to the initial direction the edge takes as it moves away from its attachmentDisplay
-  var result = <DataPositionAndOrientationMapping>{},
-    position,
-    referencedEntityDimension;
+  let result = <DataPositionAndOrientationMapping>{};
+  let position;
+  let referencedEntityDimension;
 
-  var relativeToUpperLeftCorner = (relValue + 1) / 2;
+  const relativeToUpperLeftCorner = (relValue + 1) / 2;
   if (relativeToUpperLeftCorner < 0 || relativeToUpperLeftCorner > 1) {
     if (identifier === "RelX") {
       referencedEntityDimension = referencedEntity.width;
@@ -746,17 +750,33 @@ function getDataPositionAndOrientationMapping(
   return result;
 }
 
-function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
+function entityIdReferencedByEdgeIsPvjsonNode(
+  entityIdReferencedByEdge: PvjsonNode | PvjsonEdge,
+  entityReferencedByPoint
+): entityIdReferencedByEdge is PvjsonNode {
+  //return !intersectsLSV(["Interaction", "GraphicalLine"], entityReferencedByEdge.type);
+  return entityReferencedByPoint.type.indexOf("Anchor") === -1;
+}
+
+function process(
+  pvjsonEdge: PvjsonEdge,
+  referencedEntities: { [key: string]: PvjsonEntity }
+): PvjsonEdge {
   const { points, drawAs } = pvjsonEdge;
 
-  const explicitPoints = map(function(p, index) {
-    const { ArrowHead, GraphRef, RelX, RelY, X, Y } = p;
-    const explicitPoint: any = {};
+  const pointCount = points.length;
+  let index = 0;
+  const explicitPoints = map(function(point) {
+    const { ArrowHead, GraphRef, RelX, RelY, X, Y } = point;
+    const explicitPoint: Point = {} as Point;
 
-    if (index === 0) {
-      pvjsonEdge.markerStart = ArrowHead;
-    } else {
-      pvjsonEdge.markerEnd = ArrowHead;
+    if (ArrowHead._exists !== false) {
+      // NOTE: side effects below
+      if (index === 0) {
+        pvjsonEdge.markerStart = ArrowHead;
+      } else if (index === pointCount - 1) {
+        pvjsonEdge.markerEnd = ArrowHead;
+      }
     }
 
     if (typeof X !== "undefined") {
@@ -764,24 +784,46 @@ function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
       explicitPoint.y = Y;
     }
 
-    const referencedNode =
-      referencedEntities && GraphRef && referencedEntities[GraphRef];
-    if (referencedNode) {
-      const referencedEntityId = referencedNode.type.indexOf("Anchor") === -1
-        ? referencedNode.id
-        : referencedNode.isAttachedTo;
+    // entityReferencedByPoint can be a regular node (DataNode, Shape, Label)
+    // or an Anchor. If connected to an Anchor, the biological meaning is
+    // that the edge is connected to another edge, but in this code, we
+    // implement this by treating the Anchor as a node, as if it were
+    // a "burr" that is always stuck (isAttachedTo) the other edge.
+    const entityReferencedByPoint =
+      referencedEntities &&
+      GraphRef &&
+      (referencedEntities[GraphRef] as PvjsonNode);
 
-      const referencedEntity = referencedEntities[referencedEntityId];
+    if (entityReferencedByPoint) {
+      /*
+      let entityIdReferencedByEdge;
+			if (entityReferencedByPoint.type.indexOf(
+        "Anchor"
+      ) > -1) {
+				entityIdReferencedByEdge = entityReferencedByPoint.isAttachedTo;
+			} else {
+				entityIdReferencedByEdge = entityReferencedByPoint.id;
+			}
+			//*/
+
+      const entityIdReferencedByEdge = entityReferencedByPoint.type.indexOf(
+        "Anchor"
+      ) > -1
+        ? entityReferencedByPoint.isAttachedTo
+        : entityReferencedByPoint.id;
 
       // NOTE: pvjson allows for expressing one edge attached to another edge.
       // When we do this, we say that the POINT attaches to an ANCHOR on the other edge,
       // but the EDGE attaches to the other EDGE, never the anchor.
-      explicitPoint.isAttachedTo = referencedNode.id;
+      explicitPoint.isAttachedTo = entityReferencedByPoint.id;
       // WARNING: side effects below
       pvjsonEdge.isAttachedTo = unionLSV(
         pvjsonEdge.isAttachedTo,
-        referencedEntityId
-      );
+        entityIdReferencedByEdge
+      ) as string[];
+
+      const entityReferencedByEdge =
+        referencedEntities[entityIdReferencedByEdge];
 
       // attachmentDisplay: { position: [x: number, y: number], offset: [xOffset: number, yOffset: number], orientation: [dx: number, dy: number] }
       //
@@ -827,14 +869,19 @@ function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
       //       dx, dy are unit vector coordinates of a point that specifies how the edge emanates from the node
 
       // NOTE: section below only runs for points that are not attached to edges
-      //if (!intersectsLSV(["Interaction", "GraphicalLine"], referencedEntity.type)) {}
-      if (referencedNode.type.indexOf("Anchor") === -1) {
-        var dataPositionAndOrientationX = getDataPositionAndOrientationMapping(
+      if (
+        entityIdReferencedByEdgeIsPvjsonNode(
+          entityReferencedByEdge,
+          entityReferencedByPoint
+        )
+      ) {
+        const dataPositionAndOrientationX = getDataPositionAndOrientationMapping(
           RelX,
           "RelX",
-          referencedEntity
+          entityReferencedByEdge
         );
-        explicitPoint.attachmentDisplay = explicitPoint.attachmentDisplay || {};
+        explicitPoint.attachmentDisplay =
+          explicitPoint.attachmentDisplay || ({} as AttachmentDisplay);
         if (
           !!dataPositionAndOrientationX &&
           isNumber(dataPositionAndOrientationX.position)
@@ -848,13 +895,15 @@ function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
             isNumber(dataPositionAndOrientationX.orientation)
           ) {
             explicitPoint.attachmentDisplay.orientation =
-              explicitPoint.attachmentDisplay.orientation || [];
+              explicitPoint.attachmentDisplay.orientation ||
+              ([] as [number, number]);
             explicitPoint.attachmentDisplay.orientation[0] =
               dataPositionAndOrientationX.orientation;
           }
           if (dataPositionAndOrientationX.hasOwnProperty("offset")) {
             explicitPoint.attachmentDisplay.offset =
-              explicitPoint.attachmentDisplay.offset || [];
+              explicitPoint.attachmentDisplay.offset ||
+              ([] as [number, number]);
             // TODO in the case of a group as the referenced entity,
             // we don't have the group width and height yet to properly calculate this
             explicitPoint.attachmentDisplay.offset[0] =
@@ -862,12 +911,13 @@ function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
           }
         }
 
-        var dataPositionAndOrientationY = getDataPositionAndOrientationMapping(
+        const dataPositionAndOrientationY = getDataPositionAndOrientationMapping(
           RelY,
           "RelY",
-          referencedEntity
+          entityReferencedByEdge
         );
-        explicitPoint.attachmentDisplay = explicitPoint.attachmentDisplay || {};
+        explicitPoint.attachmentDisplay =
+          explicitPoint.attachmentDisplay || ({} as AttachmentDisplay);
         if (
           !!dataPositionAndOrientationY &&
           isNumber(dataPositionAndOrientationY.position)
@@ -881,13 +931,15 @@ function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
             isNumber(dataPositionAndOrientationY.orientation)
           ) {
             explicitPoint.attachmentDisplay.orientation =
-              explicitPoint.attachmentDisplay.orientation || [];
+              explicitPoint.attachmentDisplay.orientation ||
+              ([] as [number, number]);
             explicitPoint.attachmentDisplay.orientation[1] =
               dataPositionAndOrientationY.orientation;
           }
           if (dataPositionAndOrientationY.hasOwnProperty("offset")) {
             explicitPoint.attachmentDisplay.offset =
-              explicitPoint.attachmentDisplay.offset || [];
+              explicitPoint.attachmentDisplay.offset ||
+              ([] as [number, number]);
             // TODO in the case of a group as the referenced entity,
             // we don't have the group width and height yet to properly calculate this
 
@@ -901,6 +953,8 @@ function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
       }
     }
 
+    // NOTE: side effect
+    index += 1;
     return explicitPoint;
   }, points);
 
@@ -913,9 +967,14 @@ function process(pvjsonEdge, referencedEntities: { [key: string]: any }): Edge {
   } else if (drawAs === "SegmentedLine") {
     pvjsonPoints = explicitPoints;
   } else {
-    // This is in context of what the edge is fundamentally attached to.
-    // (The edge is never *fundamentally* attached to an anchor, even though it's a useful
-    // representation for other purposes.)
+    // pvjsonEdge.isAttachedTo refers to what the EDGE is fundamentally attached to.
+    // pvjsonEdge.points[0].isAttachedTo refers to what the POINT is attached to.
+    //
+    // From the perspective of the biological meaning, the edge is always attached to
+    // a regular node like a DataNode or Shape (maybe Label?) but never to an Anchor.
+    //
+    // From the perspective of the implementation of the graphics, we say the edge
+    // has points, one or more of which can be connected to an Anchor.
     const [sourceEntity, targetEntity] = pvjsonEdge.isAttachedTo.map(
       id => referencedEntities[id]
     );
@@ -980,13 +1039,10 @@ export function createEdgeTransformStream(
 ): (
   s: Highland.Stream<GPML2013a.InteractionType | GPML2013a.GraphicalLineType>
 ) => Highland.Stream<{
-  edge: Edge;
-  anchors: any[];
-  referencedEntities: { [key: string]: any };
+  edge: PvjsonEdge;
+  anchors: PvjsonNode[];
 }> {
-  return function(
-    s: Highland.Stream<GPML2013a.InteractionType | GPML2013a.GraphicalLineType>
-  ) {
+  return function(s) {
     return s
       .sortBy(function(InteractionA, InteractionB) {
         const AHasAnchor = InteractionA.Graphics.hasOwnProperty("Anchor");
@@ -1003,9 +1059,8 @@ export function createEdgeTransformStream(
       .flatMap(function(
         InteractionBatch
       ): Highland.Stream<{
-        edge: Edge;
-        anchors: any[];
-        referencedEntities: { [key: string]: any };
+        edge: PvjsonEdge;
+        anchors: PvjsonNode[];
       }> {
         return hl(
           InteractionBatch.map(function(gpmlEdge) {
@@ -1018,9 +1073,7 @@ export function createEdgeTransformStream(
                   .flatMap(function(graphRefId) {
                     return hl(
                       processor.getByGraphId(graphRefId)
-                    ).flatMap(function(referencedEntity: {
-                      [key: string]: any;
-                    }) {
+                    ).flatMap(function(referencedEntity: PvjsonEntity) {
                       const referencedEntityStream = hl([referencedEntity]);
                       return referencedEntity.type.indexOf("Anchor") === -1
                         ? referencedEntityStream
@@ -1036,17 +1089,15 @@ export function createEdgeTransformStream(
                   })
                   .reduce({}, function(
                     acc: {
-                      [key: string]: any;
+                      [key: string]: PvjsonEntity;
                     },
-                    referencedEntity: {
-                      [key: string]: any;
-                    }
+                    referencedEntity: PvjsonEntity
                   ) {
                     acc[referencedEntity.id] = referencedEntity;
                     return acc;
                   })
               : hl([{}])).map(function(referencedEntities: {
-              [key: string]: any;
+              [key: string]: PvjsonEntity;
             }) {
               const processed = process(
                 processor.process(edgeType, gpmlEdge),
@@ -1082,10 +1133,12 @@ export function createEdgeTransformStream(
                 });
               }
 
+              // TODO where is this property being added?
+              delete processed["undefined"];
+
               return {
                 edge: processed,
-                anchors: pvjsonAnchors,
-                referencedEntities: referencedEntities
+                anchors: pvjsonAnchors
               };
             });
           })

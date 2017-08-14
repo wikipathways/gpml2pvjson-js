@@ -1,0 +1,54 @@
+{
+  "None": {
+    "Graphics": {
+      "Padding": 8,
+      "ShapeType": "Rectangle",
+      "LineStyle": "Broken",
+      "LineThickness": 1,
+      "FillColor": "B4B464"
+    },
+    "type": [
+      "GroupNone",
+      "Pathway"
+    ]
+  },
+  "Group": {
+    "Graphics": {
+      "Padding": 8,
+      "ShapeType": "None",
+      "LineStyle": "Broken",
+      "LineThickness": 0,
+      "FillColor": "Transparent"
+    },
+    "type": [
+      "GroupGroup",
+      "Pathway"
+    ]
+  },
+  "Complex": {
+    "Graphics": {
+      "Padding": 11,
+      "ShapeType": "Complex",
+      "LineStyle": "Solid",
+      "LineThickness": 1,
+      "FillColor": "B4B464"
+    },
+    "type": [
+      "GroupComplex",
+      "Complex"
+    ]
+  },
+  "Pathway": {
+    "Graphics": {
+      "Padding": 8,
+      "ShapeType": "Rectangle",
+      "LineStyle": "Broken",
+      "LineThickness": 1,
+      "FillColor": "00FF00"
+    },
+    "type": [
+      "GroupPathway",
+      "Pathway"
+    ]
+  }
+}

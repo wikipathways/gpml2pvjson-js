@@ -1,12 +1,15 @@
-/// <reference path="rgbcolor.d.ts" />
-//// <reference path="src/topublish/rx-sax/XPathParser.d.ts" />
-/// <reference path="src/json.d.ts" />
+/// <reference path="../rgbcolor.d.ts" />
+/// <reference path="./json.d.ts" />
+/// <reference path="../xmlns/pathvisio.org/GPML/2013a.d.ts" />
+//// <reference path="../../cxml/test/xmlns/pathvisio.org/GPML/2013a.d.ts" />
+
+//////// <reference path="./topublish/rx-sax/XPathParser.d.ts" />
 
 /* GPML */
 
 // TODO compile this as part of the build step for this package
 //import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
-import * as GPML2013a from "../cxml/test/xmlns/pathvisio.org/GPML/2013a";
+//import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
 
 type GPMLAttributeNames =
   | "xmlns"
@@ -59,15 +62,6 @@ declare type GPML_ATTRIBUTE_NAMES_AND_TYPES = {
   [K in GPMLAttributeNames]?: string
 };
 
-declare type GPMLElement = typeof GPML2013a.document.Pathway &
-  typeof GPML2013a.DataNodeType.prototype &
-  typeof GPML2013a.GraphicalLineType.prototype &
-  typeof GPML2013a.GroupType.prototype &
-  typeof GPML2013a.InteractionType.prototype &
-  typeof GPML2013a.LabelType.prototype &
-  typeof GPML2013a.ShapeType.prototype &
-  typeof GPML2013a.StateType.prototype;
-
 /* pvjson */
 
 // decorations or other small elements attached to another element,
@@ -75,14 +69,14 @@ declare type GPMLElement = typeof GPML2013a.document.Pathway &
 interface Burr {
   drawAs: number;
   isAttachedTo: string;
-  attachmentDisplay?: attachmentDisplay;
+  attachmentDisplay?: AttachmentDisplay;
 }
 
 interface Point {
   x?: number;
   y?: number;
   isAttachedTo?: string;
-  attachmentDisplay?: attachmentDisplay;
+  attachmentDisplay?: AttachmentDisplay;
 }
 
 interface NodeDimensions {
@@ -110,18 +104,7 @@ interface PublicationXref {
   displayName?: string;
 }
 
-interface Controller {
-  type?: string | string[];
-}
-
-interface Controlled {
-  left?: string;
-  right?: string;
-  participant?: string | string[];
-  type?: string | string[];
-}
-
-interface attachmentDisplay {
+interface AttachmentDisplay {
   // position takes two numbers for GPML States and Points, but
   // just one for GPML Anchors, which are attached to edges.
   position: number[];
@@ -129,7 +112,12 @@ interface attachmentDisplay {
   orientation?: [number, number];
 }
 
-type DataElementStringProperties =
+interface Comment {
+  content: string;
+  source?: string;
+}
+
+type PvjsonEntityMergedStringProperties =
   | "author"
   | "backgroundColor"
   | "cellularComponent"
@@ -145,28 +133,35 @@ type DataElementStringProperties =
   | "fontStyle"
   | "fontWeight"
   | "gpml:GroupRef"
-  | "gpml:Style"
-  | "gpmlElementName"
   | "href"
   | "id" // @id
   | "isPartOf"
   | "lastModified"
   | "license"
   | "maintainer"
-  | "tagName"
   | "organism"
   | "kaavioType"
   | "standardName"
   | "strokeDasharray"
   | "textAlign"
   | "verticalAlign"
+  | "biopaxType"
+  | "wpInteractionType"
+  | "conversionDirection"
+  | "controlType"
+  | "controller"
+  | "controlled"
+  | "left"
+  | "right"
+  | "markerStart"
+  | "markerEnd"
   | "wpType";
 
 // This probably isn't a problem with parsing GPML,
 // but if we need to parse non-numeric values like '0.5em',
 // we can use something like this:
 // https://github.com/sebmarkbage/art/blob/51ffce8164a555d652843241c2fdda52e186cbbd/parsers/svg/core.js#L170
-type DataElementNumberProperties =
+type PvjsonEntityMergedNumberProperties =
   | "borderWidth"
   | "fillOpacity"
   | "fontSize"
@@ -181,57 +176,126 @@ type DataElementNumberProperties =
   | "y"
   | "zIndex";
 
-declare type DataElementWithStringProperties = {
-  [K in DataElementStringProperties]?: string
+declare type PvjsonEntityMergedWithStringProperties = {
+  [K in PvjsonEntityMergedStringProperties]?: string
 };
 
-declare type DataElementWithNumberProperties = {
-  [K in DataElementNumberProperties]?: number
+declare type PvjsonEntityMergedWithNumberProperties = {
+  [K in PvjsonEntityMergedNumberProperties]?: number
 };
 
-type DataElementStringArrayProperties =
+type PvjsonEntityMergedStringArrayProperties =
   | "burrs"
   | "citation"
-  | "comment"
   | "contains"
   | "lineStyle"
+  | "sboInteractionType"
+  | "participants"
   | "type";
 
-declare type DataElementWithStringArrayProperties = {
-  [K in DataElementStringArrayProperties]?: string[]
+declare type PvjsonEntityMergedWithStringArrayProperties = {
+  [K in PvjsonEntityMergedStringArrayProperties]?: string[]
 };
 
-interface DataElementManual {
-  attachmentDisplay?: attachmentDisplay;
-  isAttachedTo?: string;
+declare type PvjsonEntityMerged = PvjsonEntityMergedWithStringProperties &
+  PvjsonEntityMergedWithNumberProperties &
+  PvjsonEntityMergedWithStringArrayProperties & {
+    attachmentDisplay?: AttachmentDisplay;
+    comments?: Comment[];
+    isAttachedTo?: string | string[];
+    points?: Point[];
+  };
+
+type PvjsonNodeRequiredKeys =
+  | "borderWidth"
+  | "color"
+  | "drawAs"
+  | "height"
+  | "id"
+  | "kaavioType"
+  | "padding"
+  | "type"
+  | "width"
+  | "x"
+  | "y"
+  | "zIndex";
+type PvjsonNodeOptionalKeys =
+  | "attachmentDisplay"
+  | "cellularComponent"
+  | "contains"
+  | "dbId"
+  | "dbName"
+  | "isPartOf"
+  | "rotation"
+  | "strokeDasharray";
+type PvjsonNode = { [K in PvjsonNodeRequiredKeys]: PvjsonEntityMerged[K] } &
+  { [K in PvjsonNodeOptionalKeys]?: PvjsonEntityMerged[K] } & {
+    isAttachedTo?: string;
+  };
+
+type PvjsonEdgeRequiredKeys =
+  | "id"
+  | "drawAs"
+  | "color"
+  | "drawAs"
+  | "kaavioType"
+  | "zIndex"
+  | "type";
+type PvjsonEdgeOptionalKeys =
+  | "dbId"
+  | "dbName"
+  | "attachmentDisplay"
+  | "strokeDasharray"
+  | "markerStart"
+  | "markerEnd"
+  | "isPartOf"
+  | "biopaxType"
+  | "wpInteractionType"
+  | "sboInteractionType"
+  | "dbId"
+  | "conversionDirection"
+  | "dbName"
+  | "participants"
+  | "controlType"
+  | "controller"
+  | "controlled"
+  | "left"
+  | "right";
+type PvjsonEdge = { [K in PvjsonEdgeRequiredKeys]: PvjsonEntityMerged[K] } &
+  { [K in PvjsonEdgeOptionalKeys]?: PvjsonEntityMerged[K] } & {
+    //explicitPoints?: any;
+    isAttachedTo?: string[];
+    points: Point[];
+  };
+
+type PvjsonInteractionRequiredKeys =
+  | "biopaxType"
+  | "wpInteractionType"
+  | "sboInteractionType";
+type PvjsonInteraction = PvjsonEdge &
+  { [K in PvjsonInteractionRequiredKeys]: PvjsonEntityMerged[K] } & {
+    //interactionType: string;
+  };
+
+interface Controlled extends PvjsonInteraction {
+  left: string;
+  right: string;
 }
 
-declare type DataElement = DataElementWithStringProperties &
-  DataElementWithNumberProperties &
-  DataElementWithStringArrayProperties &
-  DataElementManual;
-
-interface EdgeManual {
-  markerStart?: string;
-  markerEnd?: string;
-  explicitPoints?: any;
-  points?: Point[];
-  attachmentDisplay?: attachmentDisplay;
-  isAttachedTo?: string[];
+// example controller: an enzyme
+// example Control: a catalysis
+// example controlled: a conversion
+interface Control extends PvjsonEdge {
+  controlled: string;
+  controller: string;
+  controlType: string;
 }
 
-declare type Edge = DataElementWithStringProperties &
-  DataElementWithNumberProperties &
-  DataElementWithStringArrayProperties &
-  EdgeManual;
-//declare type Edge = DataElementWithStringProperties & DataElementWithNumberProperties & EdgeManual;
-//declare type Edge = EdgeManual;
+type PvjsonEntity = PvjsonNode | PvjsonEdge;
 
-declare type DataElementsByClass = { [K in GPMLClassNames]?: string[] };
-
-declare type DataElementMap = {
+declare type PvjsonEntityMap = {
   // TODO this could likely be improved
-  [key: string]: DataElement | Edge;
+  [key: string]: PvjsonEntity;
 };
 
 declare type DataManual = {
@@ -242,8 +306,8 @@ declare type DataManual = {
   // NOTE that data.elementMap may have more entries than data.elements.
   // For example, if the source GPML has one or more empty Groups, these
   // Groups will be in data.elementMap but not in data.elements.
-  elementMap: DataElementMap;
-  elements: DataElement[];
+  elementMap: PvjsonEntityMap;
+  elements: PvjsonEntity[];
   GraphIdToGroupId: {
     [key: string]: string;
   };
@@ -264,8 +328,8 @@ declare type Container = {
   // NOTE that data.elementMap may have more entries than data.elements.
   // For example, if the source GPML has one or more empty Groups, these
   // Groups will be in data.elementMap but not in data.elements.
-  elementMap: DataElementMap;
-  elements: DataElement[];
+  elementMap: PvjsonEntityMap;
+  elements: PvjsonEntity[];
   GraphIdToGroupId: {
     [key: string]: string;
   };
@@ -276,7 +340,8 @@ declare type Container = {
   edge: string[];
 } & { [K in GPMLClassNames]?: string[] };
 
-declare type Data = DataElementsByClass & DataManual;
+declare type PvjsonEntitiesByClass = { [K in GPMLClassNames]?: string[] };
+declare type Data = PvjsonEntitiesByClass & DataManual;
 
 /* jsonld and jsonld-extra */
 
@@ -326,7 +391,7 @@ declare type jsonldListSetValue =
   | jsonldListSetPrimitive
   | jsonldListSetPrimitive[];
 
-//const COMMON_PROPS: ReadonlyArray<keyof DataElement> = [
+//const COMMON_PROPS: ReadonlyArray<keyof PvjsonEntity> = [
 //	'color',
 //	'dbName', // e.g., Entrez Gene
 //	'dbId', // xref identifier, e.g., 1234 for Entrez Gene 1234
@@ -346,7 +411,7 @@ declare type jsonldListSetValue =
 //	'citation',
 //];
 //
-//const PATHWAY_PROPS: ReadonlyArray<keyof DataElement> = COMMON_PROPS.concat([
+//const PATHWAY_PROPS: ReadonlyArray<keyof PvjsonEntity> = COMMON_PROPS.concat([
 //	'author',
 //	'dataSource',
 //	'email',
@@ -356,7 +421,7 @@ declare type jsonldListSetValue =
 //	'organism',
 //]);
 //
-//const NODE_PROPS: ReadonlyArray<keyof DataElement> = [
+//const NODE_PROPS: ReadonlyArray<keyof PvjsonEntity> = [
 //	'x',
 //	'y',
 //	'width',
@@ -373,12 +438,12 @@ declare type jsonldListSetValue =
 //	'fontSize',
 //];
 //
-//const GROUP_PROPS: ReadonlyArray<keyof DataElement> = NODE_PROPS.concat([
+//const GROUP_PROPS: ReadonlyArray<keyof PvjsonEntity> = NODE_PROPS.concat([
 //	'contains',
 //	'style',
 //]);
 //
-//const EDGE_PROPS: ReadonlyArray<keyof DataElement> = COMMON_PROPS.concat([
+//const EDGE_PROPS: ReadonlyArray<keyof PvjsonEntity> = COMMON_PROPS.concat([
 //	'position',
 //	'points',
 //]);

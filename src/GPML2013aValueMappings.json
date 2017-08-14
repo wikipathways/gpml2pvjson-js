@@ -1,5 +1,15 @@
 {
   "Middle": "center",
   "Left": "start",
-  "Right": "end"
+  "Right": "end",
+  "bp:ID": "dbId",
+  "bp:DB": "dbName",
+  "bp:TITLE": "title",
+  "bp:SOURCE": "source",
+  "bp:YEAR": "year",
+  "bp:AUTHORS": "author",
+  "GeneProdKegg enzymeuct": "Protein",
+  "SimplePhysicalEntity": "Unknown",
+  "Modifier": "Metabolite",
+  "State": "Metabolite"
 }

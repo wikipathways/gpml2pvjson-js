@@ -21,6 +21,7 @@
   "Point": "points",
   "Shape": "drawAs",
   "ShapeType": "drawAs",
+  "Style": "pvjson:delete",
   "TextLabel": "displayName",
   "Version": "dataSourceVersion",
   "Valign": "verticalAlign",

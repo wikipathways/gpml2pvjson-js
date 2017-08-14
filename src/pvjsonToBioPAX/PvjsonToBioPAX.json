@@ -1,0 +1,15 @@
+{
+  "dbId": "id",
+  "dbName": "db",
+  "title": "title",
+  "source": "source",
+  "year": "year",
+  "author": "author",
+  "Complex": "Complex",
+  "GeneProduct": "Dna",
+  "Metabolite": "SmallMolecule",
+  "Pathway": "Pathway",
+  "Protein": "Protein",
+  "Rna": "Rna",
+  "Unknown": "PhysicalEntity"
+}

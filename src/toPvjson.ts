@@ -1,54 +1,48 @@
 import "source-map-support/register";
 // TODO should I get rid of the lib above for production browser build?
 
-import { assign as mutableAssign } from "lodash";
+import { assign as assignM } from "lodash";
 import {
   assign,
-  camelCase,
   concat,
-  defaultsDeep,
-  find,
-  flatten,
-  flattenDepth,
   fromPairs,
   isArray,
   isObject,
-  isString,
-  keysIn,
   map,
-  orderBy,
+  sortBy,
   toPairs,
-  toPairsIn,
-  reduce,
-  values
+  toPairsIn
 } from "lodash/fp";
-import {
-  arrayify,
-  supportedNamespaces,
-  transform,
-  unionLSV
-} from "./gpml-utilities";
+import * as hl from "highland";
+import * as iassign from "immutable-assign";
 
-import { CXMLXPath } from "./topublish/cxml-xpath";
-
+// TODO use published version
 //import * as cxml from "cxml";
 import * as cxml from "../../cxml/lib/cxml";
+import { CXMLXPath } from "./topublish/cxml-xpath";
 
 // TODO compile this as part of the build step for this package
 //import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
 import * as GPMLDefaults from "./GPMLDefaults";
-import * as BioPAXToPvjson from "./BioPAXToPvjson.json";
-import * as GPML2013aKeyMappings from "./GPML2013aKeyMappings.json";
-import * as GPML2013aValueMappings from "./GPML2013aValueMappings.json";
-import * as GPML2013aValueConverters from "./GPML2013aValueConverters";
-import * as iassign from "immutable-assign";
-import * as hl from "highland";
 
+import { processKV, Processor } from "./Processor";
 import { createEdgeTransformStream } from "./edge";
-import { process as processInteraction } from "./Interaction";
-import { addressPathVisioShapeRenderingBugs } from "./Shape";
+import {
+  preprocess as preprocessGroupGPML,
+  postprocess as postprocessGroupPVJSON
+} from "./group";
+import { postprocess as postprocessShapePVJSON } from "./Shape";
+import { isPvjsonEdge, supportedNamespaces, unionLSV } from "./gpml-utilities";
 
+iassign.setOption({
+  // Deep freeze both input and output. Used in development to make sure they don't change.
+  // TODO watch issue and re-enable when addressed: https://github.com/engineforce/ImassignM/issues/11
+  //freeze: true,
+  ignoreIfNoChange: true
+});
+
+/*
 export type GPMLElement = GPML2013a.PathwayType &
   typeof GPML2013a.DataNodeType.prototype &
   typeof GPML2013a.GraphicalLineType.prototype &
@@ -57,248 +51,7 @@ export type GPMLElement = GPML2013a.PathwayType &
   typeof GPML2013a.LabelType.prototype &
   typeof GPML2013a.ShapeType.prototype &
   typeof GPML2013a.StateType.prototype;
-
-iassign.setOption({
-  // Deep freeze both input and output. Used in development to make sure they don't change.
-  // TODO watch issue and re-enable when addressed: https://github.com/engineforce/ImmutableAssign/issues/11
-  //freeze: true,
-  ignoreIfNoChange: true
-});
-
-function liftProperties(target, source) {
-  return assign(target, source);
-}
-
-function processKV(gpmlElement, [gpmlKey, gpmlValue]) {
-  const pvjsonKey = GPML2013aKeyMappings[gpmlKey];
-  // NOTE "pvjson:lift" is for elements like "Graphics", where they
-  // are nested in GPML but are merged into the parent in pvjson.
-
-  if (gpmlKey[0] === "_" || pvjsonKey === "pvjson:delete") {
-    // NOTE: we don't want to include "private" keys, such as
-    // "_exists" or "_namespace".
-    return [];
-  } else if (pvjsonKey === "pvjson:lift") {
-    return toPairsIn(gpmlValue)
-      .map(processKV.bind(undefined, gpmlElement))
-      .map(flatten);
-  } else if (gpmlKey === "Attribute") {
-    // NOTE: in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute".
-    return toPairs(
-      gpmlValue
-        .map(function({ Key, Value }) {
-          return processKV(gpmlElement, [Key, Value]);
-        })
-        .reduce(function(acc, [[processedKey, processedValue]]) {
-          // NOTE: this looks more complicated than it needs to be,
-          // but it's to handle the case where there are two or more
-          // sibling Attribute elements that share the same Key.
-          // I don't know of any cases of this in our actual GPML,
-          // but the XSD does not require unique Keys for sibling
-          // Attributes.
-          if (acc.hasOwnProperty(processedKey)) {
-            acc[processedKey] = unionLSV(acc[processedKey], processedValue);
-          } else {
-            acc[processedKey] = processedValue;
-          }
-          return acc;
-        }, {})
-    );
-  } else {
-    // NOTE: jsSafeGPMLKey is for attributes like "Data-Source", because
-    // this is not valid JS:
-    //   export function Data-Source() {};
-    const jsSafeGPMLKey = gpmlKey.replace("-", "");
-    const pvjsonValue = GPML2013aValueConverters.hasOwnProperty(jsSafeGPMLKey)
-      ? GPML2013aValueConverters[jsSafeGPMLKey](gpmlElement)
-      : gpmlValue;
-    /* TODO for gpmlValues that are arrays, do we want to recursively descend into and process each array element?
-      : isArray(gpmlValue)
-        ? gpmlValue.map(function(valueItem) {
-            if (!isObject(valueItem) || isArray(valueItem)) {
-              return valueItem;
-            } else {
-              return fromPairs(
-                toPairs(valueItem).map(function([key, value]) {
-                  return processKV(valueItem, [key, value]);
-                })
-              );
-            }
-          })
-        : gpmlValue;
-		//*/
-    // NOTE: not including key/value pairs when the value is missing
-    if (["", null, undefined].indexOf(pvjsonValue) === -1) {
-      return [
-        [
-          pvjsonKey || camelCase(gpmlKey),
-          GPML2013aValueConverters.hasOwnProperty(jsSafeGPMLKey)
-            ? GPML2013aValueConverters[jsSafeGPMLKey](gpmlElement)
-            : GPML2013aValueMappings.hasOwnProperty(gpmlKey)
-              ? GPML2013aValueMappings[gpmlKey]
-              : gpmlValue
-        ]
-      ];
-    } else {
-      return [];
-    }
-  }
-}
-
-// see
-// https://github.com/PathVisio/pathvisio/blob/3cb194f120de550ef2e102877965bed3c54a6a75/modules/org.pathvisio.core/src/org/pathvisio/core/biopax/BiopaxElement.java#L245
-export class GraphIdManager {
-  greatestAsInt: number;
-  constructor() {
-    this.greatestAsInt = parseInt("0xa00", 16);
-  }
-
-  generateAndRecord() {
-    this.greatestAsInt += 1;
-    return this.greatestAsInt.toString(16);
-  }
-
-  recordExisting(graphIdAsHex) {
-    const { greatestAsInt } = this;
-    const graphIdAsInt = parseInt(graphIdAsHex, 16);
-    if (graphIdAsInt > greatestAsInt) {
-      this.greatestAsInt = graphIdAsInt;
-    }
-  }
-}
-
-export class Processor {
-  graphIdManager: GraphIdManager;
-
-  graphIdsByGraphRef: Record<string, string[]>;
-  graphIdsByGroupRef: Record<string, string[]>;
-
-  promisedGraphIdByGroupId: Record<string, Promise<string>>;
-  promisedPvjsonElementByGraphId: Record<string, Promise<PvjsonEntity>>;
-
-  pvjsonElementStream: Highland.Stream<PvjsonEntity>;
-  groupIdToGraphIdStream: Highland.Stream<any>;
-
-  constructor() {
-    this.graphIdManager = new GraphIdManager();
-
-    this.graphIdsByGraphRef = {};
-    const graphIdsByGraphRef = this.graphIdsByGraphRef;
-
-    this.graphIdsByGroupRef = {};
-
-    this.promisedGraphIdByGroupId = {};
-    const promisedGraphIdByGroupId = this.promisedGraphIdByGroupId;
-
-    this.promisedPvjsonElementByGraphId = {};
-    const promisedPvjsonElementByGraphId = this.promisedPvjsonElementByGraphId;
-
-    const pvjsonElementStream = hl() as Highland.Stream<PvjsonEntity>;
-    this.pvjsonElementStream = pvjsonElementStream;
-    pvjsonElementStream.each(function(pvjsonElement: PvjsonEntity) {
-      const { isAttachedTo, id } = pvjsonElement;
-      promisedPvjsonElementByGraphId[id] = Promise.resolve(pvjsonElement);
-
-      if (!!isAttachedTo) {
-        arrayify(isAttachedTo).forEach(function(graphRef: string) {
-          graphIdsByGraphRef[graphRef] = graphIdsByGraphRef[graphRef] || [];
-          graphIdsByGraphRef[graphRef].push(id);
-        });
-      }
-    });
-
-    const groupIdToGraphIdStream = hl();
-    this.groupIdToGraphIdStream = groupIdToGraphIdStream;
-    groupIdToGraphIdStream.each(function([groupId, graphId]) {
-      promisedGraphIdByGroupId[groupId] = Promise.resolve(graphId);
-    });
-
-    /*
-    endStream.each(function(x) {
-      groupIdToGraphIdStream.end();
-      pvjsonElementStream.end();
-    });
-		//*/
-  }
-
-  getByGraphId = graphId => {
-    let promisedPvjsonElement = this.promisedPvjsonElementByGraphId[graphId];
-    if (promisedPvjsonElement) {
-      return promisedPvjsonElement;
-    } else {
-      const { pvjsonElementStream } = this;
-      promisedPvjsonElement = new Promise(function(resolve, reject) {
-        pvjsonElementStream
-          .observe()
-          .find(pvjsonElement => pvjsonElement.id === graphId)
-          .errors(reject)
-          .each(resolve);
-      });
-
-      return promisedPvjsonElement;
-    }
-  };
-
-  getByGroupId = targetGroupId => {
-    const { getByGraphId, groupIdToGraphIdStream } = this;
-    let promisedGraphId = this.promisedGraphIdByGroupId[targetGroupId];
-    if (!promisedGraphId) {
-      promisedGraphId = this.promisedGraphIdByGroupId[
-        targetGroupId
-      ] = new Promise(function(resolve, reject) {
-        groupIdToGraphIdStream
-          .observe()
-          .find(([groupId, graphId]) => groupId === targetGroupId)
-          .errors(reject)
-          .each(function([groupId, graphId]) {
-            resolve(graphId);
-          });
-      });
-    }
-
-    return promisedGraphId.then(getByGraphId);
-  };
-
-  process = (gpmlElementName, gpmlElement) => {
-    const { graphIdManager } = this;
-    const { GroupId, GroupRef } = gpmlElement;
-
-    let GraphId = gpmlElement.GraphId;
-    // Does the schema allow the element to have a GraphId?
-    if (!!GraphId) {
-      // Does it actually have one?
-      if (GraphId._exists === false) {
-        // NOTE: we are making sure that elements that CAN have a GraphId
-        // always DO have a GraphId. GraphIds are optional in GPML for Groups,
-        // so we will add one if it's not already specified. But Pathway
-        // elements never have GraphIds, so we don't add one for them.
-        GraphId = gpmlElement.GraphId = graphIdManager.generateAndRecord();
-      } else {
-        graphIdManager.recordExisting(GraphId);
-      }
-
-      if (!!GroupRef && GroupRef._exists !== false) {
-        this.graphIdsByGroupRef[GroupRef] =
-          this.graphIdsByGroupRef[GroupRef] || [];
-        this.graphIdsByGroupRef[GroupRef].push(GraphId);
-      }
-
-      if (!!GroupId && GroupId._exists !== false) {
-        this.groupIdToGraphIdStream.write([GroupId, GraphId]);
-      }
-    }
-
-    const processed = fromPairs(
-      toPairs(gpmlElement).reduce(
-        (acc, x) => concat(acc, processKV(gpmlElement, x)),
-        []
-      )
-    );
-    processed.type = unionLSV(processed.type, gpmlElementName);
-
-    return processed;
-  };
-}
+//*/
 
 function extendDeep(targetOrTargetArray, source) {
   const target = isArray(targetOrTargetArray)
@@ -313,7 +66,7 @@ function extendDeep(targetOrTargetArray, source) {
     .forEach(function([targetKey, targetValue]) {
       extendDeep(targetValue, source[targetKey]);
     });
-  mutableAssign(target.constructor.prototype, source);
+  assignM(target.constructor.prototype, source);
 }
 
 extendDeep(
@@ -335,19 +88,6 @@ export function GPML2013aToPVJSON(
   inputStream: NodeJS.ReadableStream,
   pathwayIri?: string
 ) {
-  let entityIdToZIndex: string[] = [];
-  let output = {
-    metadata: {},
-    entityMap: {},
-    zIndices: []
-  } as {
-    metadata: Record<string, any>;
-    entityMap: PvjsonEntityMap;
-    zIndices: string[];
-  };
-
-  const outputStream = hl();
-
   const selectorToCXML = {
     // TODO why does TS require that we use the Pathway's "constructor.prototype"
     // instead of just the Pathway?
@@ -381,12 +121,21 @@ export function GPML2013aToPVJSON(
       throw err;
     })
     .each(function(metadata) {
-      output = iassign(
-        output,
+      processor.output = iassign(
+        processor.output,
         function(o) {
           return o.metadata;
         },
         function(outputMetadata) {
+          /*
+					const processed = fromPairs(
+						toPairs(metadata).reduce(
+							(acc, x) => concat(acc, processKV(metadata, x)),
+								[]
+						)
+					);
+					processed.type = unionLSV(processed.type, "Pathway");
+					//*/
           const processed = processor.process("Pathway", metadata);
 
           const { name } = processed;
@@ -411,7 +160,7 @@ export function GPML2013aToPVJSON(
           return assign(outputMetadata, processed);
         }
       );
-      outputStream.write(output);
+      processor.outputStream.write(processor.output);
     });
 
   hl(result["/Pathway/Comment"])
@@ -419,8 +168,8 @@ export function GPML2013aToPVJSON(
       throw err;
     })
     .each(function(Comment) {
-      output = iassign(
-        output,
+      processor.output = iassign(
+        processor.output,
         function(o) {
           return o.metadata;
         },
@@ -442,7 +191,7 @@ export function GPML2013aToPVJSON(
         }
       );
 
-      outputStream.write(output);
+      processor.outputStream.write(processor.output);
     });
 
   hl(result["/Pathway/DataNode"])
@@ -455,11 +204,9 @@ export function GPML2013aToPVJSON(
       const wpType = Type["_exists"] === false ? "Unknown" : Type;
       processed.type = unionLSV(processed.type, wpType);
       processed.wpType = wpType;
-      processor.pvjsonElementStream.write(processed);
-      const processedId = processed.id;
-      const processedZIndex = processed.zIndex;
+
       /*
-			// TODO should we update pvjsonElement here or as part of processing result["/Pathway/Group"]?
+			// TODO should we update pvjsonEntity here or as part of processing result["/Pathway/Group"]?
 			if (DataNode.GroupRef && !DataNode.GroupRef.hasOwnProperty("_exists")) {
 			console.log("DataNode w/ GroupRef");
 			console.log(DataNode);
@@ -469,202 +216,142 @@ export function GPML2013aToPVJSON(
 			});
 			}
 			//*/
-      output = iassign(
-        output,
-        function(o) {
-          return o.entityMap;
-        },
-        function(entityMap) {
-          entityMap[processedId] = processed;
-          return entityMap;
-        }
-      );
 
-      output = iassign(
-        output,
-        function(o) {
-          return o.zIndices;
-        },
-        function(zIndices) {
-          zIndices;
-          zIndices.push("101");
-          return zIndices;
-        }
-      );
-
-      output = iassign(output, function(o) {
-        //*
-        const zIndices = o.zIndices.reduce(function(acc, entityId) {
-          const currentZIndex = entityIdToZIndex[entityId];
-          if (currentZIndex < processedZIndex) {
-            acc.push(entityId);
-          } else {
-            acc.push(entityId);
-            acc.push(processedId);
-          }
-          return acc;
-        }, []);
-        // TODO
-        console.log("zIndices651");
-        console.log(zIndices);
-        //*/
-        o.zIndices = ["1", "2"];
-        return o;
-      });
-
-      outputStream.write(output);
+      processor.pvjsonEntityStream.write(processed);
     });
 
-  //  hl(result["/Pathway/Shape"])
-  //    .errors(function(err) {
-  //      throw err;
-  //    })
-  //    .each(function(Shape) {
-  //      output = iassign(output, function(o) {
-  //        o.entities = iassign(o.entities, function(l) {
-  //          const processed = addressPathVisioShapeRenderingBugs(
-  //            processor.process("Shape", Shape)
-  //          );
-  //
-  //          const { cellularComponent } = processed;
-  //          // CellularComponent is not a BioPAX term, but "PhysicalEntity" is.
-  //          if (!!cellularComponent) {
-  //            processed.type = unionLSV(
-  //              processed.type,
-  //              "PhysicalEntity",
-  //              "CellularComponent",
-  //              cellularComponent
-  //            ) as string[];
-  //          }
-  //
-  //          processor.pvjsonElementStream.write(processed);
-  //          return l.concat([processed]);
-  //        });
-  //        return o;
-  //      });
-  //
-  //      outputStream.write(output);
-  //    });
-  //
-  //  hl(result["/Pathway/Label"])
-  //    .errors(function(err) {
-  //      throw err;
-  //    })
-  //    .each(function(Label) {
-  //      output = iassign(output, function(o) {
-  //        o.entities = iassign(o.entities, function(l) {
-  //          const processed = processor.process("Label", Label);
-  //          processor.pvjsonElementStream.write(processed);
-  //          return l.concat([processed]);
-  //        });
-  //        return o;
-  //      });
-  //
-  //      outputStream.write(output);
-  //    });
-  //
-  //  const InteractionStream = hl(result["/Pathway/Interaction"])
-  //    .errors(function(err) {
-  //      throw err;
-  //    })
-  //    .through(createEdgeTransformStream(processor, "Interaction"))
-  //    .each(function({
-  //      edge,
-  //      anchors,
-  //      referencedEntities
-  //    }: {
-  //      edge: PvjsonEdge;
-  //      anchors: PvjsonNode[];
-  //      referencedEntities: any;
-  //    }) {
-  //      processor.pvjsonElementStream.write(edge);
-  //      anchors.forEach(function(anchor) {
-  //        processor.pvjsonElementStream.write(anchor);
-  //      });
-  //      output = iassign(output, function(o) {
-  //        o.entities = iassign(o.entities, function(l) {
-  //          return l
-  //            .concat([processInteraction(referencedEntities, edge)])
-  //            .concat(anchors);
-  //        });
-  //        return o;
-  //      });
-  //
-  //      outputStream.write(output);
-  //    });
-  //
-  //  hl(result["/Pathway/GraphicalLine"])
-  //    .errors(function(err) {
-  //      throw err;
-  //    })
-  //    .through(createEdgeTransformStream(processor, "GraphicalLine"))
-  //    .each(function({ edge, anchors }) {
-  //      processor.pvjsonElementStream.write(edge);
-  //      anchors.forEach(function(anchor) {
-  //        processor.pvjsonElementStream.write(anchor);
-  //      });
-  //      output = iassign(output, function(o) {
-  //        o.entities = iassign(o.entities, function(l) {
-  //          return l.concat([edge]).concat(anchors);
-  //        });
-  //        return o;
-  //      });
-  //
-  //      outputStream.write(output);
-  //    });
-  //
-  //  hl(result["/Pathway/Group"])
-  //    .errors(function(err) {
-  //      throw err;
-  //    })
-  //    .each(function(Group) {
-  //      const { GroupId, Style } = Group;
-  //
-  //      const groupedElementIds = processor.graphIdsByGroupRef[Group.GroupId];
-  //      if (groupedElementIds) {
-  //        const processed = processor.process("Group", Group);
-  //
-  //        processed["gpml:Style"] = Style;
-  //        delete processed.style;
-  //        delete processed.groupId;
-  //
-  //        processed.type = unionLSV(processed.type, ["Group" + Style]);
-  //
-  //        hl(groupedElementIds)
-  //          .flatMap(function(id) {
-  //            return hl(processor.getByGraphId(id));
-  //          })
-  //          .map(function(pvjsonElement: any) {
-  //            pvjsonElement.isPartOf = processed.id;
-  //            delete pvjsonElement.groupRef;
-  //            return pvjsonElement;
-  //          })
-  //          .errors(function(err) {
-  //            throw err;
-  //          })
-  //          .toArray(function(groupedElements) {
-  //            // TODO add zIndex, etc. to group.
-  //            // TODO update coordinates of groupedElements to be relative to group.
-  //            processed.groupContents = groupedElements;
-  //            processor.pvjsonElementStream.write(processed);
-  //            output = iassign(output, function(o) {
-  //              o.entities = iassign(
-  //                o.entities.filter(
-  //                  entity => groupedElementIds.indexOf(entity.id) === -1
-  //                ),
-  //                function(l) {
-  //                  return l.concat([processed]);
-  //                }
-  //              );
-  //              return o;
-  //            });
-  //
-  //            outputStream.write(output);
-  //          });
-  //      }
-  //    });
+  hl(result["/Pathway/Shape"])
+    .errors(function(err) {
+      throw err;
+    })
+    .each(function(Shape) {
+      const processed = postprocessShapePVJSON(
+        processor.process("Shape", Shape)
+      );
 
-  return outputStream.debounce(17);
+      const { cellularComponent } = processed;
+      // CellularComponent is not a BioPAX term, but "PhysicalEntity" is.
+      if (!!cellularComponent) {
+        processed.type = unionLSV(
+          processed.type,
+          "PhysicalEntity",
+          "CellularComponent",
+          cellularComponent
+        ) as string[];
+      }
+
+      processor.pvjsonEntityStream.write(processed);
+    });
+
+  hl(result["/Pathway/Label"])
+    .errors(function(err) {
+      throw err;
+    })
+    .each(function(Label) {
+      const processed = processor.process("Label", Label);
+      processor.pvjsonEntityStream.write(processed);
+    });
+
+  //*
+  const EdgeStream = hl([
+    hl(result["/Pathway/Interaction"])
+      .errors(function(err) {
+        throw err;
+      })
+      .through(createEdgeTransformStream(processor, "Interaction")),
+    hl(result["/Pathway/GraphicalLine"])
+      .errors(function(err) {
+        throw err;
+      })
+      .through(createEdgeTransformStream(processor, "GraphicalLine"))
+  ])
+    .merge()
+    .each(function({
+      edge,
+      anchors
+    }: {
+      edge: PvjsonEdge;
+      anchors: PvjsonNode[];
+    }) {
+      processor.pvjsonEntityStream.write(edge);
+      anchors.forEach(function(anchor) {
+        processor.pvjsonEntityStream.write(anchor);
+      });
+    });
+  //*/
+
+  //*
+  hl(result["/Pathway/Group"])
+    .errors(function(err) {
+      throw err;
+    })
+    .map(preprocessGroupGPML)
+    .each(function(Group) {
+      const { GroupId } = Group;
+
+      const groupedElementIds = processor.graphIdsByGroupRef[Group.GroupId];
+      if (groupedElementIds) {
+        const processed = processor.process("Group", Group);
+
+        hl(groupedElementIds)
+          .flatMap(function(id) {
+            return hl(processor.getByGraphId(id));
+          })
+          .map(function(pvjsonEntity: any) {
+            pvjsonEntity.isPartOf = processed.id;
+            delete pvjsonEntity.groupRef;
+            return pvjsonEntity;
+          })
+          .errors(function(err) {
+            throw err;
+          })
+          .toArray(function(groupedEntities) {
+            // TODO add zIndex, etc. to group.
+            // TODO update coordinates of groupedElements to be relative to group.
+            const graphIdToZIndex = processor.graphIdToZIndex;
+            processed.contains = sortBy(
+              [
+                function(thisEntityId) {
+                  return graphIdToZIndex[thisEntityId];
+                }
+              ],
+              groupedEntities.map(entity => entity.id)
+            );
+
+            const updatedProcessed = postprocessGroupPVJSON(
+              groupedEntities,
+              processed
+            );
+            const { x, y } = updatedProcessed;
+
+            groupedEntities.forEach(function(groupedEntity) {
+              if (isPvjsonEdge(groupedEntity)) {
+                groupedEntity.points = map(groupedEntity.points, function(
+                  point
+                ) {
+                  point.x -= x;
+                  point.y -= y;
+                  return point;
+                });
+                /*
+                groupedEntity.points.forEach(function(point) {
+                  point.x -= x;
+                  point.y -= y;
+                });
+								//*/
+              } else {
+                groupedEntity.x -= x;
+                groupedEntity.y -= y;
+              }
+              processor.pvjsonEntityStream.write(groupedEntity);
+            });
+            processor.pvjsonEntityStream.write(updatedProcessed);
+          });
+      }
+    });
+  //*/
+
+  return processor.outputStream.debounce(17);
   //return outputStream.last();
 
   //export const NODES = ["DataNode", "Label", "Shape", "Group", "State"];

@@ -3,10 +3,17 @@ import {
   intersection,
   isArray,
   isEmpty,
+  isFinite,
   keys,
   map,
   union
 } from "lodash";
+
+export function isPvjsonEdge(
+  entity: PvjsonNode | PvjsonEdge
+): entity is PvjsonEdge {
+  return entity.hasOwnProperty("points");
+}
 
 /*
  * This is needed because PublicationXref rdf:id values and
@@ -23,7 +30,7 @@ export function generatePublicationXrefId(originalId: string) {
  */
 export function arrayify<T>(
   input: (T & jsonldListSetPrimitive) | (T[] & jsonldListSetPrimitive[])
-): T[] {
+) {
   if (typeof input === "undefined") {
     return [];
   }
@@ -220,30 +227,54 @@ export function multiplyMatrices(m1, m2) {
  * different from the transformation matrix that would be returned if the y-axis
  * pointed up, as is common in many math classes.
  */
-export function rotate(theta) {
-  theta = typeof theta === "number" ? theta : 0;
-  var matrix = [
+export function rotate(
+  theta: number
+): [[number, number, 0], [number, number, 0], [0, 0, 1]] {
+  if (!isFinite(theta)) {
+    throw new Error(
+      `Invalid input: rotate(${theta}). Requires a finite number.`
+    );
+  }
+  return [
     [Math.cos(theta), -1 * Math.sin(theta), 0],
     [Math.sin(theta), Math.cos(theta), 0],
     [0, 0, 1]
   ];
-  return matrix;
 }
 
-export function scale(args) {
-  var xScale = typeof args[0] === "number" ? args[0] : 1,
-    yScale = typeof args[1] === "number" ? args[1] : xScale;
-
+export function scale(
+  [xScale, yScale]: [number, number]
+): [[number, 0, 0], [0, number, 0], [0, 0, 1]] {
+  if (!isFinite(xScale) || !isFinite(yScale)) {
+    throw new Error(
+      `Invalid input: rotate([${xScale}, ${yScale}]). Requires array of two finite numbers.`
+    );
+  }
   return [[xScale, 0, 0], [0, yScale, 0], [0, 0, 1]];
 }
 
-let GpmlUtilities = this;
+export function translate(
+  [xTranslation, yTranslation]: [number, number]
+): [[1, 0, number], [0, 1, number], [0, 0, 1]] {
+  if (!isFinite(xTranslation) || !isFinite(yTranslation)) {
+    throw new Error(
+      `Invalid input: translate([${xTranslation}, ${yTranslation}]). Requires array of two finite numbers.`
+    );
+  }
+  return [[1, 0, xTranslation], [0, 1, yTranslation], [0, 0, 1]];
+}
+
+const transformations = {
+  rotate,
+  scale,
+  translate
+};
 
 export function getTransformationMatrix(transformationSequence) {
   // Start with identity matrix
   var concatenatedTransformationMatrix = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
   transformationSequence.forEach(function(transformation) {
-    var thisTransformationMatrix = GpmlUtilities[transformation.key](
+    var thisTransformationMatrix = transformations[transformation.key](
       transformation.value
     );
     concatenatedTransformationMatrix = multiplyMatrices(
@@ -253,13 +284,6 @@ export function getTransformationMatrix(transformationSequence) {
   });
 
   return concatenatedTransformationMatrix;
-}
-
-export function translate(args) {
-  var xTranslation = typeof args[0] === "number" ? args[0] : 0,
-    yTranslation = typeof args[1] === "number" ? args[1] : 0;
-
-  return [[1, 0, xTranslation], [0, 1, yTranslation], [0, 0, 1]];
 }
 
 export function multiplyMatrixByVector(transformationMatrix, vector) {
@@ -279,14 +303,18 @@ export function multiplyMatrixByVector(transformationMatrix, vector) {
   return [[x], [y], [z]];
 }
 
-export function transform(args) {
-  var element = args.element,
-    x = element.x,
-    y = element.y,
-    width = element.width,
-    height = element.height,
-    transformOrigin = args.transformOrigin || "50% 50%",
-    transformationSequence = args.transformationSequence || [];
+export function transform({
+  element,
+  transformOrigin,
+  transformationSequence
+}: {
+  element: PvjsonNode;
+  transformOrigin?: string;
+  transformationSequence?: any[];
+}): PvjsonNode {
+  const { x, y, width, height } = element;
+  (transformOrigin = transformOrigin || "50% 50%"), (transformationSequence =
+    transformationSequence || []);
 
   var transformOriginKeywordMappings = {
     left: "0%",
@@ -300,34 +328,37 @@ export function transform(args) {
     transformOriginKeywordMappings
   );
 
-  var i = 0;
-  var transformOriginValues = [];
-  var transformOriginPoint = transformOrigin.split(" ").map(function(value) {
-    if (transformOriginKeywordMappingsKeys.indexOf(value) > -1) {
-      value = transformOriginKeywordMappings[value];
-    }
-    if (value.indexOf("%") > -1) {
-      var decimalPercent = parseFloat(value) / 100;
-      if (i === 0) {
-        value = decimalPercent * width;
+  var transformOriginPoint = transformOrigin
+    .split(" ")
+    .map(function(value: string, i: number): number {
+      let numericOrPctValue;
+      let numericValue;
+      if (transformOriginKeywordMappingsKeys.indexOf(value) > -1) {
+        numericOrPctValue = transformOriginKeywordMappings[value];
       } else {
-        value = decimalPercent * height;
+        numericOrPctValue = value;
       }
-    } else if (value.indexOf("em") > -1) {
-      // TODO refactor. this is hacky.
-      value = parseFloat(value) * 12;
-    } else {
-      value = parseFloat(value);
-    }
-    transformOriginValues[i] = value;
-    if (i === 0) {
-      value += x;
-    } else {
-      value += y;
-    }
-    i += 1;
-    return value;
-  });
+      if (numericOrPctValue.indexOf("%") > -1) {
+        var decimalPercent = parseFloat(numericOrPctValue) / 100;
+        if (i === 0) {
+          numericValue = decimalPercent * width;
+        } else {
+          numericValue = decimalPercent * height;
+        }
+      } else if (value.indexOf("em") > -1) {
+        // TODO refactor. this is hacky.
+        numericValue = parseFloat(numericOrPctValue) * 12;
+      } else {
+        numericValue = parseFloat(numericOrPctValue);
+      }
+
+      if (i === 0) {
+        numericValue += x;
+      } else {
+        numericValue += y;
+      }
+      return numericValue;
+    });
 
   // shift origin from top left corner of element bounding box to point specified by transformOrigin (default: center of bounding box)
   transformationSequence.unshift({
@@ -344,7 +375,6 @@ export function transform(args) {
   var transformationMatrix = getTransformationMatrix(transformationSequence);
 
   var topLeftPoint = [[x], [y], [1]];
-
   var bottomRightPoint = [[x + width], [y + height], [1]];
 
   var topLeftPointTransformed = multiplyMatrixByVector(

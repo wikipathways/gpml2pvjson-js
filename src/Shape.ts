@@ -1,66 +1,14 @@
 import "source-map-support/register";
 // TODO should I get rid of the lib above for production browser build?
 
-import { assign as mutableAssign } from "lodash";
-import {
-  assign,
-  camelCase,
-  concat,
-  defaultsDeep,
-  find,
-  flatten,
-  flattenDepth,
-  fromPairs,
-  isArray,
-  isObject,
-  isString,
-  keysIn,
-  map,
-  orderBy,
-  toPairs,
-  toPairsIn,
-  reduce,
-  values
-} from "lodash/fp";
-import {
-  arrayify,
-  supportedNamespaces,
-  transform,
-  unionLSV
-} from "./gpml-utilities";
+import { transform } from "./gpml-utilities";
 
-import { CXMLXPath } from "./topublish/cxml-xpath";
-
-//import * as cxml from "cxml";
-import * as cxml from "../../cxml/lib/cxml";
-
-// TODO compile this as part of the build step for this package
-//import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
-import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
-import * as GPMLDefaults from "./GPMLDefaults";
-import * as iassign from "immutable-assign";
-import * as hl from "highland";
-
-export type GPMLElement = GPML2013a.PathwayType &
-  typeof GPML2013a.DataNodeType.prototype &
-  typeof GPML2013a.GraphicalLineType.prototype &
-  typeof GPML2013a.GroupType.prototype &
-  typeof GPML2013a.InteractionType.prototype &
-  typeof GPML2013a.LabelType.prototype &
-  typeof GPML2013a.ShapeType.prototype &
-  typeof GPML2013a.StateType.prototype;
-
-iassign.setOption({
-  // Deep freeze both input and output. Used in development to make sure they don't change.
-  // TODO watch issue and re-enable when addressed: https://github.com/engineforce/ImmutableAssign/issues/11
-  //freeze: true,
-  ignoreIfNoChange: true
-});
-
-export function addressPathVisioShapeRenderingBugs(pvjsonElement) {
+export function addressPathVisioShapeRenderingBugs(
+  pvjsonElement: PvjsonNode
+): PvjsonNode {
   const ShapeType = pvjsonElement.drawAs;
   // rotation in radians
-  const Rotation = pvjsonElement.rotation * (Math.PI / 180);
+  const Rotation = (pvjsonElement.rotation || 0) * (Math.PI / 180);
 
   let transformationSequence = [];
 
@@ -213,4 +161,8 @@ export function addressPathVisioShapeRenderingBugs(pvjsonElement) {
     element: pvjsonElement,
     transformationSequence: transformationSequence
   });
+}
+
+export function postprocess(pvjsonElement: PvjsonNode): PvjsonNode {
+  return addressPathVisioShapeRenderingBugs(pvjsonElement);
 }
