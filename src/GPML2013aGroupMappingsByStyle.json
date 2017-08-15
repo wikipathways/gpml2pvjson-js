@@ -8,8 +8,8 @@
       "FillColor": "B4B464"
     },
     "type": [
-      "GroupNone",
-      "Pathway"
+      "Group",
+      "GroupNone"
     ]
   },
   "Group": {
@@ -21,8 +21,8 @@
       "FillColor": "Transparent"
     },
     "type": [
-      "GroupGroup",
-      "Pathway"
+      "Group",
+      "GroupGroup"
     ]
   },
   "Complex": {
@@ -34,8 +34,9 @@
       "FillColor": "B4B464"
     },
     "type": [
-      "GroupComplex",
-      "Complex"
+      "Group",
+      "Complex",
+      "GroupComplex"
     ]
   },
   "Pathway": {
@@ -47,8 +48,9 @@
       "FillColor": "00FF00"
     },
     "type": [
-      "GroupPathway",
-      "Pathway"
+      "Group",
+      "Pathway",
+      "GroupPathway"
     ]
   }
 }

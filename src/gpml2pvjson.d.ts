@@ -62,6 +62,21 @@ declare type GPML_ATTRIBUTE_NAMES_AND_TYPES = {
   [K in GPMLAttributeNames]?: string
 };
 
+interface Pathway {
+  contains: string[];
+  height: number;
+  organism: string;
+  title: string;
+  width: number;
+  author?: string;
+  comment: Comment[];
+  dataSource?: string;
+  email?: string;
+  lastModified?: string;
+  license?: string;
+  maintainer?: string;
+}
+
 /* pvjson */
 
 // decorations or other small elements attached to another element,
@@ -87,15 +102,9 @@ interface NodeDimensions {
   zIndex: number;
 }
 
-interface GroupDimensions extends NodeDimensions {
-  topLeftCorner: {
-    x: number;
-    y: number;
-  };
-  bottomRightCorner: {
-    x: number;
-    y: number;
-  };
+interface Corner {
+  x: number;
+  y: number;
 }
 
 interface PublicationXref {

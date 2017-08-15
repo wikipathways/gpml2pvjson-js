@@ -5,9 +5,12 @@ import {
   assign,
   camelCase,
   concat,
+  curry,
   find,
   flatten,
   fromPairs,
+  indexOf,
+  pullAt,
   sortBy,
   toPairs,
   toPairsIn
@@ -131,9 +134,8 @@ export class GraphIdManager {
 
 export class Processor {
   output: {
-    metadata: Record<string, any>;
+    pathway: Pathway;
     entityMap: PvjsonEntityMap;
-    contains: string[];
   };
 
   outputStream: Highland.Stream<any>;
@@ -155,13 +157,13 @@ export class Processor {
     const that = this;
 
     this.output = {
-      metadata: {},
-      entityMap: {},
-      contains: []
+      pathway: {
+        contains: []
+      },
+      entityMap: {}
     } as {
-      metadata: Record<string, any>;
+      pathway: Pathway;
       entityMap: PvjsonEntityMap;
-      contains: string[];
     };
 
     this.outputStream = hl();
@@ -190,6 +192,26 @@ export class Processor {
     const pvjsonEntityStream = hl() as Highland.Stream<PvjsonEntity>;
     this.pvjsonEntityStream = pvjsonEntityStream;
 
+    function insertIfNotExists<T>(list: T[], item: T): T[] {
+      if (list.indexOf(item) === -1) {
+        list.push(item);
+      }
+      return list;
+    }
+    function sortByZIndex(entityIds: string[]): string[] {
+      return sortBy(
+        [
+          function(entityId) {
+            return graphIdToZIndex[entityId];
+          }
+        ],
+        entityIds
+      );
+    }
+    const insertAndSort = curry(function(id, entityIds) {
+      return sortByZIndex(insertIfNotExists(entityIds, id));
+    });
+
     pvjsonEntityStream.each(function(pvjsonEntity: PvjsonEntity) {
       const { id, isAttachedTo, isPartOf, zIndex } = pvjsonEntity;
 
@@ -208,49 +230,58 @@ export class Processor {
 
       if (!!isAttachedTo) {
         arrayify(isAttachedTo).forEach(function(graphRef: string) {
-          graphIdsByGraphRef[graphRef] = graphIdsByGraphRef[graphRef] || [];
-          graphIdsByGraphRef[graphRef].push(id);
+          const graphRefs = graphIdsByGraphRef[graphRef] || [];
+          if (graphRefs.indexOf(id) === -1) {
+            graphRefs.push(id);
+          }
+          graphIdsByGraphRef[graphRef] = graphRefs;
         });
       }
 
       if (!!isPartOf && that.output.entityMap[isPartOf]) {
         that.output = iassign(
           that.output,
-          function(o) {
-            return o.entityMap[isPartOf];
+          function(o, ctx: Record<string, any>) {
+            return (o.entityMap[ctx.isPartOf] as PvjsonNode).contains;
           },
-          function(group: PvjsonNode) {
-            return iassign(
-              group,
-              function(g) {
-                return g.contains;
-              },
-              function(contains) {
-                contains.push(id);
-                return sortBy(
-                  [
-                    function(thisEntityId) {
-                      return graphIdToZIndex[thisEntityId];
-                    }
-                  ],
-                  contains
-                );
-              }
-            );
-          }
+          insertAndSort(id),
+          { isPartOf: isPartOf }
         );
+
+        const pullIndex = indexOf(id, that.output.pathway.contains);
+        if (pullIndex > -1) {
+          // NOTE: When an entity that is contained by a group appears in the GPML input
+          // stream before the group does, we initially return that entity as if it were
+          // not in the group, ie., as if it were contained only by the top-level pathway.
+          // When the group appears in the stream, we remove any of its contained entities
+          // from the top-level pathway and assign them as being contained just by the group.
+          // In the end, we want the group, but not its contents, to be listed in
+          // "processor.output.pathway.contains", because the contents are implicitly
+          // listed by being part of the group, which is listed.
+          that.output = iassign(
+            that.output,
+            function(o) {
+              return o.pathway.contains;
+            },
+            function(contains) {
+              return pullAt(pullIndex, contains);
+            }
+          );
+        }
       } else {
         that.output = iassign(
           that.output,
           function(o) {
-            return o.contains;
+            return o.pathway.contains;
           },
           function(contains) {
-            contains.push(id);
+            if (contains.indexOf(id) === -1) {
+              contains.push(id);
+            }
             return sortBy(
               [
-                function(thisEntityId) {
-                  return graphIdToZIndex[thisEntityId];
+                function(containedEntityId) {
+                  return graphIdToZIndex[containedEntityId];
                 }
               ],
               contains
@@ -300,8 +331,8 @@ export class Processor {
                 contains.push(id);
                 return sortBy(
                   [
-                    function(thisEntityId) {
-                      return graphIdToZIndex[thisEntityId];
+                    function(containedEntityId) {
+                      return graphIdToZIndex[containedEntityId];
                     }
                   ],
                   contains
@@ -320,8 +351,8 @@ export class Processor {
             contains.push(id);
             return sortBy(
               [
-                function(thisEntityId) {
-                  return graphIdToZIndex[thisEntityId];
+                function(containedEntityId) {
+                  return graphIdToZIndex[containedEntityId];
                 }
               ],
               contains
@@ -399,9 +430,11 @@ export class Processor {
       }
 
       if (!!GroupRef && GroupRef._exists !== false) {
-        this.graphIdsByGroupRef[GroupRef] =
-          this.graphIdsByGroupRef[GroupRef] || [];
-        this.graphIdsByGroupRef[GroupRef].push(GraphId);
+        const graphIds = this.graphIdsByGroupRef[GroupRef] || [];
+        if (graphIds.indexOf(GraphId) === -1) {
+          graphIds.push(GraphId);
+        }
+        this.graphIdsByGroupRef[GroupRef] = graphIds;
       }
 
       if (!!GroupId && GroupId._exists !== false) {

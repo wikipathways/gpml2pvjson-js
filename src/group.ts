@@ -1,24 +1,34 @@
-import { defaults as defaultsM } from "lodash";
-import { isFinite, omit } from "lodash/fp";
-import { isPvjsonEdge } from "./gpml-utilities";
+import { assign, isArray, isPlainObject, isFinite, toPairs } from "lodash/fp";
+import { isPvjsonEdge, unionLSV } from "./gpml-utilities";
 import * as GPML2013aGroupMappingsByStyle from "./GPML2013aGroupMappingsByStyle.json";
 
 export function getGroupDimensions(
   padding: number,
   borderWidth: number,
-  groupContents: PvjsonEntity[]
-): GroupDimensions {
-  let dimensions = <GroupDimensions>{};
-  dimensions.topLeftCorner = {
+  containedEntities: PvjsonEntity[]
+): NodeDimensions {
+  const dimensions = {
+    zIndex: Infinity
+  } as NodeDimensions;
+  const topLeftCorner: Corner = {
     x: Infinity,
     y: Infinity
   };
-  dimensions.bottomRightCorner = {
+  const bottomRightCorner: Corner = {
     x: 0,
     y: 0
   };
 
-  groupContents.forEach(function(entity) {
+  containedEntities.forEach(function(entity) {
+    const { zIndex } = entity;
+    const zIndexIsFinite = isFinite(zIndex);
+    const dimensionsZIndexIsFinite = isFinite(dimensions.zIndex);
+    if (zIndexIsFinite && dimensionsZIndexIsFinite) {
+      dimensions.zIndex = Math.min(zIndex, dimensions.zIndex);
+    } else if (zIndexIsFinite) {
+      dimensions.zIndex = zIndex;
+    }
+
     if (isPvjsonEdge(entity)) {
       const points = entity.points;
       // If entity is an edge
@@ -28,56 +38,38 @@ export function getGroupDimensions(
       const lastPoint = points[points.length - 1];
       const lastPointX = lastPoint.x;
       const lastPointY = lastPoint.y;
-      dimensions.topLeftCorner.x = Math.min(
-        dimensions.topLeftCorner.x,
+      topLeftCorner.x = Math.min(topLeftCorner.x, firstPointX, lastPointX);
+      topLeftCorner.y = Math.min(topLeftCorner.y, firstPointY, lastPointY);
+      bottomRightCorner.x = Math.max(
+        bottomRightCorner.x,
         firstPointX,
         lastPointX
       );
-      dimensions.topLeftCorner.y = Math.min(
-        dimensions.topLeftCorner.y,
-        firstPointY,
-        lastPointY
-      );
-      dimensions.bottomRightCorner.x = Math.max(
-        dimensions.bottomRightCorner.x,
-        firstPointX,
-        lastPointX
-      );
-      dimensions.bottomRightCorner.y = Math.max(
-        dimensions.bottomRightCorner.y,
+      bottomRightCorner.y = Math.max(
+        bottomRightCorner.y,
         firstPointY,
         lastPointY
       );
     } else {
       // If entity is a node
-      dimensions.topLeftCorner.x = Math.min(
-        dimensions.topLeftCorner.x,
-        entity.x
-      );
-      dimensions.topLeftCorner.y = Math.min(
-        dimensions.topLeftCorner.y,
-        entity.y
-      );
-      dimensions.bottomRightCorner.x = Math.max(
-        dimensions.bottomRightCorner.x,
+      topLeftCorner.x = Math.min(topLeftCorner.x, entity.x);
+      topLeftCorner.y = Math.min(topLeftCorner.y, entity.y);
+      bottomRightCorner.x = Math.max(
+        bottomRightCorner.x,
         entity.x + entity.width
       );
-      dimensions.bottomRightCorner.y = Math.max(
-        dimensions.bottomRightCorner.y,
+      bottomRightCorner.y = Math.max(
+        bottomRightCorner.y,
         entity.y + entity.height
       );
     }
 
-    dimensions.x = dimensions.topLeftCorner.x - padding - borderWidth;
-    dimensions.y = dimensions.topLeftCorner.y - padding - borderWidth;
+    dimensions.x = topLeftCorner.x - padding - borderWidth;
+    dimensions.y = topLeftCorner.y - padding - borderWidth;
     dimensions.width =
-      dimensions.bottomRightCorner.x -
-      dimensions.topLeftCorner.x +
-      2 * (padding + borderWidth);
+      bottomRightCorner.x - topLeftCorner.x + 2 * (padding + borderWidth);
     dimensions.height =
-      dimensions.bottomRightCorner.y -
-      dimensions.topLeftCorner.y +
-      2 * (padding + borderWidth);
+      bottomRightCorner.y - topLeftCorner.y + 2 * (padding + borderWidth);
   });
 
   if (
@@ -87,32 +79,47 @@ export function getGroupDimensions(
     !isFinite(dimensions.height)
   ) {
     throw new Error(
-      "Error calculating group dimensions. Cannot calculate one or more of the following: x, y, width, height."
+      "Error calculating group dimensions. Cannot calculate one or more of the following: x, y, width, height, zIndex."
     );
   }
 
   return dimensions;
 }
 
-export function preprocess(Group) {
+// NOTE: side effects
+export function preprocess(Group: {
+  [key: string]: any;
+}): { [key: string]: any } {
   // NOTE: The class "Group" is the only class that uses the "Style" property.
-  const { Style } = Group;
-  return defaultsM(Group, GPML2013aGroupMappingsByStyle[Style]);
+  // There are defaults for each Style, so we apply them here.
+  toPairs(GPML2013aGroupMappingsByStyle[Group.Style]).forEach(function(
+    [mappingKey, mappingValue]
+  ) {
+    const oldValue = Group[mappingKey];
+    let newValue;
+    if (isPlainObject(mappingValue)) {
+      newValue = assign(oldValue || {}, mappingValue);
+    } else if (Group.hasOwnProperty(mappingKey)) {
+      if (isArray(mappingValue)) {
+        newValue = unionLSV(mappingValue, oldValue);
+      } else {
+        newValue = oldValue;
+      }
+    } else {
+      // override prototype with default by style
+      newValue = mappingValue;
+    }
+    Group[mappingKey] = newValue;
+  });
+  return Group;
 }
 
 export function postprocess(
   containedEntities: PvjsonEntity[],
   group: PvjsonNode
 ): PvjsonNode {
-  const dimensions = getGroupDimensions(
-    group.padding,
-    group.borderWidth,
-    containedEntities
+  return assign(
+    group,
+    getGroupDimensions(group.padding, group.borderWidth, containedEntities)
   );
-  group.y = dimensions.y;
-  group.x = dimensions.x;
-  group.width = dimensions.width;
-  group.height = dimensions.height;
-
-  return group;
 }

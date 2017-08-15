@@ -75,20 +75,24 @@ export const DataNode = {
 
 export const Group = {
   // these aren't explicitly set in the XSD but maybe should be.
-  Align: "Center",
-  Color: "808080",
-  Valign: "Middle",
-  FontSize: 1,
-  FontWeight: "Bold",
-  LineThickness: 1,
-  FillOpacity: 0.1,
+  Graphics: {
+    Align: "Center",
+    Color: "808080",
+    Valign: "Middle",
+    FontSize: 1,
+    FontWeight: "Bold",
+    LineThickness: 1,
+    FillOpacity: 0.1
+  },
   Style: "None"
 };
 
 const Anchor = {
-  Shape: "None",
-  // this isn't explicitly set in the XSD but maybe should be.
-  LineThickness: 0
+  Graphics: {
+    Shape: "None",
+    // this isn't explicitly set in the XSD but maybe should be.
+    LineThickness: 0
+  }
 };
 
 export const GPMLEdge = {

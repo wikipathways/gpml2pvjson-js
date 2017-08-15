@@ -3,6 +3,15 @@
 
 import { isPvjsonEdge, unionLSV } from "../gpml-utilities";
 
+// TODO this isn't worth much. It also overlaps in purpose with the
+// process function below.
+export GPML2013aGroupStyleToBioPAX = {
+	None: 'Pathway',
+	Group: 'Pathway',
+	Complex: 'Complex',
+	Pathway: 'Pathway'
+};
+
 export function process(
   containedEntities: PvjsonEntity[],
   group: PvjsonNode

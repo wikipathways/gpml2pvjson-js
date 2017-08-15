@@ -42,17 +42,6 @@ iassign.setOption({
   ignoreIfNoChange: true
 });
 
-/*
-export type GPMLElement = GPML2013a.PathwayType &
-  typeof GPML2013a.DataNodeType.prototype &
-  typeof GPML2013a.GraphicalLineType.prototype &
-  typeof GPML2013a.GroupType.prototype &
-  typeof GPML2013a.InteractionType.prototype &
-  typeof GPML2013a.LabelType.prototype &
-  typeof GPML2013a.ShapeType.prototype &
-  typeof GPML2013a.StateType.prototype;
-//*/
-
 function extendDeep(targetOrTargetArray, source) {
   const target = isArray(targetOrTargetArray)
     ? targetOrTargetArray[0]
@@ -120,23 +109,23 @@ export function GPML2013aToPVJSON(
     .errors(function(err) {
       throw err;
     })
-    .each(function(metadata) {
+    .each(function(pathway) {
       processor.output = iassign(
         processor.output,
         function(o) {
-          return o.metadata;
+          return o.pathway;
         },
         function(outputMetadata) {
           /*
 					const processed = fromPairs(
-						toPairs(metadata).reduce(
-							(acc, x) => concat(acc, processKV(metadata, x)),
+						toPairs(pathway).reduce(
+							(acc, x) => concat(acc, processKV(pathway, x)),
 								[]
 						)
 					);
 					processed.type = unionLSV(processed.type, "Pathway");
 					//*/
-          const processed = processor.process("Pathway", metadata);
+          const processed = processor.process("Pathway", pathway);
 
           const { name } = processed;
           if (!!name) {
@@ -171,7 +160,7 @@ export function GPML2013aToPVJSON(
       processor.output = iassign(
         processor.output,
         function(o) {
-          return o.metadata;
+          return o.pathway;
         },
         function(outputMetadata) {
           outputMetadata.comment = iassign(
@@ -297,17 +286,15 @@ export function GPML2013aToPVJSON(
           .flatMap(function(id) {
             return hl(processor.getByGraphId(id));
           })
-          .map(function(pvjsonEntity: any) {
+          .map(function(pvjsonEntity: PvjsonEntity) {
+            // NOTE: side effect
             pvjsonEntity.isPartOf = processed.id;
-            delete pvjsonEntity.groupRef;
             return pvjsonEntity;
           })
           .errors(function(err) {
             throw err;
           })
           .toArray(function(groupedEntities) {
-            // TODO add zIndex, etc. to group.
-            // TODO update coordinates of groupedElements to be relative to group.
             const graphIdToZIndex = processor.graphIdToZIndex;
             processed.contains = sortBy(
               [
@@ -323,6 +310,7 @@ export function GPML2013aToPVJSON(
               processed
             );
             const { x, y } = updatedProcessed;
+            processor.pvjsonEntityStream.write(updatedProcessed);
 
             groupedEntities.forEach(function(groupedEntity) {
               if (isPvjsonEdge(groupedEntity)) {
@@ -333,19 +321,12 @@ export function GPML2013aToPVJSON(
                   point.y -= y;
                   return point;
                 });
-                /*
-                groupedEntity.points.forEach(function(point) {
-                  point.x -= x;
-                  point.y -= y;
-                });
-								//*/
               } else {
                 groupedEntity.x -= x;
                 groupedEntity.y -= y;
               }
               processor.pvjsonEntityStream.write(groupedEntity);
             });
-            processor.pvjsonEntityStream.write(updatedProcessed);
           });
       }
     });

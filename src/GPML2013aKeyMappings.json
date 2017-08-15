@@ -13,6 +13,8 @@
   "Graphics": "pvjson:lift",
   "GraphId": "id",
   "GraphRef": "isAttachedTo",
+  "GroupId": "pvjson:delete",
+  "GroupRef": "pvjson:delete",
   "ID": "dbId",
   "LineStyle": "strokeDasharray",
   "LineThickness": "borderWidth",
