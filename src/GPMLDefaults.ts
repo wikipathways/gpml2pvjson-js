@@ -130,6 +130,8 @@ export const Shape = {
   Graphics: defaultsDeepAll([
     {
       FillColor: "Transparent",
+      FontSize: 10,
+      Padding: 1,
       Rotation: "Top"
     },
     FontAttributes,
@@ -141,8 +143,12 @@ export const State = {
   StateType: "Unknown",
   Graphics: defaultsDeepAll([
     {
+      Align: "Center",
+      Padding: 1,
       FillColor: "White",
-      ShapeType: "Rectangle"
+      FontSize: 10,
+      ShapeType: "Rectangle",
+      Valign: "Middle"
     },
     ShapeStyleAttributes
   ])
