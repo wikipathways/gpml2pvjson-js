@@ -8,6 +8,23 @@ import {
   map,
   union
 } from "lodash";
+import { curry, sortBy } from "lodash/fp";
+
+export const sortByMap = curry(function(
+  mapToSortBy: Record<string, number>,
+  listToSort: string[]
+): string[] {
+  return sortBy(function(listItem) {
+    return mapToSortBy[listItem];
+  }, listToSort);
+});
+
+export const insertIfNotExists = curry(function<T>(item: T, list: T[]): T[] {
+  if (list.indexOf(item) === -1) {
+    list.push(item);
+  }
+  return list;
+});
 
 export function isPvjsonEdge(
   entity: PvjsonNode | PvjsonEdge

@@ -5,17 +5,21 @@ import {
   assign,
   camelCase,
   concat,
-  curry,
   find,
   flatten,
+  flow,
   fromPairs,
   indexOf,
   pullAt,
-  sortBy,
   toPairs,
   toPairsIn
 } from "lodash/fp";
-import { arrayify, unionLSV } from "./gpml-utilities";
+import {
+  arrayify,
+  insertIfNotExists,
+  sortByMap,
+  unionLSV
+} from "./gpml-utilities";
 
 import * as GPML2013aKeyMappings from "./GPML2013aKeyMappings.json";
 import * as GPML2013aValueMappings from "./GPML2013aValueMappings.json";
@@ -183,6 +187,8 @@ export class Processor {
       outputStream
     } = this;
 
+    const sortByZIndex = sortByMap(graphIdToZIndex);
+
     const groupIdToGraphIdStream = hl();
     this.groupIdToGraphIdStream = groupIdToGraphIdStream;
     groupIdToGraphIdStream.each(function([groupId, graphId]) {
@@ -192,28 +198,15 @@ export class Processor {
     const pvjsonEntityStream = hl() as Highland.Stream<PvjsonEntity>;
     this.pvjsonEntityStream = pvjsonEntityStream;
 
-    function insertIfNotExists<T>(list: T[], item: T): T[] {
-      if (list.indexOf(item) === -1) {
-        list.push(item);
-      }
-      return list;
-    }
-    function sortByZIndex(entityIds: string[]): string[] {
-      return sortBy(
-        [
-          function(entityId) {
-            return graphIdToZIndex[entityId];
-          }
-        ],
-        entityIds
-      );
-    }
-    const insertAndSort = curry(function(id, entityIds) {
-      return sortByZIndex(insertIfNotExists(entityIds, id));
-    });
-
     pvjsonEntityStream.each(function(pvjsonEntity: PvjsonEntity) {
       const { id, isAttachedTo, isPartOf, zIndex } = pvjsonEntity;
+
+      graphIdToZIndex[id] = zIndex;
+
+      const insertEntityIdAndSortByZIndex = flow([
+        insertIfNotExists(id),
+        sortByZIndex
+      ]);
 
       that.output = iassign(
         that.output,
@@ -225,8 +218,6 @@ export class Processor {
           return entityMap;
         }
       );
-
-      graphIdToZIndex[id] = zIndex;
 
       if (!!isAttachedTo) {
         arrayify(isAttachedTo).forEach(function(graphRef: string) {
@@ -244,7 +235,7 @@ export class Processor {
           function(o, ctx: Record<string, any>) {
             return (o.entityMap[ctx.isPartOf] as PvjsonNode).contains;
           },
-          insertAndSort(id),
+          insertEntityIdAndSortByZIndex,
           { isPartOf: isPartOf }
         );
 
@@ -274,95 +265,12 @@ export class Processor {
           function(o) {
             return o.pathway.contains;
           },
-          function(contains) {
-            if (contains.indexOf(id) === -1) {
-              contains.push(id);
-            }
-            return sortBy(
-              [
-                function(containedEntityId) {
-                  return graphIdToZIndex[containedEntityId];
-                }
-              ],
-              contains
-            );
-          }
+          insertEntityIdAndSortByZIndex
         );
       }
 
       promisedPvjsonEntityByGraphId[id] = Promise.resolve(pvjsonEntity);
       outputStream.write(that.output);
-      /*
-      const { id, isAttachedTo, isPartOf, zIndex } = pvjsonEntity;
-      promisedPvjsonEntityByGraphId[id] = Promise.resolve(pvjsonEntity);
-      graphIdToZIndex[id] = zIndex;
-
-      if (!!isAttachedTo) {
-        arrayify(isAttachedTo).forEach(function(graphRef: string) {
-          graphIdsByGraphRef[graphRef] = graphIdsByGraphRef[graphRef] || [];
-          graphIdsByGraphRef[graphRef].push(id);
-        });
-      }
-
-      that.output = iassign(
-        that.output,
-        function(o) {
-          return o.entityMap;
-        },
-        function(entityMap) {
-          entityMap[id] = pvjsonEntity;
-          return entityMap;
-        }
-      );
-
-      if (isPartOf) {
-        that.output = iassign(
-          that.output,
-          function(o) {
-            return o.entityMap[isPartOf];
-          },
-          function(group: PvjsonNode) {
-            return iassign(
-              group,
-              function(g) {
-                return g.contains;
-              },
-              function(contains) {
-                contains.push(id);
-                return sortBy(
-                  [
-                    function(containedEntityId) {
-                      return graphIdToZIndex[containedEntityId];
-                    }
-                  ],
-                  contains
-                );
-              }
-            );
-          }
-        );
-      } else {
-        that.output = iassign(
-          that.output,
-          function(o) {
-            return o.contains;
-          },
-          function(contains) {
-            contains.push(id);
-            return sortBy(
-              [
-                function(containedEntityId) {
-                  return graphIdToZIndex[containedEntityId];
-                }
-              ],
-              contains
-            );
-          }
-        );
-      }
-
-      outputStream.write(that.output);
-		 //*/
     });
 
     /*
