@@ -1118,6 +1118,9 @@ export function createEdgeTransformStream(
                   pvjsonAnchor.isAttachedTo = processed.id;
                   pvjsonAnchor.type.push("Burr");
                   pvjsonAnchor.zIndex = processed.zIndex;
+                  if (processed.isPartOf) {
+                    pvjsonAnchor.isPartOf = processed.isPartOf;
+                  }
                   const drawAnchorAs = pvjsonAnchor.drawAs;
                   if (drawAnchorAs === "None") {
                     defaultsDeep(pvjsonAnchor, {

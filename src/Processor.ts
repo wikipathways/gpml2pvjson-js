@@ -10,6 +10,7 @@ import {
   flow,
   fromPairs,
   indexOf,
+  isObject,
   pullAt,
   toPairs,
   toPairsIn
@@ -43,7 +44,11 @@ export function processKV(gpmlElement, [gpmlKey, gpmlValue]) {
   // NOTE "pvjson:lift" is for elements like "Graphics", where they
   // are nested in GPML but are merged into the parent in pvjson.
 
-  if (gpmlKey[0] === "_" || pvjsonKey === "pvjson:delete") {
+  if (
+    gpmlKey[0] === "_" ||
+    pvjsonKey === "pvjson:delete" ||
+    (isObject(gpmlValue) && gpmlValue._exists === false)
+  ) {
     // NOTE: we don't want to include "private" keys, such as
     // "_exists" or "_namespace".
     return [];
@@ -312,6 +317,24 @@ export class Processor {
 		//*/
   }
 
+  getGraphIdByGroupId = targetGroupId => {
+    let promisedGraphId = this.promisedGraphIdByGroupId[targetGroupId];
+    if (promisedGraphId) {
+      return promisedGraphId;
+    } else {
+      const { groupIdToGraphIdStream } = this;
+      promisedGraphId = new Promise(function(resolve, reject) {
+        groupIdToGraphIdStream
+          .observe()
+          .find(([groupId, graphId]) => groupId === targetGroupId)
+          .errors(reject)
+          .each(resolve);
+      });
+
+      return promisedGraphId;
+    }
+  };
+
   getByGraphId = graphId => {
     let promisedPvjsonEntity = this.promisedPvjsonEntityByGraphId[graphId];
     if (promisedPvjsonEntity) {
@@ -328,6 +351,40 @@ export class Processor {
 
       return promisedPvjsonEntity;
     }
+  };
+
+  getEntityAndReferencesByGraphId = graphId => {
+    const that = this;
+
+    return hl(this.getByGraphId(graphId)).flatMap(function(
+      pvjsonEntity: PvjsonEntity
+    ) {
+      const referencedIds = unionLSV(
+        pvjsonEntity.isPartOf,
+        pvjsonEntity.isAttachedTo
+      );
+      if (referencedIds.length > 0) {
+        return hl(
+          referencedIds.map(referencedId => hl(that.getByGraphId(referencedId)))
+        )
+          .merge()
+          .reduce({}, function(
+            acc,
+            referencedEntity
+          ): Record<string, PvjsonEntity> {
+            acc[referencedEntity.id] = referencedEntity;
+            return acc;
+          })
+          .map(function(idToEntityMap) {
+            return {
+              pvjsonEntity: pvjsonEntity,
+              idToEntityMap: idToEntityMap
+            };
+          });
+      } else {
+        return hl([{ pvjsonEntity, idToEntityMap: {} }]);
+      }
+    });
   };
 
   getByGroupId = targetGroupId => {

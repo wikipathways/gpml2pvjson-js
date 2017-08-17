@@ -8,6 +8,7 @@ import {
   fromPairs,
   isArray,
   isObject,
+  isString,
   map,
   sortBy,
   toPairs,
@@ -183,6 +184,8 @@ export function GPML2013aToPVJSON(
       processor.outputStream.write(processor.output);
     });
 
+  //export const NODES = ["DataNode", "Label", "Shape", "Group", "State"];
+  //
   hl(result["/Pathway/DataNode"])
     .errors(function(err) {
       throw err;
@@ -231,6 +234,33 @@ export function GPML2013aToPVJSON(
 
       processor.pvjsonEntityStream.write(processed);
     });
+
+  hl(result["/Pathway/State"])
+    .errors(function(err) {
+      throw err;
+    })
+    .flatMap(function(State) {
+      const processed = processor.process("State", State);
+      processor.pvjsonEntityStream.write(processed);
+      return processor.getEntityAndReferencesByGraphId(processed.id);
+    })
+    .each(function({ pvjsonEntity, idToEntityMap }) {
+      const { isAttachedTo, isPartOf, zIndex, id } = <PvjsonNode>pvjsonEntity;
+      const isAttachedToEntity = idToEntityMap[isAttachedTo];
+      pvjsonEntity.zIndex = !!zIndex ? zIndex : isAttachedToEntity.zIndex;
+      if (isAttachedToEntity.hasOwnProperty("isPartOf")) {
+        pvjsonEntity.isPartOf = isAttachedToEntity.isPartOf;
+      }
+      processor.pvjsonEntityStream.write(pvjsonEntity);
+    });
+  //*/
+
+  /*
+  <State GraphRef="a7a5c" TextLabel="P" GraphId="ad145">
+    <Graphics RelX="1.0" RelY="1.0" Width="15.0" Height="15.0" ShapeType="Oval" />
+    <Xref Database="" ID="" />
+  </State>
+		//*/
 
   hl(result["/Pathway/Label"])
     .errors(function(err) {
@@ -335,8 +365,6 @@ export function GPML2013aToPVJSON(
   return processor.outputStream.debounce(17);
   //return outputStream.last();
 
-  //export const NODES = ["DataNode", "Label", "Shape", "Group", "State"];
-  //
   //export const EDGES = ["Interaction", "GraphicalLine"];
   //
   //  // The top-level Pathway GPML element and all its children that represent entities.
