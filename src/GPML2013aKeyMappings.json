@@ -25,6 +25,7 @@
   "ShapeType": "drawAs",
   "Style": "pvjson:delete",
   "TextLabel": "displayName",
+  "Type": "wpType",
   "Version": "dataSourceVersion",
   "Valign": "verticalAlign",
   "Xref": "pvjson:lift",

@@ -1,6 +1,11 @@
 import { curry, defaultsDeep, isNumber, isString, map, omit } from "lodash/fp";
 import * as hl from "highland";
-import { intersectsLSV, unionLSV } from "./gpml-utilities";
+import {
+  arrayify,
+  intersectsLSV,
+  isPvjsonEdge,
+  unionLSV
+} from "./gpml-utilities";
 // TODO compile this as part of the build step for this package
 //import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
@@ -1034,42 +1039,93 @@ export function createEdgeTransformStream(
 ) => Highland.Stream<PvjsonEntity> {
   const {
     fillInGPMLPropertiesFromParent,
+    getGPMLElementByGraphId,
+    getByGraphId,
     ensureGraphIdExists,
     preprocessGPMLElement,
-    processTypeAndProperties
+    processPropertiesAndAddType
   } = processor;
+
+  function recursivelyGetReferencedElements(acc, gpmlElement: GPMLElement) {
+    const { Graphics } = gpmlElement;
+    const graphRefIds: string[] = !!Graphics.Point &&
+      Graphics.Point[0]._exists !== false
+      ? Graphics.Point.filter(P => isString(P.GraphRef)).map(P => P.GraphRef)
+      : gpmlElement.hasOwnProperty("GraphRef")
+        ? arrayify(gpmlElement.GraphRef)
+        : [];
+
+    const referencedElementIds = arrayify(graphRefIds);
+    //const referencedElementIds = unionLSV(graphRefIds, gpmlElement.GroupRef);
+    return referencedElementIds.length === 0
+      ? acc
+      : hl([
+          acc,
+          hl(referencedElementIds)
+            .flatMap(referencedElementId =>
+              hl(getGPMLElementByGraphId(referencedElementId))
+            )
+            .flatMap(function(referencedElement: GPMLElement) {
+              return recursivelyGetReferencedElements(
+                hl([referencedElement]),
+                referencedElement
+              );
+            })
+        ]).merge();
+  }
+
   return function(s) {
     return s
-      .flatMap(function(gpmlEdge) {
+      .flatMap(preprocessGPMLElement)
+      .flatMap(function(gpmlEdge: GPMLElement) {
         const { Graphics } = gpmlEdge;
 
-        const graphRefIds: string[] = Graphics.Point
-          .filter(P => isString(P.GraphRef))
-          .map(P => P.GraphRef);
+        const gpmlAnchors =
+          Graphics.hasOwnProperty("Anchor") && Graphics.Anchor;
 
-        return preprocessGPMLElement(gpmlEdge).flatMap(function(
-          processedGPMLEdge
-        ) {
-          const fillInGPMLPropertiesFromCurrentParent = fillInGPMLPropertiesFromParent(
-            processedGPMLEdge
-          );
-          const gpmlAnchors =
-            Graphics.hasOwnProperty("Anchor") && Graphics.Anchor;
+        const fillInGPMLPropertiesFromEdge = fillInGPMLPropertiesFromParent(
+          gpmlEdge
+        );
 
-          const gpmlAnchorStream = !gpmlAnchors ||
-            !gpmlAnchors[0] ||
-            gpmlAnchors[0]._exists === false
+        return hl([
+          hl([gpmlEdge])
+            .map(processPropertiesAndAddType(edgeType))
+            .flatMap(function(pvjsonEdge: PvjsonEdge) {
+              return hl([
+                hl([gpmlEdge])
+                  .reduce(hl([]), recursivelyGetReferencedElements)
+                  .merge()
+                  //.flatten()
+                  .flatMap(function(referencedGPMLElement: GPMLElement) {
+                    return hl(getByGraphId(referencedGPMLElement.GraphId));
+                  })
+              ])
+                .merge()
+                .reduce({}, function(
+                  acc: {
+                    [key: string]: PvjsonEntity;
+                  },
+                  referencedEntity: PvjsonEntity
+                ) {
+                  acc[referencedEntity.id] = referencedEntity;
+                  return acc;
+                })
+                .map(function(referencedEntities) {
+                  return process(pvjsonEdge, referencedEntities);
+                });
+            }),
+          !gpmlAnchors || !gpmlAnchors[0] || gpmlAnchors[0]._exists === false
             ? hl([])
             : hl(gpmlAnchors)
+                .flatMap(preprocessGPMLElement)
                 .map(function(gpmlAnchor: GPMLElement) {
-                  const filledInAnchor = fillInGPMLPropertiesFromCurrentParent(
+                  const filledInAnchor = fillInGPMLPropertiesFromEdge(
                     gpmlAnchor
                   );
-                  filledInAnchor.GraphRef = processedGPMLEdge.GraphId;
+                  filledInAnchor.GraphRef = gpmlEdge.GraphId;
                   return filledInAnchor;
                 })
-                .map(ensureGraphIdExists)
-                .map(processTypeAndProperties("Anchor"))
+                .map(processPropertiesAndAddType("Anchor"))
                 .map(function(pvjsonAnchor: PvjsonNode) {
                   pvjsonAnchor.type.push("Burr");
                   const drawAnchorAs = pvjsonAnchor.drawAs;
@@ -1085,134 +1141,9 @@ export function createEdgeTransformStream(
                     });
                   }
                   return pvjsonAnchor;
-                });
-
-          return hl([
-            hl([gpmlEdge]).map(processTypeAndProperties(edgeType)),
-            gpmlAnchorStream
-          ]);
-        });
+                })
+        ]);
       })
       .merge();
-  };
-}
-
-const HYPEREDGE_RECURSION_LIMIT = 5;
-export function createEdgeTransformStream1(
-  processor,
-  edgeType: "Interaction" | "GraphicalLine"
-): (
-  s: Highland.Stream<GPML2013a.InteractionType | GPML2013a.GraphicalLineType>
-) => Highland.Stream<{
-  edge: PvjsonEdge;
-  anchors: PvjsonNode[];
-}> {
-  return function(s) {
-    return s
-      .sortBy(function(InteractionA, InteractionB) {
-        const AHasAnchor = InteractionA.Graphics.hasOwnProperty("Anchor");
-        const BHasAnchor = InteractionB.Graphics.hasOwnProperty("Anchor");
-        if (AHasAnchor && !BHasAnchor) {
-          return -1;
-        } else if (!AHasAnchor && BHasAnchor) {
-          return 1;
-        } else {
-          return 0;
-        }
-      })
-      .batch(HYPEREDGE_RECURSION_LIMIT)
-      .flatMap(function(
-        InteractionBatch
-      ): Highland.Stream<{
-        edge: PvjsonEdge;
-        anchors: PvjsonNode[];
-      }> {
-        return hl(
-          hl(InteractionBatch).flatMap(function(gpmlEdge) {
-            const { Graphics } = gpmlEdge;
-            const graphRefIds: string[] = Graphics.Point
-              .filter(P => isString(P.GraphRef))
-              .map(P => P.GraphRef);
-            return (graphRefIds.length > 0
-              ? hl(graphRefIds)
-                  .flatMap(function(graphRefId) {
-                    return hl(
-                      processor.getByGraphId(graphRefId)
-                    ).flatMap(function(referencedEntity: PvjsonEntity) {
-                      const referencedEntityStream = hl([referencedEntity]);
-                      return referencedEntity.type.indexOf("Anchor") === -1
-                        ? referencedEntityStream
-                        : hl([
-                            referencedEntityStream,
-                            hl(
-                              processor.getByGraphId(
-                                referencedEntity.isAttachedTo
-                              )
-                            )
-                          ]).merge();
-                    });
-                  })
-                  .reduce({}, function(
-                    acc: {
-                      [key: string]: PvjsonEntity;
-                    },
-                    referencedEntity: PvjsonEntity
-                  ) {
-                    acc[referencedEntity.id] = referencedEntity;
-                    return acc;
-                  })
-              : hl([{}])).map(function(referencedEntities: {
-              [key: string]: PvjsonEntity;
-            }) {
-              return processor
-                .processAsync(edgeType, gpmlEdge)
-                .map(function(processedEdge) {
-                  const processed = process(processedEdge, referencedEntities);
-
-                  const gpmlAnchors =
-                    gpmlEdge.Graphics.hasOwnProperty("Anchor") &&
-                    gpmlEdge.Graphics.Anchor;
-                  const pvjsonAnchors = [];
-                  if (
-                    !!gpmlAnchors &&
-                    !!gpmlAnchors[0] &&
-                    gpmlAnchors[0]._exists !== false
-                  ) {
-                    gpmlAnchors.forEach(function(gpmlAnchor) {
-                      const pvjsonAnchor = processor.process(
-                        "Anchor",
-                        gpmlAnchor
-                      );
-                      pvjsonAnchor.isAttachedTo = processed.id;
-                      pvjsonAnchor.type.push("Burr");
-                      pvjsonAnchor.zIndex = processed.zIndex;
-                      if (processed.isPartOf) {
-                        pvjsonAnchor.isPartOf = processed.isPartOf;
-                      }
-                      const drawAnchorAs = pvjsonAnchor.drawAs;
-                      if (drawAnchorAs === "None") {
-                        defaultsDeep(pvjsonAnchor, {
-                          Height: 4,
-                          Width: 4
-                        });
-                      } else if (drawAnchorAs === "Circle") {
-                        defaultsDeep(pvjsonAnchor, {
-                          Height: 8,
-                          Width: 8
-                        });
-                      }
-                      pvjsonAnchors.push(pvjsonAnchor);
-                    });
-                  }
-
-                  return {
-                    edge: processed,
-                    anchors: pvjsonAnchors
-                  };
-                });
-            });
-          })
-        ).merge();
-      });
   };
 }

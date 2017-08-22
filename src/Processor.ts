@@ -250,6 +250,7 @@ export class Processor {
       const { id, isAttachedTo, isPartOf, zIndex } = pvjsonEntity;
 
       graphIdToZIndex[id] = zIndex;
+      promisedPvjsonEntityByGraphId[id] = Promise.resolve(pvjsonEntity);
 
       const insertEntityIdAndSortByZIndex = flow([
         insertIfNotExists(id),
@@ -317,7 +318,6 @@ export class Processor {
         );
       }
 
-      promisedPvjsonEntityByGraphId[id] = Promise.resolve(pvjsonEntity);
       outputStream.write(that.output);
     });
 
@@ -335,6 +335,8 @@ export class Processor {
       return promisedGraphId;
     } else {
       const { groupIdToGraphIdStream } = this;
+      // NOTE: we don't need to set the cache here, because the cache is
+      // set for every item that flows through groupIdToGraphIdStream
       promisedGraphId = new Promise(function(resolve, reject) {
         groupIdToGraphIdStream
           .observe()
@@ -354,6 +356,8 @@ export class Processor {
       return promisedPvjsonEntity;
     } else {
       const { pvjsonEntityStream } = this;
+      // NOTE: we don't need to set the cache here, because the cache is
+      // set for every item that flows through pvjsonEntityStream
       promisedPvjsonEntity = new Promise(function(resolve, reject) {
         pvjsonEntityStream
           .observe()
@@ -372,6 +376,8 @@ export class Processor {
       return promisedGPMLElement;
     } else {
       const { gpmlElementStream } = this;
+      // NOTE: we don't need to set the cache here, because the cache is
+      // set for every item that flows through gpmlElementStream
       promisedGPMLElement = new Promise(function(resolve, reject) {
         gpmlElementStream
           .observe()
@@ -447,7 +453,7 @@ export class Processor {
     );
   });
 
-  processTypeAndProperties = curry(
+  processPropertiesAndAddType = curry(
     (gpmlElementName: string, gpmlElement: GPMLElement): PvjsonEntity => {
       const processed = this.processProperties(gpmlElement);
       processed.type = unionLSV(processed.type, gpmlElementName);
@@ -484,7 +490,8 @@ export class Processor {
 
   fixGroupRefs = (gpmlElement: GPMLElement): Highland.Stream<GPMLElement> => {
     const that = this;
-    const { GraphId, GroupRef } = gpmlElement;
+    const { groupIdToGraphIdStream } = this;
+    const { GraphId, GroupId, GroupRef } = gpmlElement;
     return !!GroupRef && GroupRef._exists !== false
       ? hl(this.getGraphIdByGroupId(GroupRef)).map(function(graphIdOfGroup) {
           // NOTE: side effect
@@ -496,7 +503,9 @@ export class Processor {
           ) as string[];
           return gpmlElement;
         })
-      : hl([gpmlElement]);
+      : !!GroupId && GroupId._exists !== false
+        ? hl(this.getGraphIdByGroupId(GroupId)).map(x => gpmlElement)
+        : hl([gpmlElement]);
   };
 
   preprocessGPMLElement = (
@@ -513,10 +522,10 @@ export class Processor {
   };
 
   processAsync = curry((gpmlElementName: string, gpmlElement) => {
-    const { preprocessGPMLElement, processTypeAndProperties } = this;
+    const { preprocessGPMLElement, processPropertiesAndAddType } = this;
 
     return preprocessGPMLElement(gpmlElement).map(
-      processTypeAndProperties(gpmlElementName)
+      processPropertiesAndAddType(gpmlElementName)
     );
   });
 
@@ -543,7 +552,7 @@ export class Processor {
 
   finalize = pvjsonEntity => {
     const that = this;
-    const { graphIdManager, processTypeAndProperties } = this;
+    const { graphIdManager, processPropertiesAndAddType } = this;
     return hl([pvjsonEntity]);
   };
 }
