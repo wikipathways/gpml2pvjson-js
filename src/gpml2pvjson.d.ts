@@ -62,6 +62,8 @@ declare type GPML_ATTRIBUTE_NAMES_AND_TYPES = {
   [K in GPMLAttributeNames]?: string
 };
 
+declare type GPMLElement = Record<string, any>;
+
 interface Pathway {
   contains: string[];
   height: number;
@@ -69,7 +71,7 @@ interface Pathway {
   title: string;
   width: number;
   author?: string;
-  comment: Comment[];
+  comments?: Comment[];
   dataSource?: string;
   email?: string;
   lastModified?: string;

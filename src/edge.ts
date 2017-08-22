@@ -1,4 +1,4 @@
-import { defaultsDeep, isNumber, isString, map, omit } from "lodash/fp";
+import { curry, defaultsDeep, isNumber, isString, map, omit } from "lodash/fp";
 import * as hl from "highland";
 import { intersectsLSV, unionLSV } from "./gpml-utilities";
 // TODO compile this as part of the build step for this package
@@ -23,8 +23,6 @@ interface Sides {
   last: "top" | "right" | "bottom" | "left";
   comparison: "same" | "perpendicular" | "opposing";
 }
-
-const HYPEREDGE_RECURSION_LIMIT = 5;
 
 // a stub is a short path segment that is used for the first and/or last segment(s) of a path
 const DEFAULT_STUB_LENGTH = 20;
@@ -1028,12 +1026,79 @@ function sign(u: number): boolean {
   return u >= 0;
 }
 
-// TODO handle recursive hyperedges better. What we have here
-// is a kludge that generally seems to work.
-// In general, study how to handle entities whose positions are
-// recursively dependent, such as as combination of groups,
-// hyperedges, etc.
 export function createEdgeTransformStream(
+  processor,
+  edgeType: "Interaction" | "GraphicalLine"
+): (
+  s: Highland.Stream<GPML2013a.InteractionType | GPML2013a.GraphicalLineType>
+) => Highland.Stream<PvjsonEntity> {
+  const {
+    fillInGPMLPropertiesFromParent,
+    ensureGraphIdExists,
+    preprocessGPMLElement,
+    processTypeAndProperties
+  } = processor;
+  return function(s) {
+    return s
+      .flatMap(function(gpmlEdge) {
+        const { Graphics } = gpmlEdge;
+
+        const graphRefIds: string[] = Graphics.Point
+          .filter(P => isString(P.GraphRef))
+          .map(P => P.GraphRef);
+
+        return preprocessGPMLElement(gpmlEdge).flatMap(function(
+          processedGPMLEdge
+        ) {
+          const fillInGPMLPropertiesFromCurrentParent = fillInGPMLPropertiesFromParent(
+            processedGPMLEdge
+          );
+          const gpmlAnchors =
+            Graphics.hasOwnProperty("Anchor") && Graphics.Anchor;
+
+          const gpmlAnchorStream = !gpmlAnchors ||
+            !gpmlAnchors[0] ||
+            gpmlAnchors[0]._exists === false
+            ? hl([])
+            : hl(gpmlAnchors)
+                .map(function(gpmlAnchor: GPMLElement) {
+                  const filledInAnchor = fillInGPMLPropertiesFromCurrentParent(
+                    gpmlAnchor
+                  );
+                  filledInAnchor.GraphRef = processedGPMLEdge.GraphId;
+                  return filledInAnchor;
+                })
+                .map(ensureGraphIdExists)
+                .map(processTypeAndProperties("Anchor"))
+                .map(function(pvjsonAnchor: PvjsonNode) {
+                  pvjsonAnchor.type.push("Burr");
+                  const drawAnchorAs = pvjsonAnchor.drawAs;
+                  if (drawAnchorAs === "None") {
+                    defaultsDeep(pvjsonAnchor, {
+                      Height: 4,
+                      Width: 4
+                    });
+                  } else if (drawAnchorAs === "Circle") {
+                    defaultsDeep(pvjsonAnchor, {
+                      Height: 8,
+                      Width: 8
+                    });
+                  }
+                  return pvjsonAnchor;
+                });
+
+          return hl([
+            hl([gpmlEdge]).map(processTypeAndProperties(edgeType)),
+            gpmlAnchorStream
+          ]);
+        });
+      })
+      .merge();
+  };
+}
+
+const HYPEREDGE_RECURSION_LIMIT = 5;
+export function createEdgeTransformStream1(
   processor,
   edgeType: "Interaction" | "GraphicalLine"
 ): (
@@ -1063,7 +1128,7 @@ export function createEdgeTransformStream(
         anchors: PvjsonNode[];
       }> {
         return hl(
-          InteractionBatch.map(function(gpmlEdge) {
+          hl(InteractionBatch).flatMap(function(gpmlEdge) {
             const { Graphics } = gpmlEdge;
             const graphRefIds: string[] = Graphics.Point
               .filter(P => isString(P.GraphRef))
@@ -1099,51 +1164,52 @@ export function createEdgeTransformStream(
               : hl([{}])).map(function(referencedEntities: {
               [key: string]: PvjsonEntity;
             }) {
-              const processed = process(
-                processor.process(edgeType, gpmlEdge),
-                referencedEntities
-              );
+              return processor
+                .processAsync(edgeType, gpmlEdge)
+                .map(function(processedEdge) {
+                  const processed = process(processedEdge, referencedEntities);
 
-              const gpmlAnchors =
-                gpmlEdge.Graphics.hasOwnProperty("Anchor") &&
-                gpmlEdge.Graphics.Anchor;
-              const pvjsonAnchors = [];
-              if (
-                !!gpmlAnchors &&
-                !!gpmlAnchors[0] &&
-                gpmlAnchors[0]._exists !== false
-              ) {
-                gpmlAnchors.forEach(function(gpmlAnchor) {
-                  const pvjsonAnchor = processor.process("Anchor", gpmlAnchor);
-                  pvjsonAnchor.isAttachedTo = processed.id;
-                  pvjsonAnchor.type.push("Burr");
-                  pvjsonAnchor.zIndex = processed.zIndex;
-                  if (processed.isPartOf) {
-                    pvjsonAnchor.isPartOf = processed.isPartOf;
-                  }
-                  const drawAnchorAs = pvjsonAnchor.drawAs;
-                  if (drawAnchorAs === "None") {
-                    defaultsDeep(pvjsonAnchor, {
-                      Height: 4,
-                      Width: 4
+                  const gpmlAnchors =
+                    gpmlEdge.Graphics.hasOwnProperty("Anchor") &&
+                    gpmlEdge.Graphics.Anchor;
+                  const pvjsonAnchors = [];
+                  if (
+                    !!gpmlAnchors &&
+                    !!gpmlAnchors[0] &&
+                    gpmlAnchors[0]._exists !== false
+                  ) {
+                    gpmlAnchors.forEach(function(gpmlAnchor) {
+                      const pvjsonAnchor = processor.process(
+                        "Anchor",
+                        gpmlAnchor
+                      );
+                      pvjsonAnchor.isAttachedTo = processed.id;
+                      pvjsonAnchor.type.push("Burr");
+                      pvjsonAnchor.zIndex = processed.zIndex;
+                      if (processed.isPartOf) {
+                        pvjsonAnchor.isPartOf = processed.isPartOf;
+                      }
+                      const drawAnchorAs = pvjsonAnchor.drawAs;
+                      if (drawAnchorAs === "None") {
+                        defaultsDeep(pvjsonAnchor, {
+                          Height: 4,
+                          Width: 4
+                        });
+                      } else if (drawAnchorAs === "Circle") {
+                        defaultsDeep(pvjsonAnchor, {
+                          Height: 8,
+                          Width: 8
+                        });
+                      }
+                      pvjsonAnchors.push(pvjsonAnchor);
                     });
-                  } else if (drawAnchorAs === "Circle") {
-                    defaultsDeep(pvjsonAnchor, {
-                      Height: 8,
-                      Width: 8
-                    });
                   }
-                  pvjsonAnchors.push(pvjsonAnchor);
+
+                  return {
+                    edge: processed,
+                    anchors: pvjsonAnchors
+                  };
                 });
-              }
-
-              // TODO where is this property being added?
-              delete processed["undefined"];
-
-              return {
-                edge: processed,
-                anchors: pvjsonAnchors
-              };
             });
           })
         ).merge();

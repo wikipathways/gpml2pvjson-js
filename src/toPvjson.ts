@@ -27,7 +27,7 @@ import { CXMLXPath } from "./topublish/cxml-xpath";
 import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
 import * as GPMLDefaults from "./GPMLDefaults";
 
-import { processKV, Processor } from "./Processor";
+import { Processor } from "./Processor";
 import { createEdgeTransformStream } from "./edge";
 import {
   preprocess as preprocessGroupGPML,
@@ -104,30 +104,21 @@ export function GPML2013aToPVJSON(
   const result = cxmlXPath.parse(selectorToCXML);
 
   const processor = new Processor();
+  const { fillInGPMLPropertiesFromParent, preprocessGPMLElement } = processor;
 
   hl([result["/Pathway/@*"], result["/Pathway/Graphics/@*"]])
     .merge()
     .errors(function(err) {
       throw err;
     })
-    .each(function(pathway) {
+    .map(processor.processTypeAndProperties("Pathway"))
+    .each(function(processed: Record<string, any>) {
       processor.output = iassign(
         processor.output,
         function(o) {
           return o.pathway;
         },
-        function(outputMetadata) {
-          /*
-					const processed = fromPairs(
-						toPairs(pathway).reduce(
-							(acc, x) => concat(acc, processKV(pathway, x)),
-								[]
-						)
-					);
-					processed.type = unionLSV(processed.type, "Pathway");
-					//*/
-          const processed = processor.process("Pathway", pathway);
-
+        function(pathway) {
           const { name } = processed;
           if (!!name) {
             const splitName = name.split(" (");
@@ -147,7 +138,7 @@ export function GPML2013aToPVJSON(
             }
           }
 
-          return assign(outputMetadata, processed);
+          return assign(pathway, processed);
         }
       );
       processor.outputStream.write(processor.output);
@@ -163,21 +154,11 @@ export function GPML2013aToPVJSON(
         function(o) {
           return o.pathway;
         },
-        function(outputMetadata) {
-          outputMetadata.comment = iassign(
-            outputMetadata.comment || [],
-            function(l) {
-              return l.concat([
-                fromPairs(
-                  toPairs(Comment).reduce(
-                    (acc, x) => concat(acc, processKV(Comment, x)),
-                    []
-                  )
-                )
-              ]);
-            }
-          );
-          return outputMetadata;
+        function(pathway) {
+          const comments = pathway.comments || [];
+          comments.push(processor.processProperties(Comment));
+          pathway.comments = comments;
+          return pathway;
         }
       );
 
@@ -185,42 +166,46 @@ export function GPML2013aToPVJSON(
     });
 
   //export const NODES = ["DataNode", "Label", "Shape", "Group", "State"];
-  //
+  // TODO make sure all different elements are taking advantage of new
+  // capabilities of processor.
+  // Double-check old code to make sure nothing is missed.
+
   hl(result["/Pathway/DataNode"])
     .errors(function(err) {
       throw err;
     })
-    .each(function(DataNode) {
-      const processed = processor.process("DataNode", DataNode);
-      const { Type } = DataNode;
-      const wpType = Type["_exists"] === false ? "Unknown" : Type;
-      processed.type = unionLSV(processed.type, wpType);
-      processed.wpType = wpType;
+    .each(function(gpmlDataNode) {
+      processor
+        .processAsync("DataNode", gpmlDataNode)
+        .each(function(processed) {
+          const { Type } = gpmlDataNode;
+          const wpType = Type["_exists"] === false ? "Unknown" : Type;
+          processed.type = unionLSV(processed.type, wpType);
+          processed.wpType = wpType;
 
-      /*
-			// TODO should we update pvjsonEntity here or as part of processing result["/Pathway/Group"]?
-			if (DataNode.GroupRef && !DataNode.GroupRef.hasOwnProperty("_exists")) {
-			console.log("DataNode w/ GroupRef");
-			console.log(DataNode);
-			processor.getByGroupId(DataNode.GroupRef).then(function(group) {
-			console.log("awaited group");
-			console.log(group);
-			});
-			}
-			//*/
+          /*
+				// TODO should we update pvjsonEntity here or as part of processing result["/Pathway/Group"]?
+				if (DataNode.GroupRef && !DataNode.GroupRef.hasOwnProperty("_exists")) {
+				console.log("DataNode w/ GroupRef");
+				console.log(DataNode);
+				processor.getByGroupId(DataNode.GroupRef).then(function(group) {
+				console.log("awaited group");
+				console.log(group);
+				});
+				}
+				//*/
 
-      processor.pvjsonEntityStream.write(processed);
+          processor.pvjsonEntityStream.write(processed);
+        });
     });
 
   hl(result["/Pathway/Shape"])
     .errors(function(err) {
       throw err;
     })
-    .each(function(Shape) {
-      const processed = postprocessShapePVJSON(
-        processor.process("Shape", Shape)
-      );
-
+    .flatMap(processor.processAsync("Shape"))
+    .map(postprocessShapePVJSON)
+    .each(function(processed) {
       const { cellularComponent } = processed;
       // CellularComponent is not a BioPAX term, but "PhysicalEntity" is.
       if (!!cellularComponent) {
@@ -239,9 +224,21 @@ export function GPML2013aToPVJSON(
     .errors(function(err) {
       throw err;
     })
-    .flatMap(function(State) {
-      const processed = processor.process("State", State);
-      processor.pvjsonEntityStream.write(processed);
+    .flatMap(preprocessGPMLElement)
+    .flatMap(function(gpmlState) {
+      return hl(
+        processor.getGPMLElementByGraphId(gpmlState.GraphRef)
+      ).map(function(gpmlDataNode) {
+        return fillInGPMLPropertiesFromParent(gpmlDataNode, gpmlState);
+      });
+    })
+    .map(processor.processTypeAndProperties("State"))
+    .each(function(pvjsonEntity: PvjsonNode) {
+      processor.pvjsonEntityStream.write(pvjsonEntity);
+    });
+  /*
+    .flatMap(processor.processAsync("State"))
+    .flatMap(function(processed: PvjsonNode) {
       return processor.getEntityAndReferencesByGraphId(processed.id);
     })
     .each(function({ pvjsonEntity, idToEntityMap }) {
@@ -253,6 +250,7 @@ export function GPML2013aToPVJSON(
       }
       processor.pvjsonEntityStream.write(pvjsonEntity);
     });
+		//*/
   //*/
 
   /*
@@ -266,10 +264,31 @@ export function GPML2013aToPVJSON(
     .errors(function(err) {
       throw err;
     })
-    .each(function(Label) {
-      const processed = processor.process("Label", Label);
+    .flatMap(processor.processAsync("Label"))
+    .each(function(processed: PvjsonNode) {
       processor.pvjsonEntityStream.write(processed);
     });
+
+  /*
+  const EdgeStream = hl([
+    hl(result["/Pathway/Interaction"])
+      .errors(function(err) {
+        throw err;
+      })
+      .flatMap(fillInGPMLValuesForEdgeChildren(processor)),
+    hl(result["/Pathway/GraphicalLine"])
+      .errors(function(err) {
+        throw err;
+      })
+      .flatMap(fillInGPMLValuesForEdgeChildren(processor))
+  ])
+    .merge()
+    .each(function(gpmlEdge) {
+      console.log("gpmlEdge");
+      console.log(gpmlEdge);
+      console.log(JSON.stringify(gpmlEdge, null, "  "));
+    });
+  //*/
 
   //*
   const EdgeStream = hl([
@@ -285,17 +304,8 @@ export function GPML2013aToPVJSON(
       .through(createEdgeTransformStream(processor, "GraphicalLine"))
   ])
     .merge()
-    .each(function({
-      edge,
-      anchors
-    }: {
-      edge: PvjsonEdge;
-      anchors: PvjsonNode[];
-    }) {
-      processor.pvjsonEntityStream.write(edge);
-      anchors.forEach(function(anchor) {
-        processor.pvjsonEntityStream.write(anchor);
-      });
+    .each(function(pvjsonEntity: PvjsonEntity) {
+      processor.pvjsonEntityStream.write(pvjsonEntity);
     });
   //*/
 
@@ -305,13 +315,12 @@ export function GPML2013aToPVJSON(
       throw err;
     })
     .map(preprocessGroupGPML)
-    .each(function(Group) {
-      const { GroupId } = Group;
+    .flatMap(processor.processAsync("Group"))
+    .each(function(processed: PvjsonNode) {
+      const { id } = processed;
 
-      const groupedElementIds = processor.graphIdsByGroupRef[Group.GroupId];
+      const groupedElementIds = processor.graphIdsByGroup[id];
       if (groupedElementIds) {
-        const processed = processor.process("Group", Group);
-
         hl(groupedElementIds)
           .flatMap(function(id) {
             return hl(processor.getByGraphId(id));

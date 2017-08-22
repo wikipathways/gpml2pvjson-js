@@ -5,16 +5,20 @@ import {
   assign,
   camelCase,
   concat,
+  curry,
+  defaultsDeep,
   find,
-  flatten,
   flow,
   fromPairs,
   indexOf,
   isObject,
+  isString,
+  omit,
   pullAt,
   toPairs,
   toPairsIn
 } from "lodash/fp";
+import { defaultsDeep as defaultsDeepM } from "lodash";
 import {
   arrayify,
   insertIfNotExists,
@@ -35,11 +39,10 @@ iassign.setOption({
   ignoreIfNoChange: true
 });
 
-function liftProperties(target, source) {
-  return assign(target, source);
-}
-
-export function processKV(gpmlElement, [gpmlKey, gpmlValue]) {
+export const processKV = curry(function(
+  gpmlElement,
+  [gpmlKey, gpmlValue]
+): [string, any][] {
   const pvjsonKey = GPML2013aKeyMappings[gpmlKey];
   // NOTE "pvjson:lift" is for elements like "Graphics", where they
   // are nested in GPML but are merged into the parent in pvjson.
@@ -53,9 +56,10 @@ export function processKV(gpmlElement, [gpmlKey, gpmlValue]) {
     // "_exists" or "_namespace".
     return [];
   } else if (pvjsonKey === "pvjson:lift") {
-    return toPairsIn(gpmlValue)
-      .map(processKV.bind(undefined, gpmlElement))
-      .map(flatten);
+    return toPairsIn(gpmlValue).reduce(
+      (acc, x) => concat(acc, processKV(gpmlElement, x)),
+      []
+    );
   } else if (gpmlKey === "Attribute") {
     // NOTE: in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute".
     return toPairs(
@@ -117,7 +121,7 @@ export function processKV(gpmlElement, [gpmlKey, gpmlValue]) {
       return [];
     }
   }
-}
+});
 
 /* pvjson: "id" is a required property.
  * GPML2013a: GraphId is sometimes optional, e.g., for Groups or Anchors.
@@ -153,12 +157,10 @@ export class GraphIdManager {
     this.incrementingValueAsInt = parseInt("0xa00", 16);
   }
 
-  generateAndRecord() {
+  generateAndRecord(): string {
     this.incrementingValueAsInt += 1;
     // NOTE: the namespace is not part of incrementingValueAsInt
-    return (
-      this.incrementingValueAsInt + this.incrementingValueAsInt.toString(16)
-    );
+    return this.namespace + this.incrementingValueAsInt.toString(16);
   }
 
   recordExisting(graphIdAsHex) {
@@ -176,26 +178,38 @@ export class Processor {
   output: {
     pathway: Pathway;
     entityMap: PvjsonEntityMap;
+  } = {
+    pathway: {
+      contains: [],
+      height: 0,
+      width: 0,
+      organism: "Homo Sapiens",
+      title: "New Untitled Pathway"
+    },
+    entityMap: {}
   };
 
-  outputStream: Highland.Stream<any>;
+  outputStream: Highland.Stream<any> = hl();
 
-  graphIdManager: GraphIdManager;
+  graphIdManager: GraphIdManager = new GraphIdManager();
 
-  graphIdsByGraphRef: Record<string, string[]>;
-  graphIdsByGroupRef: Record<string, string[]>;
+  graphIdsByGraphRef: Record<string, string[]> = {};
+  graphIdsByGroup: Record<string, string[]> = {};
 
-  promisedGraphIdByGroupId: Record<string, Promise<string>>;
-  promisedPvjsonEntityByGraphId: Record<string, Promise<PvjsonEntity>>;
+  promisedGraphIdByGroupId: Record<string, Promise<string>> = {};
+  promisedGPMLElementByGraphId: Record<string, Promise<GPMLElement>> = {};
+  promisedPvjsonEntityByGraphId: Record<string, Promise<PvjsonEntity>> = {};
 
-  pvjsonEntityStream: Highland.Stream<PvjsonEntity>;
-  groupIdToGraphIdStream: Highland.Stream<any>;
+  gpmlElementStream: Highland.Stream<GPMLElement> = hl();
+  pvjsonEntityStream: Highland.Stream<PvjsonEntity> = hl();
+  groupIdToGraphIdStream: Highland.Stream<any> = hl();
 
-  graphIdToZIndex: Record<string, number>;
+  graphIdToZIndex: Record<string, number> = {};
 
   constructor() {
     const that = this;
 
+    /*
     this.output = {
       pathway: {
         contains: []
@@ -205,34 +219,32 @@ export class Processor {
       pathway: Pathway;
       entityMap: PvjsonEntityMap;
     };
-
-    this.outputStream = hl();
-    this.graphIdManager = new GraphIdManager();
-    this.graphIdsByGraphRef = {};
-    this.graphIdsByGroupRef = {};
-    this.promisedGraphIdByGroupId = {};
-    this.promisedPvjsonEntityByGraphId = {};
-    this.graphIdToZIndex = {};
+		//*/
 
     const {
       graphIdToZIndex,
       promisedGraphIdByGroupId,
       promisedPvjsonEntityByGraphId,
+      promisedGPMLElementByGraphId,
       graphIdsByGraphRef,
       output,
-      outputStream
+      outputStream,
+      groupIdToGraphIdStream,
+      pvjsonEntityStream,
+      gpmlElementStream
     } = this;
 
     const sortByZIndex = sortByMap(graphIdToZIndex);
 
-    const groupIdToGraphIdStream = hl();
-    this.groupIdToGraphIdStream = groupIdToGraphIdStream;
     groupIdToGraphIdStream.each(function([groupId, graphId]) {
       promisedGraphIdByGroupId[groupId] = Promise.resolve(graphId);
     });
 
-    const pvjsonEntityStream = hl() as Highland.Stream<PvjsonEntity>;
-    this.pvjsonEntityStream = pvjsonEntityStream;
+    gpmlElementStream.each(function(gpmlElement) {
+      promisedGPMLElementByGraphId[gpmlElement.GraphId] = Promise.resolve(
+        gpmlElement
+      );
+    });
 
     pvjsonEntityStream.each(function(pvjsonEntity: PvjsonEntity) {
       const { id, isAttachedTo, isPartOf, zIndex } = pvjsonEntity;
@@ -327,6 +339,7 @@ export class Processor {
         groupIdToGraphIdStream
           .observe()
           .find(([groupId, graphId]) => groupId === targetGroupId)
+          .map(([groupId, graphId]) => graphId)
           .errors(reject)
           .each(resolve);
       });
@@ -350,6 +363,24 @@ export class Processor {
       });
 
       return promisedPvjsonEntity;
+    }
+  };
+
+  getGPMLElementByGraphId = graphId => {
+    let promisedGPMLElement = this.promisedGPMLElementByGraphId[graphId];
+    if (promisedGPMLElement) {
+      return promisedGPMLElement;
+    } else {
+      const { gpmlElementStream } = this;
+      promisedGPMLElement = new Promise(function(resolve, reject) {
+        gpmlElementStream
+          .observe()
+          .find(gpmlElement => gpmlElement.GraphId === graphId)
+          .errors(reject)
+          .each(resolve);
+      });
+
+      return promisedGPMLElement;
     }
   };
 
@@ -407,11 +438,29 @@ export class Processor {
     return promisedGraphId.then(getByGraphId);
   };
 
-  process = (gpmlElementName, gpmlElement) => {
-    const { graphIdManager } = this;
-    const { GroupId, GroupRef } = gpmlElement;
+  processProperties = curry((gpmlElement: GPMLElement): PvjsonEntity => {
+    return fromPairs(
+      toPairs(gpmlElement).reduce(
+        (acc, x) => concat(acc, processKV(gpmlElement, x)),
+        []
+      )
+    );
+  });
 
-    let GraphId = gpmlElement.GraphId;
+  processTypeAndProperties = curry(
+    (gpmlElementName: string, gpmlElement: GPMLElement): PvjsonEntity => {
+      const processed = this.processProperties(gpmlElement);
+      processed.type = unionLSV(processed.type, gpmlElementName);
+      return processed;
+    }
+  );
+
+  ensureGraphIdExists = (gpmlElement: GPMLElement): GPMLElement => {
+    const { graphIdManager } = this;
+    const { GroupId } = gpmlElement;
+    let { GraphId } = gpmlElement;
+
+    // TODO does this work for all elements? Are there any that we give an id that don't have one in GPML?
     // Does the schema allow the element to have a GraphId?
     if (!!GraphId) {
       // Does it actually have one?
@@ -425,27 +474,76 @@ export class Processor {
         graphIdManager.recordExisting(GraphId);
       }
 
-      if (!!GroupRef && GroupRef._exists !== false) {
-        const graphIds = this.graphIdsByGroupRef[GroupRef] || [];
-        if (graphIds.indexOf(GraphId) === -1) {
-          graphIds.push(GraphId);
-        }
-        this.graphIdsByGroupRef[GroupRef] = graphIds;
-      }
-
       if (!!GroupId && GroupId._exists !== false) {
         this.groupIdToGraphIdStream.write([GroupId, GraphId]);
       }
     }
 
-    const processed = fromPairs(
-      toPairs(gpmlElement).reduce(
-        (acc, x) => concat(acc, processKV(gpmlElement, x)),
-        []
-      )
-    );
-    processed.type = unionLSV(processed.type, gpmlElementName);
+    return gpmlElement;
+  };
 
-    return processed;
+  fixGroupRefs = (gpmlElement: GPMLElement): Highland.Stream<GPMLElement> => {
+    const that = this;
+    const { GraphId, GroupRef } = gpmlElement;
+    return !!GroupRef && GroupRef._exists !== false
+      ? hl(this.getGraphIdByGroupId(GroupRef)).map(function(graphIdOfGroup) {
+          // NOTE: side effect
+          gpmlElement.GroupRef = graphIdOfGroup;
+          // NOTE: side effect
+          that.graphIdsByGroup[graphIdOfGroup] = unionLSV(
+            that.graphIdsByGroup[graphIdOfGroup],
+            GraphId
+          ) as string[];
+          return gpmlElement;
+        })
+      : hl([gpmlElement]);
+  };
+
+  preprocessGPMLElement = (
+    gpmlElement: GPMLElement
+  ): Highland.Stream<GPMLElement> => {
+    const { ensureGraphIdExists, fixGroupRefs, gpmlElementStream } = this;
+
+    return hl([gpmlElement])
+      .map(ensureGraphIdExists)
+      .flatMap(fixGroupRefs)
+      .doto(function(processedGPMLElement) {
+        gpmlElementStream.write(processedGPMLElement);
+      });
+  };
+
+  processAsync = curry((gpmlElementName: string, gpmlElement) => {
+    const { preprocessGPMLElement, processTypeAndProperties } = this;
+
+    return preprocessGPMLElement(gpmlElement).map(
+      processTypeAndProperties(gpmlElementName)
+    );
+  });
+
+  fillInGPMLPropertiesFromParent = curry(
+    (
+      gpmlParentElement: GPMLElement,
+      gpmlChildElement: GPMLElement
+    ): GPMLElement => {
+      const { Graphics } = gpmlParentElement;
+
+      const propertiesToFillIn: Record<string, any> = {
+        Graphics: {
+          ZOrder: Graphics.ZOrder
+        }
+      };
+
+      if (gpmlParentElement.GroupRef._exists !== false) {
+        propertiesToFillIn.GroupRef = gpmlParentElement.GroupRef;
+      }
+
+      return defaultsDeepM(gpmlChildElement, propertiesToFillIn);
+    }
+  );
+
+  finalize = pvjsonEntity => {
+    const that = this;
+    const { graphIdManager, processTypeAndProperties } = this;
+    return hl([pvjsonEntity]);
   };
 }

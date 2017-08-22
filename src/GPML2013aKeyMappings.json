@@ -14,7 +14,7 @@
   "GraphId": "id",
   "GraphRef": "isAttachedTo",
   "GroupId": "pvjson:delete",
-  "GroupRef": "pvjson:delete",
+  "GroupRef": "isPartOf",
   "ID": "dbId",
   "LineStyle": "strokeDasharray",
   "LineThickness": "borderWidth",
