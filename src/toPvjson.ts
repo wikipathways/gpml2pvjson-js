@@ -1,17 +1,16 @@
 import "source-map-support/register";
 // TODO should I get rid of the lib above for production browser build?
 
+import * as He from "he";
 import { assign as assignM } from "lodash";
 import {
   assign,
   concat,
-  fromPairs,
   isArray,
   isObject,
-  isString,
   map,
+  reduce,
   sortBy,
-  toPairs,
   toPairsIn
 } from "lodash/fp";
 import * as hl from "highland";
@@ -25,6 +24,7 @@ import { CXMLXPath } from "./topublish/cxml-xpath";
 // TODO compile this as part of the build step for this package
 //import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
+//import * as Biopax from "../../cxml/test/xmlns/www.biopax.org/release/biopax-level3.owl";
 import * as GPMLDefaults from "./GPMLDefaults";
 
 import { Processor } from "./Processor";
@@ -34,7 +34,13 @@ import {
   postprocess as postprocessGroupPVJSON
 } from "./group";
 import { postprocess as postprocessShapePVJSON } from "./Shape";
-import { isPvjsonEdge, supportedNamespaces, unionLSV } from "./gpml-utilities";
+import {
+  generatePublicationXrefId,
+  isPvjsonEdge,
+  supportedNamespaces,
+  unionLSV
+} from "./gpml-utilities";
+import * as VOCABULARY_NAME_TO_IRI from "./VOCABULARY_NAME_TO_IRI.json";
 
 iassign.setOption({
   // Deep freeze both input and output. Used in development to make sure they don't change.
@@ -84,7 +90,12 @@ export function GPML2013aToPVJSON(
     // Why does Pathway.Graphics not need that?
     // Why do many of the other require using the prototype?
     "/Pathway/@*": GPML2013a.document.Pathway.constructor.prototype,
-    "/Pathway/Biopax": GPML2013a.BiopaxType.prototype,
+    //"/Pathway/Biopax": GPML2013a.BiopaxType.prototype,
+    "/Pathway/Biopax/bp:PublicationXref":
+      GPML2013a.document.Pathway.Biopax.PublicationXref[0],
+    "/Pathway/Biopax/bp:OpenControlledVocabulary":
+      // TODO what's up with the lowercase?
+      GPML2013a.document.Pathway.Biopax.openControlledVocabulary[0],
     "/Pathway/Comment/@*": GPML2013a.document.Pathway.Comment[0],
     "/Pathway/Comment": GPML2013a.document.Pathway.Comment[0],
     "/Pathway/DataNode": GPML2013a.DataNodeType.prototype,
@@ -99,7 +110,9 @@ export function GPML2013aToPVJSON(
     "/Pathway/State": GPML2013a.StateType.prototype
   };
 
-  const cxmlXPath = new CXMLXPath(inputStream, GPML2013a);
+  const cxmlXPath = new CXMLXPath(inputStream, GPML2013a, {
+    bp: "http://www.biopax.org/release/biopax-level3.owl#"
+  });
 
   const result = cxmlXPath.parse(selectorToCXML);
 
@@ -114,7 +127,15 @@ export function GPML2013aToPVJSON(
     processAsync
   } = processor;
 
-  hl([result["/Pathway/@*"], result["/Pathway/Graphics/@*"]])
+  hl([
+    result["/Pathway/@*"].doto(function(pathway) {
+      if (supportedNamespaces.indexOf(pathway._namespace) === -1) {
+        // TODO should we do anything further?
+        throw new Error(`Unsupported namespace: ${pathway._namespace}`);
+      }
+    }),
+    result["/Pathway/Graphics/@*"]
+  ])
     .merge()
     .errors(function(err) {
       throw err;
@@ -173,11 +194,6 @@ export function GPML2013aToPVJSON(
       processor.outputStream.write(processor.output);
     });
 
-  //export const NODES = ["DataNode", "Label", "Shape", "Group", "State"];
-  // TODO make sure all different elements are taking advantage of new
-  // capabilities of processor.
-  // Double-check old code to make sure nothing is missed.
-
   const dataNodeStream = hl(result["/Pathway/DataNode"])
     .errors(function(err) {
       throw err;
@@ -217,29 +233,6 @@ export function GPML2013aToPVJSON(
       });
     })
     .map(processPropertiesAndAddType("State"));
-  /*
-    .flatMap(processor.processAsync("State"))
-    .flatMap(function(processed: PvjsonNode) {
-      return processor.getEntityAndReferencesByGraphId(processed.id);
-    })
-    .each(function({ pvjsonEntity, idToEntityMap }) {
-      const { isAttachedTo, isPartOf, zIndex, id } = <PvjsonNode>pvjsonEntity;
-      const isAttachedToEntity = idToEntityMap[isAttachedTo];
-      pvjsonEntity.zIndex = !!zIndex ? zIndex : isAttachedToEntity.zIndex;
-      if (isAttachedToEntity.hasOwnProperty("isPartOf")) {
-        pvjsonEntity.isPartOf = isAttachedToEntity.isPartOf;
-      }
-      processor.pvjsonEntityStream.write(pvjsonEntity);
-    });
-		//*/
-  //*/
-
-  /*
-  <State GraphRef="a7a5c" TextLabel="P" GraphId="ad145">
-    <Graphics RelX="1.0" RelY="1.0" Width="15.0" Height="15.0" ShapeType="Oval" />
-    <Xref Database="" ID="" />
-  </State>
-		//*/
 
   const labelStream = hl(result["/Pathway/Label"])
     .errors(function(err) {
@@ -247,28 +240,6 @@ export function GPML2013aToPVJSON(
     })
     .flatMap(processAsync("Label"));
 
-  /*
-  const edgeStream = hl([
-    hl(result["/Pathway/Interaction"])
-      .errors(function(err) {
-        throw err;
-      })
-      .flatMap(fillInGPMLValuesForEdgeChildren(processor)),
-    hl(result["/Pathway/GraphicalLine"])
-      .errors(function(err) {
-        throw err;
-      })
-      .flatMap(fillInGPMLValuesForEdgeChildren(processor))
-  ])
-    .merge()
-    .each(function(gpmlEdge) {
-      console.log("gpmlEdge");
-      console.log(gpmlEdge);
-      console.log(JSON.stringify(gpmlEdge, null, "  "));
-    });
-  //*/
-
-  //*
   const edgeStream = hl([
     hl(result["/Pathway/Interaction"])
       .errors(function(err) {
@@ -280,12 +251,8 @@ export function GPML2013aToPVJSON(
         throw err;
       })
       .through(createEdgeTransformStream(processor, "GraphicalLine"))
-  ])
-    //.parallel()
-    .merge();
-  //*/
+  ]).merge();
 
-  //*
   const groupStream = hl(result["/Pathway/Group"])
     .errors(function(err) {
       throw err;
@@ -330,28 +297,33 @@ export function GPML2013aToPVJSON(
               );
               const { x, y } = updatedProcessed;
 
-              const result: PvjsonEntity[] = [updatedProcessed];
-
-              groupedEntities.forEach(function(groupedEntity) {
-                if (isPvjsonEdge(groupedEntity)) {
-                  groupedEntity.points = map(groupedEntity.points, function(
-                    point
-                  ) {
-                    point.x -= x;
-                    point.y -= y;
-                    return point;
-                  });
-                } else {
-                  groupedEntity.x -= x;
-                  groupedEntity.y -= y;
-                }
-                result.push(groupedEntity);
-              });
-
-              return hl(result);
+              return hl(
+                concat(
+                  [updatedProcessed],
+                  groupedEntities.map(function(groupedEntity) {
+                    if (isPvjsonEdge(groupedEntity)) {
+                      groupedEntity.points = map(groupedEntity.points, function(
+                        point
+                      ) {
+                        point.x -= x;
+                        point.y -= y;
+                        return point;
+                      });
+                    } else if (groupedEntity.hasOwnProperty("x")) {
+                      groupedEntity.x -= x;
+                      groupedEntity.y -= y;
+                    } else {
+                      console.error(groupedEntity);
+                      throw new Error(
+                        "Unexpected entity found in group (see above)"
+                      );
+                    }
+                    return groupedEntity;
+                  })
+                )
+              );
             });
     });
-  //*/
 
   hl([
     dataNodeStream,
@@ -369,109 +341,37 @@ export function GPML2013aToPVJSON(
       throw err;
     })
     .each(function(processed) {});
+
+  hl(result["/Pathway/Biopax/bp:OpenControlledVocabulary"])
+    .errors(function(err) {
+      throw err;
+    })
+    .each(function(OpenControlledVocabulary) {
+      console.log("Biopax OpenControlledVocabulary");
+      console.log(OpenControlledVocabulary);
+      // TODO finish this
+    });
+
+  hl(result["/Pathway/Biopax/bp:PublicationXref"])
+    .errors(function(err) {
+      throw err;
+    })
+    .each(function(PublicationXref) {
+      console.log("Biopax PublicationXref");
+      console.log(PublicationXref);
+      // TODO finish this
+    });
+
   return processor.outputStream.debounce(17);
-  //return processor.outputStream.last();
 
-  //export const EDGES = ["Interaction", "GraphicalLine"];
-  //
-  //  // The top-level Pathway GPML element and all its children that represent entities.
-  //  const PATHWAY_AND_CHILD_TARGET_ELEMENTS = NODES.concat(EDGES).concat([
-  //    "Pathway"
-  //  ]);
-  //
-  //  // GPML Elements that represent entities and are grandchildren or lower descendants of top-level Pathway element.
-  //  const SUB_CHILD_TARGET_ELEMENTS = ["Anchor"];
-  //
-  //  const TARGET_ELEMENTS = PATHWAY_AND_CHILD_TARGET_ELEMENTS.concat(
-  //    SUB_CHILD_TARGET_ELEMENTS
-  //  );
-  //
-  //  const SUPPLEMENTAL_ELEMENTS_WITH_ATTRIBUTES = ["Graphics", "Xref"];
-  //  const SUPPLEMENTAL_ELEMENTS_WITH_TEXT = ["BiopaxRef", "Comment"];
-  //  const NESTED_SUPPLEMENTAL_ELEMENTS = ["Point", "Attribute"];
+  // TODO finish by re-enabling BioPAX parsing, of both
+  // the Biopax section and the in-line content, e.g., biopaxRef
+  // TODO double-check that groups are correctly getting their contents.
+  // TODO Double-check old code to make sure nothing is missed.
+  // TODO get CLI working again
+  // TODO does the stream ever end?
+  // TODO does backpressure work?
 
-  //  var cXMLRx = new CXMLRx(inputStream, GPML2013a);
-  //  const parsed = cXMLRx.parse(selectors);
-  //
-  //  // Conversion steps
-  //  // 1. Convert property keys
-  //  // 2. Convert property values
-  //  // 3. Transform structures
-  //  // 4. Perform conversions with dependencies
-  //
-  //  // What about immutable data structures and streaming?
-  //  // We are basically going to be doing "scan" for this,
-  //  // where we return the entire thing each time.
-  //  //
-  //  // Conversion steps (updated)
-  //  // 1. Return pathway metadata, incl/ boardwidth & height
-  //  // 2. Convert elements
-  //  //    a. Fully convert elements w/out deps. Convert elements w/ deps as much as possible.
-  //  //    b. Walk tree backwards to fully convert elements w/ deps
-  //
-  //  return Observable.from(values(parsed) as Observable<any>[])
-  //    .mergeMap(function(x) {
-  //      return Observable.merge([
-  //        x["/Pathway/@*"].map(function(metadata) {
-  //          // TODO should this line be re-enabled?
-  //          // It's pulled out of the iassign overload function,
-  //          // because iassign doesn't like comments.
-  //          //m.tagName = 'Pathway';
-  //          return iassign(metadata, function(m) {
-  //            m.id = pathwayIri;
-  //            return m;
-  //          });
-  //        }),
-  //        x["/Pathway/DataNode"]
-  //          //.map(preprocessGPMLDataNode(rxSax, {}))
-  //          .do(console.log),
-  //        /*
-  //				Observable.merge(
-  //						//x['/Pathway/Label'],
-  //						//x['/Pathway/Interaction'],
-  //						//x['/Pathway/GraphicalLine']
-  //				),
-  //				//*/
-  //        /*
-  //					.map(value => iassign(
-  //							value,
-  //							(value: SimpleElement) => value.attributes,
-  //							ensureGraphIdExists.bind(undefined, rxSax)
-  //					)),
-  //					//*/
-  //        // NOTE: potential side effects
-  //        /*
-  //					.do(({type, value}) => ensureGraphIdExists(rxSax, value))
-  //					.do(function({type, value}) {
-  //						value.type = value.type || [];
-  //						value.type.push(value.tagName);
-  //					})
-  //					//*/
-  //        /*
-  //					// TODO Apply whatever transformations are needed. Scan results back.
-  //					.let(function(subO) {
-  //						const [hasIdSource, missingIdSource] = subO
-  //							.partition(({type, value}: any) => value.attributes.hasOwnProperty('GraphId'));
-  //
-  //						return hasIdSource.concat(
-  //								missingIdSource
-  //									.reduce(function(x) {
-  //
-  //									}, {})
-  //						);
-  //
-  //
-  //					})
-  //					//*/
-  //        /*
-  //					.do(function({type, value}) {
-  //						if (!value.attributes.hasOwnProperty('GraphId')) {
-  //							console.error('Missing GraphId');
-  //							console.log(value);
-  //							throw new Error('Missing GraphId');
-  //						}
-  //					}),
-  //				  //*/
   //        x["/Pathway/Biopax"]
   //      ]);
   //    })
@@ -527,12 +427,6 @@ export function GPML2013aToPVJSON(
   //          containedIdsByGroupId: {},
   //          PublicationXref: [],
   //          OpenControlledVocabulary: [],
-  //
-  //          Point: [],
-  //          DataNode: [],
-  //          Label: [],
-  //          Interaction: [],
-  //          GraphicalLine: []
   //        } as Data
   //      )
   //    )
@@ -540,71 +434,6 @@ export function GPML2013aToPVJSON(
   //      console.log("complete182")
   //    );
   //
-  //  //	const rxSax = new RxSax(inputStream);
-  //  //	return rxSax.parse(selectors)
-  //  //		.mergeMap(function(x) {
-  //  //			return Observable.merge([
-  //  //				x['/Pathway/@*']
-  //  //					.map(function(metadata) {
-  //  //						// TODO should this line be re-enabled?
-  //  //						// It's pulled out of the iassign overload function,
-  //  //						// because iassign doesn't like comments.
-  //  //						//m.tagName = 'Pathway';
-  //  //						return iassign(metadata, function(m) {
-  //  //							m.id = pathwayIri;
-  //  //							return m;
-  //  //						});
-  //  //					}),
-  //  //				x['/Pathway/DataNode']
-  //  //					//.map(preprocessGPMLDataNode(rxSax, {}))
-  //  //					.do(console.log),
-  //  //				/*
-  //  //				Observable.merge(
-  //  //						//x['/Pathway/Label'],
-  //  //						//x['/Pathway/Interaction'],
-  //  //						//x['/Pathway/GraphicalLine']
-  //  //				),
-  //  //				//*/
-  //  //					/*
-  //  //					.map(value => iassign(
-  //  //							value,
-  //  //							(value: SimpleElement) => value.attributes,
-  //  //							ensureGraphIdExists.bind(undefined, rxSax)
-  //  //					)),
-  //  //					//*/
-  //  //					// NOTE: potential side effects
-  //  //					/*
-  //  //					.do(({type, value}) => ensureGraphIdExists(rxSax, value))
-  //  //					.do(function({type, value}) {
-  //  //						value.type = value.type || [];
-  //  //						value.type.push(value.tagName);
-  //  //					})
-  //  //					//*/
-  //  //					/*
-  //  //					// TODO Apply whatever transformations are needed. Scan results back.
-  //  //					.let(function(subO) {
-  //  //						const [hasIdSource, missingIdSource] = subO
-  //  //							.partition(({type, value}: any) => value.attributes.hasOwnProperty('GraphId'));
-  //  //
-  //  //						return hasIdSource.concat(
-  //  //								missingIdSource
-  //  //									.reduce(function(x) {
-  //  //
-  //  //									}, {})
-  //  //						);
-  //  //
-  //  //
-  //  //					})
-  //  //					//*/
-  //  //				  /*
-  //  //					.do(function({type, value}) {
-  //  //						if (!value.attributes.hasOwnProperty('GraphId')) {
-  //  //							console.error('Missing GraphId');
-  //  //							console.log(value);
-  //  //							throw new Error('Missing GraphId');
-  //  //						}
-  //  //					}),
-  //  //				  //*/
   //  //				x['/Pathway/Biopax']
   //  //					.map(function(x) {
   //  //						return reduce(
@@ -665,15 +494,7 @@ export function GPML2013aToPVJSON(
   //  //				PublicationXref: [],
   //  //				OpenControlledVocabulary: [],
   //  //
-  //  //				Point: [],
-  //  //				DataNode: [],
-  //  //				Label: [],
-  //  //				Interaction: [],
-  //  //				GraphicalLine: [],
-  //  //
   //  //
   //  //			} as Data)
   //  //		)
-  //  //		.do(x => console.log('next182'), console.error, x => console.log('complete182'))
-  //  //		//.do(console.log)
 }

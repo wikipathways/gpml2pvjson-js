@@ -184,7 +184,7 @@ export class Processor {
       height: 0,
       width: 0,
       organism: "Homo Sapiens",
-      title: "New Untitled Pathway"
+      name: "New Untitled Pathway"
     },
     entityMap: {}
   };

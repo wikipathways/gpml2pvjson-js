@@ -68,7 +68,7 @@ interface Pathway {
   contains: string[];
   height: number;
   organism: string;
-  title: string;
+  name: string;
   width: number;
   author?: string;
   comments?: Comment[];

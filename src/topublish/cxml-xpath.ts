@@ -4,7 +4,7 @@ import "source-map-support/register";
 // TODO most or all of this should go into the xpath branch of @wikipathways/cxml.
 // Decide on an API and then merge most or all this code into there.
 
-import * as GPML2013a from "../../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
+//import * as GPML2013a from "../../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
 
 import { cloneDeep, toPairs } from "lodash/fp";
 import * as hl from "highland";
@@ -39,8 +39,12 @@ export class CXMLXPath<T extends GenericCXML, K extends keyof T> {
   _parser;
   _schema: T;
   _inputStream: NodeJS.ReadableStream;
-  constructor(inputStream, schema) {
-    this._parser = new cxml.Parser();
+  constructor(
+    inputStream,
+    schema,
+    xpathNamespaceTbl: Record<string, string> = { "": "" }
+  ) {
+    this._parser = new cxml.Parser(xpathNamespaceTbl);
     this._schema = schema;
     this._inputStream = inputStream;
   }

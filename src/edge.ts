@@ -978,7 +978,7 @@ function process(
     //
     // From the perspective of the implementation of the graphics, we say the edge
     // has points, one or more of which can be connected to an Anchor.
-    const [sourceEntity, targetEntity] = pvjsonEdge.isAttachedTo.map(
+    const [sourceEntity, targetEntity] = arrayify(pvjsonEdge.isAttachedTo).map(
       id => referencedEntities[id]
     );
     if (drawAs === "ElbowLine") {

@@ -6,3 +6,5 @@ data-output
 node_modules
 config.json
 cache/
+playground/
+src/topublish/todelete/
