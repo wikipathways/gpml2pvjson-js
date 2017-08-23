@@ -733,6 +733,40 @@ declare namespace Highland {
     head(): Stream<R>;
 
     /**
+		 * Creates a new Stream with the separator interspersed between the elements of the source.
+		 *
+		 * `intersperse` is effectively the inverse of [splitBy](#splitBy).
+		 *
+		 * @id intersperse
+		 * @section Transforms
+		 * @name Stream.intersperse(sep)
+		 * @param {String} sep - the value to intersperse between the source elements
+		 * @api public
+		 *
+		 * _(['ba', 'a', 'a']).intersperse('n')  // => 'ba', 'n', 'a', 'n', 'a'
+		 * _(['mississippi']).splitBy('ss').intersperse('ss')  // => 'mi', 'ss', 'i', 'ss', 'ippi'
+		 * _(['foo']).intersperse('bar')  // => 'foo'
+		 */
+    intersperse<U>(sep: string): Stream<U>;
+
+    /**
+		 * Splits the source Stream by a separator and emits the pieces in between, much like splitting a string.
+		 *
+		 * `splitBy` is effectively the inverse of [intersperse](#intersperse).
+		 *
+		 * @id splitBy
+		 * @section Transforms
+		 * @name Stream.splitBy(sep)
+		 * @param {String | RegExp} sep - the separator to split on
+		 * @api public
+		 *
+		 * _(['mis', 'si', 's', 'sippi']).splitBy('ss')  // => 'mi', 'i', 'ippi'
+		 * _(['ba', 'a', 'a']).intersperse('n').splitBy('n')  // => 'ba', 'a', 'a'
+		 * _(['foo']).splitBy('bar')  // => 'foo'
+		 */
+    splitBy<U>(sep: string | RegExp): Stream<U>;
+
+    /**
 		 * Calls a named method on each object from the Stream - returning
 		 * a new stream with the result of those calls.
 		 *

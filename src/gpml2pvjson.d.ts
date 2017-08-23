@@ -77,6 +77,7 @@ interface Pathway {
   lastModified?: string;
   license?: string;
   maintainer?: string;
+  type: string[];
 }
 
 /* pvjson */
@@ -109,12 +110,6 @@ interface Corner {
   y: number;
 }
 
-interface PublicationXref {
-  id: string;
-  type: string[];
-  displayName?: string;
-}
-
 interface AttachmentDisplay {
   // position takes two numbers for GPML States and Points, but
   // just one for GPML Anchors, which are attached to edges.
@@ -131,11 +126,16 @@ interface Comment {
 type PvjsonEntityMergedStringProperties =
   | "author"
   | "backgroundColor"
+  | "biopaxType"
   | "cellularComponent"
   | "color"
+  | "controlled"
+  | "controller"
+  | "controlType"
+  | "conversionDirection"
   | "dataSource"
-  | "dbName" // e.g., Entrez Gene
   | "dbId" // xref identifier, e.g., 1234 for Entrez Gene 1234
+  | "dbName" // e.g., Entrez Gene
   | "displayName"
   | "drawAs"
   | "email"
@@ -143,30 +143,27 @@ type PvjsonEntityMergedStringProperties =
   | "fontFamily"
   | "fontStyle"
   | "fontWeight"
-  | "gpml:GroupRef"
+  //| "gpml:GroupRef"
   | "href"
   | "id" // @id
   | "isPartOf"
+  | "kaavioType"
   | "lastModified"
+  | "left"
   | "license"
   | "maintainer"
+  | "markerEnd"
+  | "markerStart"
   | "organism"
-  | "kaavioType"
+  | "right"
+  | "source"
   | "standardName"
   | "strokeDasharray"
   | "textAlign"
   | "verticalAlign"
-  | "biopaxType"
   | "wpInteractionType"
-  | "conversionDirection"
-  | "controlType"
-  | "controller"
-  | "controlled"
-  | "left"
-  | "right"
-  | "markerStart"
-  | "markerEnd"
-  | "wpType";
+  | "wpType"
+  | "year";
 
 // This probably isn't a problem with parsing GPML,
 // but if we need to parse non-numeric values like '0.5em',
@@ -196,6 +193,7 @@ declare type PvjsonEntityMergedWithNumberProperties = {
 };
 
 type PvjsonEntityMergedStringArrayProperties =
+  | "authors"
   | "burrs"
   | "citation"
   | "contains"
@@ -302,7 +300,20 @@ interface Control extends PvjsonEdge {
   controlType: string;
 }
 
-type PvjsonEntity = PvjsonNode | PvjsonEdge;
+type PvjsonPublicationXrefRequiredKeys =
+  | "id"
+  | "type"
+  | "year"
+  | "authors"
+  | "source"
+  | "standardName";
+type PvjsonPublicationXrefOptionalKeys = "displayName" | "dbId" | "dbName";
+type PvjsonPublicationXref = {
+  [K in PvjsonPublicationXrefRequiredKeys]: PvjsonEntityMerged[K]
+} &
+  { [K in PvjsonPublicationXrefOptionalKeys]?: PvjsonEntityMerged[K] } & {};
+
+type PvjsonEntity = PvjsonNode | PvjsonEdge | PvjsonPublicationXref;
 
 declare type PvjsonEntityMap = {
   // TODO this could likely be improved

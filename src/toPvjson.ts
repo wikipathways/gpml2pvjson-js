@@ -1,7 +1,6 @@
 import "source-map-support/register";
 // TODO should I get rid of the lib above for production browser build?
 
-import * as He from "he";
 import { assign as assignM } from "lodash";
 import {
   assign,
@@ -81,20 +80,24 @@ extendDeep(GPML2013a.StateType.prototype, GPMLDefaults.State);
 // NOTE: there are some differences between this version and previous version, e.g.:
 // 'Double' instead of 'double' for double lines
 export function GPML2013aToPVJSON(
-  inputStream: NodeJS.ReadableStream,
+  inputStreamWithMessedUpRDFIDs: NodeJS.ReadableStream,
   pathwayIri?: string
 ) {
+  // NOTE: GPML2013a incorrectly uses "rdf:id" instead of "rdf:ID".
+  // We need to fix this error so that CXML can process the GPML.
+  const inputStream = hl(inputStreamWithMessedUpRDFIDs)
+    .splitBy(' rdf:id="')
+    .intersperse(' rdf:ID="');
+
   const selectorToCXML = {
     // TODO why does TS require that we use the Pathway's "constructor.prototype"
     // instead of just the Pathway?
     // Why does Pathway.Graphics not need that?
     // Why do many of the other require using the prototype?
     "/Pathway/@*": GPML2013a.document.Pathway.constructor.prototype,
-    //"/Pathway/Biopax": GPML2013a.BiopaxType.prototype,
     "/Pathway/Biopax/bp:PublicationXref":
       GPML2013a.document.Pathway.Biopax.PublicationXref[0],
-    "/Pathway/Biopax/bp:OpenControlledVocabulary":
-      // TODO what's up with the lowercase?
+    "/Pathway/Biopax/bp:openControlledVocabulary":
       GPML2013a.document.Pathway.Biopax.openControlledVocabulary[0],
     "/Pathway/Comment/@*": GPML2013a.document.Pathway.Comment[0],
     "/Pathway/Comment": GPML2013a.document.Pathway.Comment[0],
@@ -112,6 +115,7 @@ export function GPML2013aToPVJSON(
 
   const cxmlXPath = new CXMLXPath(inputStream, GPML2013a, {
     bp: "http://www.biopax.org/release/biopax-level3.owl#"
+    //rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
   });
 
   const result = cxmlXPath.parse(selectorToCXML);
@@ -269,7 +273,7 @@ export function GPML2013aToPVJSON(
             .flatMap(function(id) {
               return hl(getByGraphId(id));
             })
-            .map(function(pvjsonEntity: PvjsonEntity) {
+            .map(function(pvjsonEntity: PvjsonNode | PvjsonEdge) {
               // NOTE: side effect
               pvjsonEntity.isPartOf = processed.id;
               return pvjsonEntity;
@@ -279,8 +283,8 @@ export function GPML2013aToPVJSON(
             })
             .collect()
             .flatMap(function(
-              groupedEntities: PvjsonEntity[]
-            ): Highland.Stream<PvjsonEntity> {
+              groupedEntities: (PvjsonNode | PvjsonEdge)[]
+            ): Highland.Stream<PvjsonNode | PvjsonEdge> {
               const graphIdToZIndex = processor.graphIdToZIndex;
               processed.contains = sortBy(
                 [
@@ -342,159 +346,82 @@ export function GPML2013aToPVJSON(
     })
     .each(function(processed) {});
 
-  hl(result["/Pathway/Biopax/bp:OpenControlledVocabulary"])
+  hl(result["/Pathway/Biopax/bp:openControlledVocabulary"])
     .errors(function(err) {
       throw err;
     })
-    .each(function(OpenControlledVocabulary) {
-      console.log("Biopax OpenControlledVocabulary");
-      console.log(OpenControlledVocabulary);
-      // TODO finish this
+    .map(processPropertiesAndAddType("openControlledVocabulary"))
+    .map(function(openControlledVocabulary: Record<string, any>) {
+      const vocabularyName = openControlledVocabulary.ontology;
+      let vocabularyIRI = VOCABULARY_NAME_TO_IRI[vocabularyName];
+      if (!vocabularyIRI) {
+        console.warn(
+          `Unknown openControlledVocabulary name "${vocabularyName}" with dbId "${openControlledVocabulary.dbId}"`
+        );
+        vocabularyIRI = `http://www.ebi.ac.uk/miriam/main/search?query=${vocabularyName.replace(
+          /\ /,
+          "+"
+        )}#`;
+      }
+      openControlledVocabulary.id =
+        vocabularyIRI + openControlledVocabulary.dbId;
+      return openControlledVocabulary;
+    })
+    .collect()
+    .each(function(openControlledVocabularies: Record<string, any>) {
+      // TODO should these go through the processor instead?
+
+      processor.output = iassign(processor.output, function(output) {
+        const { pathway, entityMap } = output;
+
+        openControlledVocabularies.forEach(function(openControlledVocabulary) {
+          const { id } = openControlledVocabulary;
+          entityMap[id] = openControlledVocabulary;
+          if (openControlledVocabulary.ontology === "Pathway Ontology") {
+            pathway.type.push(id);
+          }
+        });
+
+        return output;
+      });
+
+      processor.outputStream.write(processor.output);
     });
 
   hl(result["/Pathway/Biopax/bp:PublicationXref"])
     .errors(function(err) {
       throw err;
     })
-    .each(function(PublicationXref) {
-      console.log("Biopax PublicationXref");
-      console.log(PublicationXref);
-      // TODO finish this
+    .map(processPropertiesAndAddType("PublicationXref"))
+    .collect()
+    .doto(function(publicationXrefs: PvjsonPublicationXref[]) {
+      publicationXrefs.forEach(function(publicationXref, i) {
+        publicationXref.displayName = String(i + 1);
+      });
+    })
+    .each(function(publicationXrefs: PvjsonPublicationXref[]) {
+      // TODO should these go through the processor instead?
+      processor.output = iassign(
+        processor.output,
+        function(o) {
+          return o.entityMap;
+        },
+        function(entityMap) {
+          publicationXrefs.forEach(function(publicationXref) {
+            entityMap[publicationXref.id] = publicationXref;
+          });
+          return entityMap;
+        }
+      );
+
+      processor.outputStream.write(processor.output);
     });
 
   return processor.outputStream.debounce(17);
 
-  // TODO finish by re-enabling BioPAX parsing, of both
-  // the Biopax section and the in-line content, e.g., biopaxRef
   // TODO double-check that groups are correctly getting their contents.
   // TODO Double-check old code to make sure nothing is missed.
   // TODO get CLI working again
   // TODO does the stream ever end?
   // TODO does backpressure work?
-
-  //        x["/Pathway/Biopax"]
-  //      ]);
-  //    })
-  //    .mergeAll()
-  //    .scan(
-  //      function(acc, gpmlElement) {
-  //        const { tagName } = gpmlElement;
-  //        if (tagName === "Biopax") {
-  //          gpmlElement.OpenControlledVocabulary.forEach(function(
-  //            openControlledVocabulary
-  //          ) {
-  //            const openControlledVocabularyId = openControlledVocabulary.id;
-  //            acc.elementMap[
-  //              openControlledVocabularyId
-  //            ] = openControlledVocabulary;
-  //            acc.OpenControlledVocabulary.push(openControlledVocabularyId);
-  //          });
-  //          gpmlElement.PublicationXref.forEach(function(publicationXref) {
-  //            const publicationXrefId = publicationXref.id;
-  //            acc.elementMap[publicationXrefId] = publicationXref;
-  //            acc.PublicationXref.push(publicationXrefId);
-  //          });
-  //          return acc;
-  //        } else if (
-  //          ["DataNode", "Label", "Interaction", "GraphicalLine"].indexOf(
-  //            tagName
-  //          ) > -1
-  //        ) {
-  //          return acc;
-  //          /*
-  //				return reduce(
-  //						[value].concat(value.children),
-  //						function(subAcc: any, valueOrChild: any) {
-  //							elementFromGPML(acc, subAcc, valueOrChild);
-  //							return subAcc;
-  //						},
-  //						{type: []}
-  //				);
-  //				//*/
-  //        } else {
-  //          return acc;
-  //        }
-  //      },
-  //      TARGET_ELEMENTS.reduce(
-  //        function(data, tagName) {
-  //          data[tagName] = [];
-  //          return data;
-  //        },
-  //        {
-  //          elementMap: {},
-  //          elements: [],
-  //          GraphIdToGroupId: {},
-  //          containedIdsByGroupId: {},
-  //          PublicationXref: [],
-  //          OpenControlledVocabulary: [],
-  //        } as Data
-  //      )
-  //    )
-  //    .do(x => console.log("next182"), console.error, x =>
-  //      console.log("complete182")
-  //    );
-  //
-  //  //				x['/Pathway/Biopax']
-  //  //					.map(function(x) {
-  //  //						return reduce(
-  //  //								x.children,
-  //  //								parseBioPAXElements,
-  //  //								{
-  //  //									PublicationXref: [],
-  //  //									OpenControlledVocabulary: [],
-  //  //								}
-  //  //						);
-  //  //					}),
-  //  //			]);
-  //  //		})
-  //  //		.mergeAll()
-  //  //		.scan(function(acc, gpmlElement) {
-  //  //			const {tagName} = gpmlElement;
-  //  //			if (tagName === 'Biopax') {
-  //  //				gpmlElement.OpenControlledVocabulary.forEach(function(openControlledVocabulary) {
-  //  //					const openControlledVocabularyId = openControlledVocabulary.id;
-  //  //					acc.elementMap[openControlledVocabularyId] = openControlledVocabulary;
-  //  //					acc.OpenControlledVocabulary.push(openControlledVocabularyId);
-  //  //				});
-  //  //				gpmlElement.PublicationXref.forEach(function(publicationXref) {
-  //  //					const publicationXrefId = publicationXref.id;
-  //  //					acc.elementMap[publicationXrefId] = publicationXref;
-  //  //					acc.PublicationXref.push(publicationXrefId);
-  //  //				});
-  //  //				return acc;
-  //  //			} else if (['DataNode', 'Label', 'Interaction', 'GraphicalLine'].indexOf(tagName) > -1) {
-  //  //				if (tagName === 'DataNode') {
-  //  //					return converters[tagName](acc, gpmlElement);
-  //  //				} else {
-  //  //					return acc;
-  //  //				}
-  //  //				/*
-  //  //				return reduce(
-  //  //						[value].concat(value.children),
-  //  //						function(subAcc: any, valueOrChild: any) {
-  //  //							elementFromGPML(acc, subAcc, valueOrChild);
-  //  //							return subAcc;
-  //  //						},
-  //  //						{type: []}
-  //  //				);
-  //  //				//*/
-  //  //			} else {
-  //  //				return acc;
-  //  //			}
-  //  //		},
-  //  //		TARGET_ELEMENTS
-  //  //			.reduce(function(data, tagName) {
-  //  //				data[tagName] = [];
-  //  //				return data;
-  //  //			}, {
-  //  //				elementMap: {},
-  //  //				elements: [],
-  //  //				GraphIdToGroupId: {},
-  //  //				containedIdsByGroupId: {},
-  //  //				PublicationXref: [],
-  //  //				OpenControlledVocabulary: [],
-  //  //
-  //  //
-  //  //			} as Data)
-  //  //		)
 }

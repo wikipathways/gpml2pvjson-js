@@ -435,7 +435,7 @@ function getSideCombination(firstPoint: Point, lastPoint: Point): Combination {
 function getSideEquivalentForLine(
   pointOnShape: Point,
   pointOnEdge: Point,
-  //referencedEdge: PvjsonEntity
+  //referencedEdge: (PvjsonNode | PvjsonEdge)
   referencedEdge: PvjsonEdge
 ): Point {
   var riseFromPointOnEdgeToPointOnShape = pointOnShape.y - pointOnEdge.y;
@@ -763,7 +763,7 @@ function entityIdReferencedByEdgeIsPvjsonNode(
 
 function process(
   pvjsonEdge: PvjsonEdge,
-  referencedEntities: { [key: string]: PvjsonEntity }
+  referencedEntities: { [key: string]: (PvjsonNode | PvjsonEdge) }
 ): PvjsonEdge {
   const { points, drawAs } = pvjsonEdge;
 
@@ -1036,7 +1036,7 @@ export function createEdgeTransformStream(
   edgeType: "Interaction" | "GraphicalLine"
 ): (
   s: Highland.Stream<GPML2013a.InteractionType | GPML2013a.GraphicalLineType>
-) => Highland.Stream<PvjsonEntity> {
+) => Highland.Stream<(PvjsonNode | PvjsonEdge)> {
   const {
     fillInGPMLPropertiesFromParent,
     getGPMLElementByGraphId,
@@ -1103,9 +1103,9 @@ export function createEdgeTransformStream(
                 .merge()
                 .reduce({}, function(
                   acc: {
-                    [key: string]: PvjsonEntity;
+                    [key: string]: (PvjsonNode | PvjsonEdge);
                   },
-                  referencedEntity: PvjsonEntity
+                  referencedEntity: (PvjsonNode | PvjsonEdge)
                 ) {
                   acc[referencedEntity.id] = referencedEntity;
                   return acc;

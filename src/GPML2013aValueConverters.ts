@@ -5,6 +5,7 @@ import {
   get,
   isEmpty,
   isNaN,
+  isString,
   kebabCase,
   map,
   toLower
@@ -25,7 +26,43 @@ function parseAsNonNaNNumber(i: number | string): number {
   return parsed;
 }
 
+//*****************
 // Value Converters
+//*****************
+
+// NOTE: we use He.decode for many of these
+// because at some point some GPML files were
+// processed w/out using UTF-8, leaving some
+// strings garbled, such as author names.
+
+// TODO backpageHead could be further processed to yield displayName and standardName
+
+export function ID(gpmlElement) {
+  if (gpmlElement.hasOwnProperty("ID")) {
+    const { ID } = gpmlElement;
+    return isString(ID) ? ID : ID.content;
+  } else {
+    return gpmlElement.Xref.ID;
+  }
+}
+// GPML2013a incorrectly used "rdf:id" where it was intented
+// to use "rdf:ID". We corrected that error before processing,
+// but CXML turns "rdf:ID" into "ID", and since we already have
+// a property "ID" on the element, CXML uses "$ID".
+export const $ID = flow(get("$ID"), generatePublicationXrefId);
+export const DB = flow(get("DB.content"), decode);
+export const TITLE = flow(get("TITLE.content"), decode);
+export const SOURCE = flow(get("SOURCE.content"), decode);
+export const YEAR = get("YEAR.content");
+//export const AUTHORS = map(flow(get("AUTHORS.content"), decode));
+//*
+export function AUTHORS(gpmlElement) {
+  return gpmlElement.AUTHORS.map(author => decode(author.content));
+}
+export function BiopaxRef(gpmlElement) {
+  return gpmlElement.BiopaxRef.map(generatePublicationXrefId);
+}
+//*/
 
 export function CenterX(gpmlElement) {
   const { CenterX, Width } = gpmlElement.Graphics;

@@ -184,7 +184,8 @@ export class Processor {
       height: 0,
       width: 0,
       organism: "Homo Sapiens",
-      name: "New Untitled Pathway"
+      name: "New Untitled Pathway",
+      type: ["Pathway"]
     },
     entityMap: {}
   };
@@ -208,18 +209,6 @@ export class Processor {
 
   constructor() {
     const that = this;
-
-    /*
-    this.output = {
-      pathway: {
-        contains: []
-      },
-      entityMap: {}
-    } as {
-      pathway: Pathway;
-      entityMap: PvjsonEntityMap;
-    };
-		//*/
 
     const {
       graphIdToZIndex,
@@ -246,7 +235,7 @@ export class Processor {
       );
     });
 
-    pvjsonEntityStream.each(function(pvjsonEntity: PvjsonEntity) {
+    pvjsonEntityStream.each(function(pvjsonEntity: PvjsonNode | PvjsonEdge) {
       const { id, isAttachedTo, isPartOf, zIndex } = pvjsonEntity;
 
       graphIdToZIndex[id] = zIndex;
@@ -322,6 +311,7 @@ export class Processor {
     });
 
     /*
+		TODO do we need this?
     endStream.each(function(x) {
       groupIdToGraphIdStream.end();
       pvjsonEntityStream.end();
@@ -388,40 +378,6 @@ export class Processor {
 
       return promisedGPMLElement;
     }
-  };
-
-  getEntityAndReferencesByGraphId = graphId => {
-    const that = this;
-
-    return hl(this.getByGraphId(graphId)).flatMap(function(
-      pvjsonEntity: PvjsonEntity
-    ) {
-      const referencedIds = unionLSV(
-        pvjsonEntity.isPartOf,
-        pvjsonEntity.isAttachedTo
-      );
-      if (referencedIds.length > 0) {
-        return hl(
-          referencedIds.map(referencedId => hl(that.getByGraphId(referencedId)))
-        )
-          .merge()
-          .reduce({}, function(
-            acc,
-            referencedEntity
-          ): Record<string, PvjsonEntity> {
-            acc[referencedEntity.id] = referencedEntity;
-            return acc;
-          })
-          .map(function(idToEntityMap) {
-            return {
-              pvjsonEntity: pvjsonEntity,
-              idToEntityMap: idToEntityMap
-            };
-          });
-      } else {
-        return hl([{ pvjsonEntity, idToEntityMap: {} }]);
-      }
-    });
   };
 
   getByGroupId = targetGroupId => {

@@ -5,7 +5,7 @@ import * as GPML2013aGroupMappingsByStyle from "./GPML2013aGroupMappingsByStyle.
 export function getGroupDimensions(
   padding: number,
   borderWidth: number,
-  containedEntities: PvjsonEntity[]
+  containedEntities: (PvjsonNode | PvjsonEdge)[]
 ): NodeDimensions {
   const dimensions = {
     zIndex: Infinity
@@ -115,7 +115,7 @@ export function preprocess(Group: {
 }
 
 export function postprocess(
-  containedEntities: PvjsonEntity[],
+  containedEntities: (PvjsonNode | PvjsonEdge)[],
   group: PvjsonNode
 ): PvjsonNode {
   return assign(
