@@ -6,6 +6,7 @@ import {
   assign,
   concat,
   isArray,
+  isEmpty,
   isObject,
   map,
   reduce,
@@ -120,7 +121,7 @@ export function GPML2013aToPVJSON(
 
   const result = cxmlXPath.parse(selectorToCXML);
 
-  const processor = new Processor();
+  const processor = new Processor(pathwayIri);
   const {
     processPropertiesAndAddType,
     getByGraphId,
@@ -263,69 +264,46 @@ export function GPML2013aToPVJSON(
     })
     .map(preprocessGroupGPML)
     .flatMap(processAsync("Group"))
-    .flatMap(function(processed: PvjsonNode) {
-      const { id } = processed;
-
-      const groupedElementIds = processor.graphIdsByGroup[id];
-      return !groupedElementIds
+    .flatMap(function(pvjsonGroup: PvjsonNode) {
+      const { id } = pvjsonGroup;
+      return (hl([
+          dataNodeStream.observe(),
+          shapeStream.observe(),
+          stateStream.observe(),
+          labelStream.observe(),
+          edgeStream.observe()
+        ])
+          .merge()
+          // TODO find an end event so we can use .last() here
+          .debounce(20)
+          .map(function(x) {
+            const graphIdToZIndex = processor.graphIdToZIndex;
+            pvjsonGroup.contains = sortBy(
+              [
+                function(thisEntityId) {
+                  return graphIdToZIndex[thisEntityId];
+                }
+              ],
+              processor.graphIdsByGroup[id]
+            );
+            return pvjsonGroup;
+          }) );
+    })
+    .flatMap(function(pvjsonGroup: PvjsonNode) {
+      const { id } = pvjsonGroup;
+      const groupedElementIds = pvjsonGroup.contains;
+      return isEmpty(groupedElementIds)
         ? hl([])
         : hl(groupedElementIds)
             .flatMap(function(id) {
               return hl(getByGraphId(id));
             })
-            .map(function(pvjsonEntity: PvjsonNode | PvjsonEdge) {
-              // NOTE: side effect
-              pvjsonEntity.isPartOf = processed.id;
-              return pvjsonEntity;
-            })
             .errors(function(err) {
               throw err;
             })
             .collect()
-            .flatMap(function(
-              groupedEntities: (PvjsonNode | PvjsonEdge)[]
-            ): Highland.Stream<PvjsonNode | PvjsonEdge> {
-              const graphIdToZIndex = processor.graphIdToZIndex;
-              processed.contains = sortBy(
-                [
-                  function(thisEntityId) {
-                    return graphIdToZIndex[thisEntityId];
-                  }
-                ],
-                groupedEntities.map(entity => entity.id)
-              );
-
-              const updatedProcessed = postprocessGroupPVJSON(
-                groupedEntities,
-                processed
-              );
-              const { x, y } = updatedProcessed;
-
-              return hl(
-                concat(
-                  [updatedProcessed],
-                  groupedEntities.map(function(groupedEntity) {
-                    if (isPvjsonEdge(groupedEntity)) {
-                      groupedEntity.points = map(groupedEntity.points, function(
-                        point
-                      ) {
-                        point.x -= x;
-                        point.y -= y;
-                        return point;
-                      });
-                    } else if (groupedEntity.hasOwnProperty("x")) {
-                      groupedEntity.x -= x;
-                      groupedEntity.y -= y;
-                    } else {
-                      console.error(groupedEntity);
-                      throw new Error(
-                        "Unexpected entity found in group (see above)"
-                      );
-                    }
-                    return groupedEntity;
-                  })
-                )
-              );
+            .map(function(groupedEntities: PvjsonNode[]): PvjsonNode {
+              return postprocessGroupPVJSON(groupedEntities, pvjsonGroup);
             });
     });
 
@@ -401,6 +379,7 @@ export function GPML2013aToPVJSON(
     })
     .each(function(publicationXrefs: PvjsonPublicationXref[]) {
       // TODO should these go through the processor instead?
+
       processor.output = iassign(
         processor.output,
         function(o) {
@@ -417,11 +396,10 @@ export function GPML2013aToPVJSON(
       processor.outputStream.write(processor.output);
     });
 
-  return processor.outputStream.debounce(17);
+  // TODO see the issue in the other place we're using debounce
+  return processor.outputStream.debounce(50);
 
-  // TODO double-check that groups are correctly getting their contents.
   // TODO Double-check old code to make sure nothing is missed.
-  // TODO get CLI working again
   // TODO does the stream ever end?
   // TODO does backpressure work?
 }

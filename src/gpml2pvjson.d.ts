@@ -70,6 +70,8 @@ interface Pathway {
   organism: string;
   name: string;
   width: number;
+  type: string[];
+  id?: string;
   author?: string;
   comments?: Comment[];
   dataSource?: string;
@@ -77,7 +79,6 @@ interface Pathway {
   lastModified?: string;
   license?: string;
   maintainer?: string;
-  type: string[];
 }
 
 /* pvjson */

@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="New Pathway" Version="20140925">
-  <Graphics BoardWidth="152.0" BoardHeight="158.0" />
-  <Shape GraphId="f6861">
-    <Graphics CenterX="24.25" CenterY="63.75" Width="115.5" Height="104.5" ZOrder="16384" FontSize="10" Valign="Middle" ShapeType="Triangle" Rotation="0.0" />
-  </Shape>
+<Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="New Pathway" Version="20170823">
+  <Graphics BoardWidth="412.7109974424552" BoardHeight="285.5242966751918" />
+  <DataNode TextLabel="GeneProduct" GraphId="a62df" Type="GeneProduct" GroupRef="bc7f4">
+    <Graphics CenterX="140.66496163682865" CenterY="152.17391304347825" Width="80.0" Height="20.0" ZOrder="32768" FontSize="10" Valign="Middle" />
+    <Xref Database="" ID="" />
+  </DataNode>
+  <DataNode TextLabel="Metabolite" GraphId="ade96" Type="Metabolite" GroupRef="bc7f4">
+    <Graphics CenterX="124.04092071611252" CenterY="245.5242966751918" Width="80.0" Height="20.0" ZOrder="32768" FontSize="10" Valign="Middle" Color="0000ff" />
+    <Xref Database="" ID="" />
+  </DataNode>
+  <Group GroupId="bc7f4" Style="Pathway" />
   <InfoBox CenterX="0.0" CenterY="0.0" />
 </Pathway>
 

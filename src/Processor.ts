@@ -13,6 +13,7 @@ import {
   indexOf,
   isObject,
   isString,
+  map,
   omit,
   pullAt,
   toPairs,
@@ -22,6 +23,7 @@ import { defaultsDeep as defaultsDeepM } from "lodash";
 import {
   arrayify,
   insertIfNotExists,
+  isPvjsonEdge,
   sortByMap,
   unionLSV
 } from "./gpml-utilities";
@@ -207,8 +209,11 @@ export class Processor {
 
   graphIdToZIndex: Record<string, number> = {};
 
-  constructor() {
+  constructor(pathwayIri?: string) {
     const that = this;
+    if (pathwayIri) {
+      that.output.pathway.id = pathwayIri;
+    }
 
     const {
       graphIdToZIndex,
@@ -246,17 +251,6 @@ export class Processor {
         sortByZIndex
       ]);
 
-      that.output = iassign(
-        that.output,
-        function(o) {
-          return o.entityMap;
-        },
-        function(entityMap) {
-          entityMap[id] = pvjsonEntity;
-          return entityMap;
-        }
-      );
-
       if (!!isAttachedTo) {
         arrayify(isAttachedTo).forEach(function(graphRef: string) {
           const graphRefs = graphIdsByGraphRef[graphRef] || [];
@@ -267,36 +261,51 @@ export class Processor {
         });
       }
 
-      if (!!isPartOf && that.output.entityMap[isPartOf]) {
-        that.output = iassign(
-          that.output,
-          function(o, ctx: Record<string, any>) {
-            return (o.entityMap[ctx.isPartOf] as PvjsonNode).contains;
-          },
-          insertEntityIdAndSortByZIndex,
-          { isPartOf: isPartOf }
-        );
-
-        const pullIndex = indexOf(id, that.output.pathway.contains);
-        if (pullIndex > -1) {
-          // NOTE: When an entity that is contained by a group appears in the GPML input
-          // stream before the group does, we initially return that entity as if it were
-          // not in the group, ie., as if it were contained only by the top-level pathway.
-          // When the group appears in the stream, we remove any of its contained entities
-          // from the top-level pathway and assign them as being contained just by the group.
-          // In the end, we want the group, but not its contents, to be listed in
-          // "processor.output.pathway.contains", because the contents are implicitly
-          // listed by being part of the group, which is listed.
-          that.output = iassign(
-            that.output,
-            function(o) {
-              return o.pathway.contains;
-            },
-            function(contains) {
-              return pullAt(pullIndex, contains);
+      if (!!isPartOf) {
+        that.getByGraphId(isPartOf).then(
+          function(group: PvjsonNode) {
+            const { x, y } = group;
+            if (isPvjsonEdge(pvjsonEntity)) {
+              pvjsonEntity.points = map(pvjsonEntity.points, function(point) {
+                point.x -= x;
+                point.y -= y;
+                return point;
+              });
+            } else if (pvjsonEntity.hasOwnProperty("x")) {
+              pvjsonEntity.x -= x;
+              pvjsonEntity.y -= y;
+            } else {
+              console.error(pvjsonEntity);
+              throw new Error(
+                "Unexpected entity (logged above) found in group"
+              );
             }
-          );
-        }
+
+            that.output = iassign(
+              that.output,
+              function(o) {
+                return o.entityMap;
+              },
+              function(entityMap) {
+                entityMap[id] = pvjsonEntity;
+                return entityMap;
+              }
+            );
+
+            that.output = iassign(
+              that.output,
+              function(o, ctx: Record<string, any>) {
+                return (o.entityMap[ctx.isPartOf] as PvjsonNode).contains;
+              },
+              insertEntityIdAndSortByZIndex,
+              { isPartOf: isPartOf }
+            );
+            outputStream.write(that.output);
+          },
+          function(err) {
+            throw err;
+          }
+        );
       } else {
         that.output = iassign(
           that.output,
@@ -305,9 +314,20 @@ export class Processor {
           },
           insertEntityIdAndSortByZIndex
         );
-      }
 
-      outputStream.write(that.output);
+        that.output = iassign(
+          that.output,
+          function(o) {
+            return o.entityMap;
+          },
+          function(entityMap) {
+            entityMap[id] = pvjsonEntity;
+            return entityMap;
+          }
+        );
+
+        outputStream.write(that.output);
+      }
     });
 
     /*
