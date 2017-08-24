@@ -88,23 +88,45 @@ var source = id
 ../wikipathways-api-client-js/bin/wikipathways-api-client list | while read i; do echo "$i"; sleep 0.01; done | head | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
 //*/
 
-var hash = crypto.createHash(HASH_NAME);
-hash.setEncoding("hex");
-gpml2pvjson(source, id)
-  .doto(chunk => hash.update(chunk.toString()))
-  .debounce(500)
-  .map(function(pvjson) {
-    if (!pvjson.pathway.id) {
-      pvjson.pathway.id = `hash://${HASH_NAME}/${hash.digest("hex")}`;
-    }
-    return pvjson;
-  })
-  .errors(function(err) {
-    console.error(err);
-    process.exit(1);
-  })
-  .pipe(ndjson.serialize())
-  .pipe(process.stdout);
+hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
+  var hash = crypto.createHash(HASH_NAME);
+  hash.setEncoding("hex");
+  gpml2pvjson(gpmlStream, id)
+    .doto(chunk => hash.update(chunk.toString()))
+    .debounce(500)
+    .map(function(pvjson) {
+      if (!pvjson.pathway.id) {
+        pvjson.pathway.id = `hash://${HASH_NAME}/${hash.digest("hex")}`;
+      }
+      return pvjson;
+    })
+    .errors(function(err) {
+      console.error(err);
+      process.exit(1);
+    })
+    .pipe(ndjson.serialize())
+    .pipe(process.stdout);
+});
+
+//hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
+//  var hash = crypto.createHash(HASH_NAME);
+//  hash.setEncoding("hex");
+//  gpml2pvjson(gpmlStream.doto(console.log), id)
+//    .doto(chunk => hash.update(chunk.toString()))
+//    .debounce(500)
+//    .map(function(pvjson) {
+//      if (!pvjson.pathway.id) {
+//        pvjson.pathway.id = `hash://${HASH_NAME}/${hash.digest("hex")}`;
+//      }
+//      return pvjson;
+//    })
+//    .errors(function(err) {
+//      console.error(err);
+//      process.exit(1);
+//    })
+//    .pipe(ndjson.serialize())
+//    .pipe(process.stdout);
+//});
 
 // TODO does the process exit on its own?
 //process.exit(0);

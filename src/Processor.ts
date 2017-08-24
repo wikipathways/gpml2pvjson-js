@@ -41,10 +41,15 @@ iassign.setOption({
   ignoreIfNoChange: true
 });
 
+const VALUES_TO_SKIP = ["", null, undefined];
+
 export const processKV = curry(function(
   gpmlElement,
   [gpmlKey, gpmlValue]
 ): [string, any][] {
+  if (VALUES_TO_SKIP.indexOf(gpmlValue) > -1) {
+    return [];
+  }
   const pvjsonKey = GPML2013aKeyMappings[gpmlKey];
   // NOTE "pvjson:lift" is for elements like "Graphics", where they
   // are nested in GPML but are merged into the parent in pvjson.
@@ -66,6 +71,9 @@ export const processKV = curry(function(
     // NOTE: in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute".
     return toPairs(
       gpmlValue
+        // NOTE: some attributes have empty values and will cause problems
+        // if we don't use this filter to skip them.
+        .filter(({ Key, Value }) => VALUES_TO_SKIP.indexOf(Value) === -1)
         .map(function({ Key, Value }) {
           return processKV(gpmlElement, [Key, Value]);
         })
@@ -107,8 +115,8 @@ export const processKV = curry(function(
           })
         : gpmlValue;
 		//*/
-    // NOTE: not including key/value pairs when the value is missing
-    if (["", null, undefined].indexOf(pvjsonValue) === -1) {
+    // NOTE: we don't include key/value pairs when the value is missing
+    if (VALUES_TO_SKIP.indexOf(pvjsonValue) === -1) {
       return [
         [
           pvjsonKey || camelCase(gpmlKey),

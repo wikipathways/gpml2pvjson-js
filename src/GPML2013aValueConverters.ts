@@ -18,6 +18,10 @@ import {
 import { decode } from "he";
 import RGBColor = require("rgbcolor");
 
+function decodeIfNotEmpty(input) {
+  return isEmpty(input) ? input : decode(input);
+}
+
 function parseAsNonNaNNumber(i: number | string): number {
   const parsed = Number(i);
   if (isNaN(parsed)) {
@@ -50,14 +54,14 @@ export function ID(gpmlElement) {
 // but CXML turns "rdf:ID" into "ID", and since we already have
 // a property "ID" on the element, CXML uses "$ID".
 export const $ID = flow(get("$ID"), generatePublicationXrefId);
-export const DB = flow(get("DB.content"), decode);
-export const TITLE = flow(get("TITLE.content"), decode);
-export const SOURCE = flow(get("SOURCE.content"), decode);
+export const DB = flow(get("DB.content"), decodeIfNotEmpty);
+export const TITLE = flow(get("TITLE.content"), decodeIfNotEmpty);
+export const SOURCE = flow(get("SOURCE.content"), decodeIfNotEmpty);
 export const YEAR = get("YEAR.content");
-//export const AUTHORS = map(flow(get("AUTHORS.content"), decode));
+//export const AUTHORS = map(flow(get("AUTHORS.content"), decodeIfNotEmpty));
 //*
 export function AUTHORS(gpmlElement) {
-  return gpmlElement.AUTHORS.map(author => decode(author.content));
+  return gpmlElement.AUTHORS.map(author => decodeIfNotEmpty(author.content));
 }
 export function BiopaxRef(gpmlElement) {
   return gpmlElement.BiopaxRef.map(generatePublicationXrefId);
@@ -173,19 +177,19 @@ export function LineStyle(gpmlElement) {
   }
 }
 
-export const Author = flow(get("Author"), decode);
-export const DataSource = flow(get("Data-Source"), decode);
-export const Email = flow(get("Email"), decode);
-export const Maintainer = flow(get("Maintainer"), decode);
-export const Name = flow(get("Name"), decode);
+export const Author = flow(get("Author"), decodeIfNotEmpty);
+export const DataSource = flow(get("Data-Source"), decodeIfNotEmpty);
+export const Email = flow(get("Email"), decodeIfNotEmpty);
+export const Maintainer = flow(get("Maintainer"), decodeIfNotEmpty);
+export const Name = flow(get("Name"), decodeIfNotEmpty);
 
-export const TextLabel = flow(get("TextLabel"), decode);
+export const TextLabel = flow(get("TextLabel"), decodeIfNotEmpty);
 
 export const FontStyle = flow(get("Graphics.FontStyle"), toLower);
 export const FontWeight = flow(get("Graphics.FontWeight"), toLower);
 export const Valign = flow(get("Graphics.Valign"), kebabCase);
 
-export const Href = flow(get("Href"), decode, encodeURI);
+export const Href = flow(get("Href"), decodeIfNotEmpty, encodeURI);
 
 export function gpmlColorToCssColor(gpmlElement) {
   const { Color } = gpmlElement.Graphics;
