@@ -15,9 +15,7 @@
     "compile:test": "cp src/GPMLDefaults.json lib/ && tsc -p tsconfig.cxmlplayground.json",
     "copyJSON": "cp src/*.json lib/ && echo ok || echo not ok",
     "prepare": "npm run compile:xsd && npm run compile:es5",
-    "test": "echo 'Get more/better tests working, please!' && node ./test/node-test-streaming.js",
-    "test:parse": "node ./lib/cxml-playground.js",
-    "test:rx-sax": "mocha ./src/topublish/rx-sax/test/spec/api.js"
+    "test": "echo 'Get more/better tests working, please!' && bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 < ./test/input/WP554_77712.gpml"
   },
   "keywords": [
     "gpml",
