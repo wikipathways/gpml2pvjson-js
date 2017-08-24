@@ -18,7 +18,7 @@ const ShapeStyleAttributes = {
 };
 
 /* TODO look at using something like this:
-import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
+import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 export class DataNode extends GPML2013a.DataNodeType {
   constructor() {
     super();
@@ -35,7 +35,7 @@ export class DataNode extends GPML2013a.DataNodeType {
 }
 //*/
 /* or this:
-import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
+import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 export class DataNode extends GPML2013a.document.Pathway.DataNode[0]
   .constructor {
   constructor() {

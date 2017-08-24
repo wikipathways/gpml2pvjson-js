@@ -6,9 +6,7 @@ import {
   isPvjsonEdge,
   unionLSV
 } from "./gpml-utilities";
-// TODO compile this as part of the build step for this package
-//import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
-import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
+import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 
 interface DataPositionAndOrientationMapping {
   position: number;

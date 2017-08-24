@@ -16,15 +16,10 @@ import {
 import * as hl from "highland";
 import * as iassign from "immutable-assign";
 
-// TODO use published version
-//import * as cxml from "cxml";
-import * as cxml from "../../cxml/lib/cxml";
 import { CXMLXPath } from "./topublish/cxml-xpath";
 
-// TODO compile this as part of the build step for this package
-//import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
-import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
-//import * as Biopax from "../../cxml/test/xmlns/www.biopax.org/release/biopax-level3.owl";
+import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
+
 import * as GPMLDefaults from "./GPMLDefaults";
 
 import { Processor } from "./Processor";

@@ -69,8 +69,6 @@ var HASH_NAME = "sha256";
 
 var gpmlSeparator = '<?xml version="1.0" encoding="UTF-8"?>';
 
-//var source = hl(process.stdin);
-//var source = hl(process.stdin).split('\r');
 //var source = hl(process.stdin).splitBy(gpmlSeparator).intersperse(gpmlSeparator);
 var source = hl(process.stdin).splitBy(gpmlSeparator).drop(1);
 /*
@@ -110,3 +108,6 @@ gpml2pvjson(source, id)
 
 // TODO does the process exit on its own?
 //process.exit(0);
+
+// rebuild and run like this:
+//  npm run compile:es5 && bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 < ./test/input/WP554_77712.gpml

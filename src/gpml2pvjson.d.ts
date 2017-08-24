@@ -1,15 +1,10 @@
 /// <reference path="../rgbcolor.d.ts" />
 /// <reference path="./json.d.ts" />
 /// <reference path="../xmlns/pathvisio.org/GPML/2013a.d.ts" />
-//// <reference path="../../cxml/test/xmlns/pathvisio.org/GPML/2013a.d.ts" />
 
 //////// <reference path="./topublish/rx-sax/XPathParser.d.ts" />
 
 /* GPML */
-
-// TODO compile this as part of the build step for this package
-//import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
-//import * as GPML2013a from "../../cxml/test/xmlns/pathvisio.org/GPML/2013a";
 
 type GPMLAttributeNames =
   | "xmlns"
