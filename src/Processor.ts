@@ -434,7 +434,7 @@ export class Processor {
     }
   );
 
-  setPvjsonEntityFinal(pvjsonEntity) {
+  setPvjsonEntity(pvjsonEntity) {
     const { graphIdToZIndex, promisedPvjsonEntityLatestByGraphId } = this;
     const { id, zIndex } = pvjsonEntity;
 

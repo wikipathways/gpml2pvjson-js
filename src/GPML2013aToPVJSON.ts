@@ -373,12 +373,20 @@ export function GPML2013aToPVJSON(
               groupedEntity.x -= x;
               groupedEntity.y -= y;
             }
+            // NOTE: this is needed for GPML2013a, because GPML2013a uses both
+            // GroupId/GroupRef and GraphId/GraphRef. GPML2017 uses a single
+            // identifier per entity. That identifier can be referenced by
+            // GroupRef and/or GraphRef. Pvjson follows GPML2017 in this, so
+            // we convert from GPML2013a format:
+            //   GroupRef="GROUP_ID_VALUE"
+            // to pvjson format:
+            //   {isPartOf: "GRAPH_ID_VALUE"}
             groupedEntity.isPartOf = id;
-            return groupedEntity;
+            return omit(["groupRef"], groupedEntity);
           });
 
           groupedEntitiesFinal.forEach(function(pvjsonEntity) {
-            processor.setPvjsonEntityFinal(pvjsonEntity);
+            processor.setPvjsonEntity(pvjsonEntity);
           });
 
           return pvjsonGroup;
@@ -394,7 +402,19 @@ export function GPML2013aToPVJSON(
     hl([edgeStream, groupStream]).merge()
   ])
     .sequence()
-    .filter((pvjsonEntity: (PvjsonNode | PvjsonEdge)) => !pvjsonEntity.isPartOf)
+    //		// NOTE: group members are handled in the groupStream.
+    //		// Past here, we only handle burrs and children
+    //		// of the top-level pathway.
+    //
+    //		// NOTE: This is only needed for the GPML2013a converter.
+    //    // See note in groupStream code re: GroupId vs. GraphId.
+    //		// The GPML2017 converter will use this test:
+    //    .filter(
+    //      (pvjsonEntity: (PvjsonNode | PvjsonEdge)) => !pvjsonEntity["isPartOf"]
+    //    )
+    .filter(
+      (pvjsonEntity: (PvjsonNode | PvjsonEdge)) => !pvjsonEntity["groupRef"]
+    )
     .flatMap(function(
       pvjsonEntity: PvjsonNode | PvjsonEdge
     ): Highland.Stream<{
@@ -423,6 +443,8 @@ export function GPML2013aToPVJSON(
 
       let finalProcessedStream;
       if (isPvjsonBurr(pvjsonEntity)) {
+        // NOTE: burrs are not added to the property "contained".
+        // Rather, they are added to the property "burrs".
         finalProcessedStream = hl(
           getPvjsonEntityLatestByGraphId(isAttachedTo)
         ).map(function(referencedEntity: PvjsonNode | PvjsonInteraction) {
@@ -432,11 +454,11 @@ export function GPML2013aToPVJSON(
           }
 					//*/
 
-          processor.setPvjsonEntityFinal(pvjsonEntity);
+          processor.setPvjsonEntity(pvjsonEntity);
 
           referencedEntity.burrs = referencedEntity.burrs || [];
           insertEntityIdAndSortByZIndex(referencedEntity.burrs);
-          processor.setPvjsonEntityFinal(referencedEntity);
+          processor.setPvjsonEntity(referencedEntity);
 
           return processor.output;
         });
@@ -449,7 +471,7 @@ export function GPML2013aToPVJSON(
           insertEntityIdAndSortByZIndex
         );
 
-        processor.setPvjsonEntityFinal(pvjsonEntity);
+        processor.setPvjsonEntity(pvjsonEntity);
 
         finalProcessedStream = hl([processor.output]);
       }
