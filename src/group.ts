@@ -1,76 +1,106 @@
 import { assign, isArray, isPlainObject, isFinite, toPairs } from "lodash/fp";
-import { isPvjsonEdge, unionLSV } from "./gpml-utilities";
+import { isPvjsonEdge, isPvjsonNode, unionLSV } from "./gpml-utilities";
 import * as GPML2013aGroupMappingsByStyle from "./GPML2013aGroupMappingsByStyle.json";
 
 export function getGroupDimensions(
   padding: number,
   borderWidth: number,
-  containedEntities: (PvjsonNode | PvjsonEdge)[]
+  containedEntities: PvjsonEntity[]
 ): NodeDimensions {
-  const dimensions = {
-    zIndex: Infinity
-  } as NodeDimensions;
-  const topLeftCorner: Corner = {
-    x: Infinity,
-    y: Infinity
-  };
-  const bottomRightCorner: Corner = {
-    x: 0,
-    y: 0
-  };
+  if (containedEntities.length === 0) {
+    console.warn(`Warning: Empty group observed.`);
+    return {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      zIndex: 0
+    };
+  } else if (!isFinite(padding)) {
+    throw new Error("Invalid padding value: ${padding}");
+  } else if (!isFinite(borderWidth)) {
+    throw new Error("Invalid borderWidth value: ${borderWidth}");
+  }
+  const dimensions = containedEntities
+    .filter(entity => isPvjsonNode(entity) || isPvjsonEdge(entity))
+    .reduce(
+      function(
+        { runningDimensions, topLeftCorner, bottomRightCorner },
+        entity: PvjsonNode | PvjsonEdge
+      ) {
+        const { zIndex } = entity;
+        const zIndexIsFinite = isFinite(zIndex);
+        const runningDimensionsZIndexIsFinite = isFinite(
+          runningDimensions.zIndex
+        );
+        if (zIndexIsFinite && runningDimensionsZIndexIsFinite) {
+          runningDimensions.zIndex = Math.min(zIndex, runningDimensions.zIndex);
+        } else if (zIndexIsFinite) {
+          runningDimensions.zIndex = zIndex;
+        }
 
-  containedEntities.forEach(function(entity) {
-    const { zIndex } = entity;
-    const zIndexIsFinite = isFinite(zIndex);
-    const dimensionsZIndexIsFinite = isFinite(dimensions.zIndex);
-    if (zIndexIsFinite && dimensionsZIndexIsFinite) {
-      dimensions.zIndex = Math.min(zIndex, dimensions.zIndex);
-    } else if (zIndexIsFinite) {
-      dimensions.zIndex = zIndex;
-    }
+        if (isPvjsonEdge(entity)) {
+          const points = entity.points;
+          // If entity is an edge
+          const firstPoint = points[0];
+          const firstPointX = firstPoint.x;
+          const firstPointY = firstPoint.y;
+          const lastPoint = points[points.length - 1];
+          const lastPointX = lastPoint.x;
+          const lastPointY = lastPoint.y;
+          topLeftCorner.x = Math.min(topLeftCorner.x, firstPointX, lastPointX);
+          topLeftCorner.y = Math.min(topLeftCorner.y, firstPointY, lastPointY);
+          bottomRightCorner.x = Math.max(
+            bottomRightCorner.x,
+            firstPointX,
+            lastPointX
+          );
+          bottomRightCorner.y = Math.max(
+            bottomRightCorner.y,
+            firstPointY,
+            lastPointY
+          );
+        } else {
+          // If entity is a node
+          topLeftCorner.x = Math.min(topLeftCorner.x, entity.x);
+          topLeftCorner.y = Math.min(topLeftCorner.y, entity.y);
+          bottomRightCorner.x = Math.max(
+            bottomRightCorner.x,
+            entity.x + entity.width
+          );
+          bottomRightCorner.y = Math.max(
+            bottomRightCorner.y,
+            entity.y + entity.height
+          );
+        }
 
-    if (isPvjsonEdge(entity)) {
-      const points = entity.points;
-      // If entity is an edge
-      const firstPoint = points[0];
-      const firstPointX = firstPoint.x;
-      const firstPointY = firstPoint.y;
-      const lastPoint = points[points.length - 1];
-      const lastPointX = lastPoint.x;
-      const lastPointY = lastPoint.y;
-      topLeftCorner.x = Math.min(topLeftCorner.x, firstPointX, lastPointX);
-      topLeftCorner.y = Math.min(topLeftCorner.y, firstPointY, lastPointY);
-      bottomRightCorner.x = Math.max(
-        bottomRightCorner.x,
-        firstPointX,
-        lastPointX
-      );
-      bottomRightCorner.y = Math.max(
-        bottomRightCorner.y,
-        firstPointY,
-        lastPointY
-      );
-    } else {
-      // If entity is a node
-      topLeftCorner.x = Math.min(topLeftCorner.x, entity.x);
-      topLeftCorner.y = Math.min(topLeftCorner.y, entity.y);
-      bottomRightCorner.x = Math.max(
-        bottomRightCorner.x,
-        entity.x + entity.width
-      );
-      bottomRightCorner.y = Math.max(
-        bottomRightCorner.y,
-        entity.y + entity.height
-      );
-    }
+        runningDimensions.x = topLeftCorner.x - padding - borderWidth;
+        runningDimensions.y = topLeftCorner.y - padding - borderWidth;
+        runningDimensions.width =
+          bottomRightCorner.x - topLeftCorner.x + 2 * (padding + borderWidth);
+        runningDimensions.height =
+          bottomRightCorner.y - topLeftCorner.y + 2 * (padding + borderWidth);
 
-    dimensions.x = topLeftCorner.x - padding - borderWidth;
-    dimensions.y = topLeftCorner.y - padding - borderWidth;
-    dimensions.width =
-      bottomRightCorner.x - topLeftCorner.x + 2 * (padding + borderWidth);
-    dimensions.height =
-      bottomRightCorner.y - topLeftCorner.y + 2 * (padding + borderWidth);
-  });
+        return { runningDimensions, topLeftCorner, bottomRightCorner };
+      },
+      {
+        topLeftCorner: {
+          x: Infinity,
+          y: Infinity
+        },
+        bottomRightCorner: {
+          x: 0,
+          y: 0
+        },
+        runningDimensions: {
+          zIndex: Infinity
+        }
+      } as {
+        topLeftCorner: Corner;
+        bottomRightCorner: Corner;
+        runningDimensions: NodeDimensions;
+      }
+    ).runningDimensions;
 
   if (
     !isFinite(dimensions.x) ||
@@ -78,8 +108,9 @@ export function getGroupDimensions(
     !isFinite(dimensions.width) ||
     !isFinite(dimensions.height)
   ) {
+    console.error(containedEntities);
     throw new Error(
-      "Error calculating group dimensions. Cannot calculate one or more of the following: x, y, width, height, zIndex."
+      `Error calculating group dimensions for group members logged above. Cannot calculate one or more of the following: x, y, width, height, zIndex.`
     );
   }
 
@@ -123,3 +154,54 @@ export function postprocess(
     getGroupDimensions(group.padding, group.borderWidth, containedEntities)
   );
 }
+
+//// TODO do we need any of this old code that was in post-process.ts?
+//  // Kludge to get the zIndex for Groups
+//  const zIndexForGroups =
+//    -1 +
+//    EDGES.concat(["DataNode", "Label"])
+//      .reduce(function(acc, gpmlElementName) {
+//        data[gpmlElementName].forEach(function(el) {
+//          acc.push(el);
+//        });
+//        return acc;
+//      }, [])
+//      .reduce(getFromElementMapByIdIfExists, [])
+//      .map(element => element.zIndex)
+//      .reduce(function(acc, zIndex) {
+//        return Math.min(acc, zIndex);
+//      }, Infinity);
+//
+//  // specify contained elements in groups
+//  data.Group
+//    .reduce(getFromElementMapByIdIfExists, [])
+//    .map(function(element) {
+//      element.zIndex = zIndexForGroups;
+//
+//      // NOTE: pvjson doesn't use GroupId. It just uses GraphId as the id for an element.
+//      // That means:
+//      //   GPML GroupId is replaced in pvjson by just id (from GraphId), and
+//      //   GPML GroupRef is replaced in pvjson by element.isPartOf and group.contains (from GraphRef)
+//      // We need to map from GroupId/GroupRef to id/contains/isPartOf here.
+//      // element.id refers to the value of the GraphId of the Group
+//      const groupGraphId = element.id;
+//      const containedIds = (element.contains =
+//        data.containedIdsByGroupId[data.GraphIdToGroupId[groupGraphId]] || []);
+//
+//      if (containedIds.length > 0) {
+//        // NOTE side effects
+//        containedIds
+//          .reduce(getFromElementMapByIdIfExists, [])
+//          .map(function(contained) {
+//            contained.isPartOf = groupGraphId;
+//            return contained;
+//          })
+//          .forEach(upsertDataMapEntry.bind(undefined, elementMap));
+//      } else {
+//        // NOTE: side effect
+//        delete elementMap[groupGraphId];
+//      }
+//
+//      return element;
+//    })
+//    .forEach(upsertDataMapEntry.bind(undefined, elementMap));

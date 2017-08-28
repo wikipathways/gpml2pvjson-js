@@ -26,10 +26,21 @@ export const insertIfNotExists = curry(function<T>(item: T, list: T[]): T[] {
   return list;
 });
 
-export function isPvjsonEdge(
-  entity: PvjsonNode | PvjsonEdge
-): entity is PvjsonEdge {
+export function isPvjsonBurr(entity: PvjsonEntity): entity is PvjsonBurr {
+  return intersectsLSV(entity.type, "Burr");
+}
+
+export function isPvjsonEdge(entity: PvjsonEntity): entity is PvjsonEdge {
   return entity.hasOwnProperty("points");
+}
+
+export function isPvjsonNode(entity: PvjsonEntity): entity is PvjsonNode {
+  return (
+    entity.hasOwnProperty("x") &&
+    entity.hasOwnProperty("y") &&
+    entity.hasOwnProperty("width") &&
+    entity.hasOwnProperty("height")
+  );
 }
 
 /*

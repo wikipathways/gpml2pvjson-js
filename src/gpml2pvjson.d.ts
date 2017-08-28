@@ -59,29 +59,40 @@ declare type GPML_ATTRIBUTE_NAMES_AND_TYPES = {
 
 declare type GPMLElement = Record<string, any>;
 
-interface Pathway {
+interface PathwayStarter {
+  backgroundColor: string;
   contains: string[];
   height: number;
-  organism: string;
-  name: string;
-  width: number;
   type: string[];
-  id?: string;
+  width: number;
   author?: string;
   comments?: Comment[];
+  "@context"?: any;
   dataSource?: string;
   email?: string;
+  id?: string;
+  isSimilarTo?: string;
   lastModified?: string;
   license?: string;
   maintainer?: string;
+  name?: string;
+  organism?: string;
+}
+
+interface Pathway extends PathwayStarter {
+  "@context": any;
+  name: string;
 }
 
 /* pvjson */
 
 // decorations or other small elements attached to another element,
 // e.g., GPML States and Anchors
-interface Burr {
+interface PvjsonBurr {
+  id: string;
   drawAs: number;
+  type: string[];
+  kaavioType: string;
   isAttachedTo: string;
   attachmentDisplay?: AttachmentDisplay;
 }
@@ -226,6 +237,7 @@ type PvjsonNodeRequiredKeys =
   | "zIndex";
 type PvjsonNodeOptionalKeys =
   | "attachmentDisplay"
+  | "burrs"
   | "cellularComponent"
   | "contains"
   | "dbId"
@@ -247,6 +259,7 @@ type PvjsonEdgeRequiredKeys =
   | "zIndex"
   | "type";
 type PvjsonEdgeOptionalKeys =
+  | "burrs"
   | "dbId"
   | "dbName"
   | "attachmentDisplay"
@@ -302,6 +315,7 @@ type PvjsonPublicationXrefRequiredKeys =
   | "year"
   | "authors"
   | "source"
+  | "kaavioType"
   | "standardName";
 type PvjsonPublicationXrefOptionalKeys = "displayName" | "dbId" | "dbName";
 type PvjsonPublicationXref = {
@@ -309,7 +323,11 @@ type PvjsonPublicationXref = {
 } &
   { [K in PvjsonPublicationXrefOptionalKeys]?: PvjsonEntityMerged[K] } & {};
 
-type PvjsonEntity = PvjsonNode | PvjsonEdge | PvjsonPublicationXref;
+type PvjsonEntity =
+  | PvjsonNode
+  | PvjsonEdge
+  | PvjsonPublicationXref
+  | PvjsonBurr;
 
 declare type PvjsonEntityMap = {
   // TODO this could likely be improved

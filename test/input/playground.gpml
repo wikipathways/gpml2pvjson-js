@@ -1,15 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="New Pathway" Version="20170823">
-  <Graphics BoardWidth="412.7109974424552" BoardHeight="285.5242966751918" />
-  <DataNode TextLabel="GeneProduct" GraphId="a62df" Type="GeneProduct" GroupRef="bc7f4">
-    <Graphics CenterX="140.66496163682865" CenterY="152.17391304347825" Width="80.0" Height="20.0" ZOrder="32768" FontSize="10" Valign="Middle" />
+  <Graphics BoardWidth="1009.1099744245524" BoardHeight="403.4015345268542" />
+  <DataNode TextLabel="GeneProduct" GraphId="f3e06" Type="GeneProduct" GroupRef="b7b5a">
+    <Graphics CenterX="897.6982097186703" CenterY="153.4526854219949" Width="80.0" Height="20.0" ZOrder="32768" FontSize="10" Valign="Middle" />
     <Xref Database="" ID="" />
   </DataNode>
-  <DataNode TextLabel="Metabolite" GraphId="ade96" Type="Metabolite" GroupRef="bc7f4">
-    <Graphics CenterX="124.04092071611252" CenterY="245.5242966751918" Width="80.0" Height="20.0" ZOrder="32768" FontSize="10" Valign="Middle" Color="0000ff" />
+  <DataNode TextLabel="Metabolite" GraphId="fce86" Type="Metabolite" GroupRef="b7b5a">
+    <Graphics CenterX="878.516624040921" CenterY="196.9309462915601" Width="80.0" Height="20.0" ZOrder="32768" FontSize="10" Valign="Middle" Color="0000ff" />
     <Xref Database="" ID="" />
   </DataNode>
-  <Group GroupId="bc7f4" Style="Pathway" />
+  <State GraphRef="f3e06" TextLabel="P" GraphId="cda5f">
+    <Graphics RelX="1.0" RelY="1.0" Width="15.0" Height="15.0" ShapeType="Oval" />
+    <Xref Database="" ID="" />
+  </State>
+  <Interaction>
+    <Graphics ZOrder="12288" LineThickness="1.0">
+      <Point X="405.3708439897698" Y="131.71355498721226" />
+      <Point X="826.516624040921" Y="175.1918158567775" GraphRef="cb61b" RelX="-1.0" RelY="0.0" ArrowHead="Arrow" />
+    </Graphics>
+    <Xref Database="" ID="" />
+  </Interaction>
+  <Group GroupId="b7b5a" GraphId="cb61b" Style="Complex" />
   <InfoBox CenterX="0.0" CenterY="0.0" />
+  <Biopax />
 </Pathway>
 

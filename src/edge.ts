@@ -1038,10 +1038,10 @@ export function createEdgeTransformStream(
   const {
     fillInGPMLPropertiesFromParent,
     getGPMLElementByGraphId,
-    getByGraphId,
+    getPvjsonEntityLatestByGraphId,
     ensureGraphIdExists,
     preprocessGPMLElement,
-    processPropertiesAndAddType
+    processPropertiesAndType
   } = processor;
 
   function recursivelyGetReferencedElements(acc, gpmlElement: GPMLElement) {
@@ -1074,12 +1074,18 @@ export function createEdgeTransformStream(
 
   return function(s) {
     return s
-      .flatMap(preprocessGPMLElement)
-      .flatMap(function(gpmlEdge: GPMLElement) {
+      .map(preprocessGPMLElement)
+      .flatMap(function(
+        gpmlEdge: GPMLElement
+      ): Highland.Stream<Highland.Stream<PvjsonNode | PvjsonEdge>> {
         const { Graphics } = gpmlEdge;
 
-        const gpmlAnchors =
-          Graphics.hasOwnProperty("Anchor") && Graphics.Anchor;
+        const gpmlAnchors = Graphics.hasOwnProperty("Anchor") &&
+          Graphics.Anchor &&
+          Graphics.Anchor[0] &&
+          Graphics.Anchor[0]._exists !== false
+          ? Graphics.Anchor.filter(a => a.hasOwnProperty("GraphId"))
+          : [];
 
         const fillInGPMLPropertiesFromEdge = fillInGPMLPropertiesFromParent(
           gpmlEdge
@@ -1087,15 +1093,18 @@ export function createEdgeTransformStream(
 
         return hl([
           hl([gpmlEdge])
-            .map(processPropertiesAndAddType(edgeType))
+            .map(processPropertiesAndType(edgeType))
             .flatMap(function(pvjsonEdge: PvjsonEdge) {
               return hl([
                 hl([gpmlEdge])
                   .reduce(hl([]), recursivelyGetReferencedElements)
                   .merge()
-                  //.flatten()
                   .flatMap(function(referencedGPMLElement: GPMLElement) {
-                    return hl(getByGraphId(referencedGPMLElement.GraphId));
+                    return hl(
+                      getPvjsonEntityLatestByGraphId(
+                        referencedGPMLElement.GraphId
+                      )
+                    );
                   })
               ])
                 .merge()
@@ -1112,34 +1121,29 @@ export function createEdgeTransformStream(
                   return process(pvjsonEdge, referencedEntities);
                 });
             }),
-          !gpmlAnchors || !gpmlAnchors[0] || gpmlAnchors[0]._exists === false
-            ? hl([])
-            : hl(gpmlAnchors)
-                .flatMap(preprocessGPMLElement)
-                .map(function(gpmlAnchor: GPMLElement) {
-                  const filledInAnchor = fillInGPMLPropertiesFromEdge(
-                    gpmlAnchor
-                  );
-                  filledInAnchor.GraphRef = gpmlEdge.GraphId;
-                  return filledInAnchor;
-                })
-                .map(processPropertiesAndAddType("Anchor"))
-                .map(function(pvjsonAnchor: PvjsonNode) {
-                  pvjsonAnchor.type.push("Burr");
-                  const drawAnchorAs = pvjsonAnchor.drawAs;
-                  if (drawAnchorAs === "None") {
-                    defaultsDeep(pvjsonAnchor, {
-                      Height: 4,
-                      Width: 4
-                    });
-                  } else if (drawAnchorAs === "Circle") {
-                    defaultsDeep(pvjsonAnchor, {
-                      Height: 8,
-                      Width: 8
-                    });
-                  }
-                  return pvjsonAnchor;
-                })
+          hl(gpmlAnchors)
+            .map(preprocessGPMLElement)
+            .map(function(gpmlAnchor: GPMLElement) {
+              const filledInAnchor = fillInGPMLPropertiesFromEdge(gpmlAnchor);
+              filledInAnchor.GraphRef = gpmlEdge.GraphId;
+              return filledInAnchor;
+            })
+            .map(processPropertiesAndType("Anchor"))
+            .map(function(pvjsonAnchor: PvjsonNode): PvjsonNode {
+              const drawAnchorAs = pvjsonAnchor.drawAs;
+              if (drawAnchorAs === "None") {
+                defaultsDeep(pvjsonAnchor, {
+                  Height: 4,
+                  Width: 4
+                });
+              } else if (drawAnchorAs === "Circle") {
+                defaultsDeep(pvjsonAnchor, {
+                  Height: 8,
+                  Width: 8
+                });
+              }
+              return pvjsonAnchor;
+            })
         ]);
       })
       .merge();

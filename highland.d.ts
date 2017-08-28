@@ -1167,7 +1167,8 @@ declare namespace Highland {
 		 * @param {Number} n - the maximum number of concurrent reads/buffers
 		 * @api public
 		 */
-    parallel(n: number): Stream<R>;
+    //parallel(n: number): Stream<R>;
+    parallel(n: number): R;
 
     /**
 		 * Reads values from a Stream of Streams, emitting them on a Single output

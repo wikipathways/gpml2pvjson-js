@@ -3,7 +3,7 @@
 var _ = require("lodash");
 var crypto = require("crypto");
 var fs = require("fs");
-var gpml2pvjson = require("../lib/toPvjson").GPML2013aToPVJSON;
+var gpml2pvjson = require("../lib/GPML2013aToPVJSON").GPML2013aToPVJSON;
 var hl = require("highland");
 var npmPackage = JSON.parse(
   fs.readFileSync("./package.json", { encoding: "utf8" })
@@ -25,10 +25,7 @@ program.on("--help", function() {
   console.log();
   console.log("    Display pvjson in command line:");
   console.log(
-    [
-      "    $ gpml2pvjson --id http://identifiers.org/wikipathways/WP554",
-      " < ./test/input/WP554_77712.gpml"
-    ].join("")
+    `    $ gpml2pvjson --id http://identifiers.org/wikipathways/WP554 < ./test/input/WP554_77712.gpml`
   );
 
   console.log("    Save pvjson to new file:");
@@ -38,24 +35,12 @@ program.on("--help", function() {
 
   console.log("    Download from WikiPathways and convert:");
   console.log(
-    [
-      '    $ curl "http://webservice.wikipathways.org/getPathwayAs?',
-      'fileType=xml&pwId=WP554&revision=77712&format=xml"',
-      ' | xpath "*/ns1:data/text()" | base64 --decode',
-      " | gpml2pvjson --id http://identifiers.org/wikipathways/WP554"
-    ].join("")
+    `    $ curl "http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=xml" | xpath "*/ns1:data/text()" | base64 --decode | gpml2pvjson --id http://identifiers.org/wikipathways/WP554`
   );
 
   console.log("    Get w/ WikiPathways API and convert:");
-  // currently:
-  // ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway WP4 | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP4
-  //
-  // cat test/input/WP554_77712.gpml | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554
   console.log(
-    [
-      "    $ wikipathways-api-client get-pathway WP4 | ",
-      "gpml2pvjson --id http://identifiers.org/wikipathways/WP4"
-    ].join("")
+    `    $ wikipathways-api-client get-pathway WP4 | gpml2pvjson --id http://identifiers.org/wikipathways/WP4`
   );
 });
 
@@ -80,26 +65,40 @@ var source = id
 //*/
 
 /*
-// This isn't working yet, because gpml2pvjson isn't accepting multiple
-../wikipathways-api-client-js/bin/wikipathways-api-client list | while read i; do echo "$i"; sleep 0.01; done | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
-
-../wikipathways-api-client-js/bin/wikipathways-api-client list | head | while read i; do echo "$i"; sleep 0.01; done | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
-
-../wikipathways-api-client-js/bin/wikipathways-api-client list | while read i; do echo "$i"; sleep 0.01; done | head | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
+hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
+  const gpmlStreamFork = gpmlStream.fork();
+  const gpmlStreamLast = gpmlStream.fork().last();
+  gpmlStreamLast.each(function(gpml) {
+    console.log("lastgpml");
+    console.log(gpml);
+  });
+  gpmlStreamFork.each(function(gpml) {
+    console.log("gpmlStream");
+    console.log(gpmlStream);
+    console.log("gpml");
+    console.log(gpml);
+  });
+  gpmlStream.end();
+});
 //*/
 
+//*
 hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
-  var hash = crypto.createHash(HASH_NAME);
+  const hash = crypto.createHash(HASH_NAME);
   hash.setEncoding("hex");
+
+  gpmlStream.observe().doto(chunk => hash.update(chunk.toString()));
+
   gpml2pvjson(gpmlStream, id)
-    .doto(chunk => hash.update(chunk.toString()))
-    .debounce(500)
+    .last()
+    //*
     .map(function(pvjson) {
       if (!pvjson.pathway.id) {
         pvjson.pathway.id = `hash://${HASH_NAME}/${hash.digest("hex")}`;
       }
       return pvjson;
     })
+    //*/
     .errors(function(err) {
       console.error(err);
       process.exit(1);
@@ -107,29 +106,33 @@ hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
     .pipe(ndjson.serialize())
     .pipe(process.stdout);
 });
-
-//hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
-//  var hash = crypto.createHash(HASH_NAME);
-//  hash.setEncoding("hex");
-//  gpml2pvjson(gpmlStream.doto(console.log), id)
-//    .doto(chunk => hash.update(chunk.toString()))
-//    .debounce(500)
-//    .map(function(pvjson) {
-//      if (!pvjson.pathway.id) {
-//        pvjson.pathway.id = `hash://${HASH_NAME}/${hash.digest("hex")}`;
-//      }
-//      return pvjson;
-//    })
-//    .errors(function(err) {
-//      console.error(err);
-//      process.exit(1);
-//    })
-//    .pipe(ndjson.serialize())
-//    .pipe(process.stdout);
-//});
+//*/
 
 // TODO does the process exit on its own?
 //process.exit(0);
 
-// rebuild and run like this:
-//  npm run compile:es5 && bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 < ./test/input/WP554_77712.gpml
+/*
+rebuild and run like this:
+npm run compile:es5 && bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 < ./test/input/WP554_77712.gpml
+
+currently need to run commands like this:
+../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway WP4 | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP4
+
+cat test/input/WP554_77712.gpml | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554
+
+for f in playground/wikipathways-20170510-gpml-Homo_sapiens/*.gpml; do cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; done
+
+for f in playground/wikipathways-20170510-gpml-Homo_sapiens/*.gpml; do WPID=`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"$WPID > ./playground/pvjson/$WPID.json; done
+
+for f in playground/wikipathways-20170510-gpml-Homo_sapiens/*.gpml; do WPID=`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"$WPID; done
+
+//*/
+
+/*
+// These aren't fully working yet:
+../wikipathways-api-client-js/bin/wikipathways-api-client list | while read i; do echo "$i"; sleep 0.01; done | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
+
+../wikipathways-api-client-js/bin/wikipathways-api-client list | head | while read i; do echo "$i"; sleep 0.01; done | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
+
+../wikipathways-api-client-js/bin/wikipathways-api-client list | while read i; do echo "$i"; sleep 0.01; done | head | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
+//*/
