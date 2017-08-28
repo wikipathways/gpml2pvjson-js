@@ -19,15 +19,7 @@ import {
 import { defaultsDeep as defaultsDeepM } from "lodash";
 import * as hl from "highland";
 
-import {
-  arrayify,
-  insertIfNotExists,
-  isPvjsonBurr,
-  isPvjsonEdge,
-  isPvjsonNode,
-  sortByMap,
-  unionLSV
-} from "./gpml-utilities";
+import { unionLSV } from "./gpml-utilities";
 
 import * as iassign from "immutable-assign";
 iassign.setOption({

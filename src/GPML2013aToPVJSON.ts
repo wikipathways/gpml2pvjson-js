@@ -343,12 +343,12 @@ export function GPML2013aToPVJSON(
         .map(function(
           groupedEntities: (PvjsonNode | PvjsonEdge)[]
         ): PvjsonNode {
-          const pvjsonGroupPre = processGeneral(
-            "Group",
-            preprocessGroupGPML(gpmlGroup)
+          const pvjsonGroup = postprocessGroupPVJSON(
+            groupedEntities,
+            processor.processPropertiesAndType("Group", gpmlGroup)
           );
           const graphIdToZIndex = processor.graphIdToZIndex;
-          pvjsonGroupPre.contains = sortBy(
+          pvjsonGroup.contains = sortBy(
             [
               function(thisEntityId) {
                 return graphIdToZIndex[thisEntityId];
@@ -357,12 +357,7 @@ export function GPML2013aToPVJSON(
             groupedEntities.map(x => x.id)
           );
 
-          const pvjsonGroup = postprocessGroupPVJSON(
-            groupedEntities,
-            pvjsonGroupPre
-          );
-
-          const { x, y } = pvjsonGroup;
+          const { id, x, y } = pvjsonGroup;
 
           const groupedEntitiesFinal = groupedEntities.map(function(
             groupedEntity
@@ -378,6 +373,7 @@ export function GPML2013aToPVJSON(
               groupedEntity.x -= x;
               groupedEntity.y -= y;
             }
+            groupedEntity.isPartOf = id;
             return groupedEntity;
           });
 
