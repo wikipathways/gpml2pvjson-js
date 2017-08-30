@@ -428,7 +428,9 @@ export class Processor {
         gpmlElementName,
         kaavioType
       ) as string[];
-      processed.kaavioType = kaavioType;
+      if (!!kaavioType) {
+        processed.kaavioType = kaavioType;
+      }
       processed.gpmlElementName = gpmlElementName;
       return processed;
     }

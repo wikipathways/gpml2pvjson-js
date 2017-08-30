@@ -196,8 +196,9 @@ export function GPML2013aToPVJSON(
           return o.pathway;
         },
         function(pathway): Pathway {
-          // NOTE: GPML schema specifies that name is required
-          const { name } = metadata;
+          // NOTE: GPML schema specifies that name is required,
+          // but some pathways don't have a name.
+          const name = metadata.name || "Untitled Pathway";
           const splitName = name.split(" (");
           if (
             !!splitName &&
@@ -495,14 +496,6 @@ export function GPML2013aToPVJSON(
           const targetTranchIndex =
             (matchingTranchIndex > -1 ? matchingTranchIndex : tranches.length) +
             (testIndex > -1 ? testIndex : TEST_COUNT);
-          /*
-          console.log("vvv x vvv");
-          console.log(`matchingTranchIndex: ${matchingTranchIndex}`);
-          console.log(`testIndex: ${testIndex}`);
-          console.log(`targetTranchIndex: ${targetTranchIndex}`);
-          console.log(x);
-          console.log("");
-					//*/
           tranches[targetTranchIndex] = tranches[targetTranchIndex] || [];
           tranches[targetTranchIndex].push(x);
         } else {
@@ -516,26 +509,20 @@ export function GPML2013aToPVJSON(
       };
     }
 
-    return (
-      s
-        .reduce(
-          {
-            missing: [],
-            tranches: [[]]
-          },
-          processDependent
-        )
-        /*
-        .doto(x => console.log("acc"))
-        .doto(console.log)
-        //*/
-        .map(function(acc) {
-          const { tranches, missing } = acc;
-          tranches.push(missing);
-          return hl(tranches.reduce((acc, tranch) => acc.concat(tranch), []));
-        })
-        .sequence()
-    );
+    return s
+      .reduce(
+        {
+          missing: [],
+          tranches: [[]]
+        },
+        processDependent
+      )
+      .map(function(acc) {
+        const { tranches, missing } = acc;
+        tranches.push(missing);
+        return hl(tranches.reduce((acc, tranch) => acc.concat(tranch), []));
+      })
+      .sequence();
   }
 
   const pvjsonEntityStream = hl([
@@ -714,7 +701,7 @@ export function GPML2013aToPVJSON(
 
         setPvjsonEntity(pvjsonEdge);
 
-        finalProcessedStream = hl([pvjsonEdge]);
+        finalProcessedStream = hl([processor.output]);
       } else {
         setPvjsonEntity(pvjsonEntity);
         processor.output = iassign(
@@ -780,9 +767,23 @@ export function GPML2013aToPVJSON(
     .map(processPropertiesAndType("PublicationXref"))
     .collect()
     .map(function(publicationXrefs: PvjsonPublicationXref[]) {
-      publicationXrefs.forEach(function(publicationXref, i) {
-        publicationXref.displayName = String(i + 1);
-      });
+      publicationXrefs
+        // TODO I believe we sort by date, but check that is true and
+        // not by the order they appear in the GPML
+        .sort(function(a, b) {
+          const yearA = parseInt(a.year);
+          const yearB = parseInt(b.year);
+          if (yearA > yearB) {
+            return 1;
+          } else if (yearA < yearB) {
+            return -1;
+          } else {
+            return 0;
+          }
+        })
+        .forEach(function(publicationXref, i) {
+          publicationXref.displayName = String(i + 1);
+        });
       return publicationXrefs;
     })
     .map(function(publicationXrefs: PvjsonPublicationXref[]) {
@@ -802,27 +803,6 @@ export function GPML2013aToPVJSON(
       );
       return processor.output;
     });
-
-  //  //*/
-  //  /* TODO should we sort by date, or by the order they appear in the GPML?
-  //  data.PublicationXref
-  //    .reduce(getFromEntityMapByIdIfExists, [])
-  //    .sort(function(a, b) {
-  //      const yearA = parseInt(a.year);
-  //      const yearB = parseInt(b.year);
-  //      if (yearA > yearB) {
-  //        return 1;
-  //      } else if (yearA < yearB) {
-  //        return -1;
-  //      } else {
-  //        return 0;
-  //      }
-  //    })
-  //    .map(function(publicationXref, i) {
-  //      publicationXref.displayName = String(i + 1);
-  //      return publicationXref;
-  //    })
-  //	//*/
 
   /* TODO do we need to handle these?
 		 <xsd:element ref="gpml:InfoBox" minOccurs="1" maxOccurs="1" />

@@ -124,7 +124,9 @@ for f in playground/wikipathways-20170510-gpml-Homo_sapiens/*.gpml; do cat "$f" 
 
 for f in playground/wikipathways-20170510-gpml-Homo_sapiens/*.gpml; do WPID=`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"$WPID > ./playground/pvjson/$WPID.json; done
 
-for f in playground/wikipathways-20170510-gpml-Homo_sapiens/*.gpml; do WPID=`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"$WPID; done
+for f in playground/wikipathways-20170510-gpml-Homo_sapiens/*.gpml; do echo && echo "$f" && WPID=`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"$WPID; done
+
+for f in ../pvjs/test/input-data/troublesome-pathways/*.gpml; do echo && echo "$f" && WPID=`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"$WPID; done
 
 //*/
 

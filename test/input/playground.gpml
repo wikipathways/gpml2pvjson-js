@@ -1,31 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="New Pathway" Version="20170828">
-  <Graphics BoardWidth="744.7868453105968" BoardHeight="1115.84686774942" />
-  <DataNode TextLabel="GPABC" GraphId="b5419" Type="GeneProduct" GroupRef="b5ef0">
-    <Graphics CenterX="406.90600549144284" CenterY="91.12326844071924" Width="80.0" Height="20.0" ZOrder="32768" FontSize="10" Valign="Middle" />
-    <Xref Database="" ID="" />
-  </DataNode>
-  <DataNode TextLabel="GPXYZ" GraphId="f670a" Type="GeneProduct" GroupRef="b5ef0">
-    <Graphics CenterX="408.9399037965276" CenterY="162.30970911868533" Width="80.0" Height="20.0" ZOrder="32768" FontSize="10" Valign="Middle" />
-    <Xref Database="" ID="" />
-  </DataNode>
-  <Interaction>
-    <Comment>First</Comment>
-    <Graphics ZOrder="12288" LineThickness="1.0" Color="ff0000">
-      <Point X="204.79704797047972" Y="158.05658056580566" />
-      <Point X="354.9060054914429" Y="126.71648877970229" GraphRef="ed1b2" RelX="-1.0" RelY="0.0" ArrowHead="Arrow" />
-      <Anchor Position="0.4" Shape="None" GraphId="a749f" />
-    </Graphics>
-    <Xref Database="" ID="" />
-  </Interaction>
+  <Graphics BoardWidth="478.9399037965276" BoardHeight="238.28258221680878" />
   <Interaction>
     <Graphics ZOrder="12288" LineThickness="1.0">
-      <Point X="360.53593179049943" Y="208.28258221680878" />
-      <Point X="264.84063097886497" Y="145.52054385136432" GraphRef="a749f" RelX="0.0" RelY="0.0" ArrowHead="mim-catalysis" />
+      <Point X="146.2671406805485" Y="47.23209751142712" />
+      <Point X="113.2554596241747" Y="109.70035551041137" ArrowHead="Arrow" />
     </Graphics>
     <Xref Database="" ID="" />
   </Interaction>
-  <Group GroupId="b5ef0" GraphId="ed1b2" Style="Complex" />
   <Group GroupId="ef117" GraphId="c657d" Style="Complex" />
   <Group GroupId="f1c1a" GraphId="e3688" Style="Complex" />
   <InfoBox CenterX="0.0" CenterY="0.0" />
