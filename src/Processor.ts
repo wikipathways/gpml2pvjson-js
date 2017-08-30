@@ -429,12 +429,12 @@ export class Processor {
         kaavioType
       ) as string[];
       processed.kaavioType = kaavioType;
-      // TODO do we want to specify the GPML element name here?
+      processed.gpmlElementName = gpmlElementName;
       return processed;
     }
   );
 
-  setPvjsonEntity(pvjsonEntity) {
+  setPvjsonEntity = pvjsonEntity => {
     const { graphIdToZIndex, promisedPvjsonEntityLatestByGraphId } = this;
     const { id, zIndex } = pvjsonEntity;
 
@@ -451,5 +451,5 @@ export class Processor {
         return entityMap;
       }
     );
-  }
+  };
 }

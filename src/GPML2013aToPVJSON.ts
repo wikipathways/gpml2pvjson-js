@@ -6,15 +6,21 @@ import {
   assign,
   assignAll,
   concat,
+  curry,
+  defaultsDeep,
+  difference,
+  findIndex,
   flow,
   isArray,
   isEmpty,
   isObject,
   map,
   omit,
+  partition,
   reduce,
   sortBy,
-  toPairsIn
+  toPairsIn,
+  values
 } from "lodash/fp";
 import * as hl from "highland";
 
@@ -25,18 +31,24 @@ import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 import * as GPMLDefaults from "./GPMLDefaults";
 
 import { Processor } from "./Processor";
-import { createEdgeTransformStream } from "./edge";
+//import { createEdgeTransformStream } from "./edge";
 import {
-  preprocess as preprocessGroupGPML,
-  postprocess as postprocessGroupPVJSON
+  preprocessGPML as preprocessEdgeGPML,
+  postprocessPVJSON as postprocessEdgePVJSON
+} from "./edge";
+import {
+  preprocessGPML as preprocessGroupGPML,
+  postprocessPVJSON as postprocessGroupPVJSON
 } from "./group";
-import { postprocess as postprocessShapePVJSON } from "./Shape";
+import { postprocessPVJSON as postprocessShapePVJSON } from "./Shape";
 import {
   arrayify,
+  augmentErrorMessage,
   generatePublicationXrefId,
   insertIfNotExists,
   isPvjsonBurr,
   isPvjsonEdge,
+  isPvjsonGroup,
   isPvjsonNode,
   sortByMap,
   supportedNamespaces,
@@ -52,7 +64,7 @@ iassign.setOption({
   ignoreIfNoChange: true
 });
 
-function partition<T>(
+function partitionStream<T>(
   s: Highland.Stream<T>,
   partitioner: (x: T) => boolean
 ): [Highland.Stream<T>, Highland.Stream<T>] {
@@ -135,15 +147,16 @@ export function GPML2013aToPVJSON(
 
   const processor = new Processor();
   const {
-    processPropertiesAndType,
+    fillInGPMLPropertiesFromParent,
     getPvjsonEntityLatestByGraphId,
     graphIdsByGraphRef,
     graphIdToZIndex,
     getGPMLElementByGraphId,
-    fillInGPMLPropertiesFromParent,
     preprocessGPMLElement,
+    processGeneral,
     processProperties,
-    processGeneral
+    processPropertiesAndType,
+    setPvjsonEntity
   } = processor;
 
   if (pathwayIri) {
@@ -171,9 +184,6 @@ export function GPML2013aToPVJSON(
     cxmlSources["/Pathway/Graphics/@*"]
   ])
     .merge()
-    .errors(function(err) {
-      throw err;
-    })
     .map(processProperties)
     .reduce({} as Record<string, any>, function(acc, metadataChunk) {
       return assign(acc, metadataChunk);
@@ -244,34 +254,29 @@ export function GPML2013aToPVJSON(
       return processor.output;
     });
 
-  const pathwayCommentStream = hl(cxmlSources["/Pathway/Comment"])
-    .errors(function(err) {
-      throw err;
-    })
-    .map(function(Comment) {
-      processor.output = iassign(
-        processor.output,
-        function(o) {
-          return o.pathway;
-        },
-        function(pathway) {
-          const comments = pathway.comments || [];
-          comments.push(processProperties(Comment));
-          pathway.comments = comments;
-          return pathway;
-        }
-      );
-      return processor.output;
-    });
+  const pathwayCommentStream = hl(cxmlSources["/Pathway/Comment"]).map(function(
+    Comment
+  ) {
+    processor.output = iassign(
+      processor.output,
+      function(o) {
+        return o.pathway;
+      },
+      function(pathway) {
+        const comments = pathway.comments || [];
+        comments.push(processProperties(Comment));
+        pathway.comments = comments;
+        return pathway;
+      }
+    );
+    return processor.output;
+  });
 
   const dataNodeStream = cxmlSources["/Pathway/DataNode"].map(
     processGeneral("DataNode")
   );
 
   const stateStream = cxmlSources["/Pathway/State"]
-    .errors(function(err) {
-      throw err;
-    })
     .map(preprocessGPMLElement)
     .flatMap(function(gpmlState) {
       return hl(getGPMLElementByGraphId(gpmlState.GraphRef)).map(function(
@@ -311,12 +316,70 @@ export function GPML2013aToPVJSON(
       return processed;
     });
 
-  const labelStream = cxmlSources["/Pathway/Label"]
-    .errors(function(err) {
-      throw err;
-    })
-    .map(processGeneral("Label"));
+  const labelStream = cxmlSources["/Pathway/Label"].map(
+    processGeneral("Label")
+  );
 
+  const gpmlInteractionStream = cxmlSources["/Pathway/Interaction"].map(
+    preprocessGPMLElement
+  );
+  const gpmlGraphicalLineStream = cxmlSources["/Pathway/GraphicalLine"].map(
+    preprocessGPMLElement
+  );
+  const edgeStream = hl([
+    gpmlInteractionStream
+      .fork()
+      .map(preprocessEdgeGPML)
+      .map(processPropertiesAndType("Interaction")),
+    gpmlGraphicalLineStream
+      .fork()
+      .map(preprocessEdgeGPML)
+      .map(processPropertiesAndType("GraphicalLine"))
+  ]).merge() as Highland.Stream<PvjsonEdge>;
+
+  const anchorStream = hl([
+    gpmlInteractionStream.fork(),
+    gpmlGraphicalLineStream.fork()
+  ])
+    .merge()
+    .flatMap(function(gpmlEdge: GPMLElement): Highland.Stream<PvjsonNode> {
+      const { GraphId, Graphics } = gpmlEdge;
+      const fillInGPMLPropertiesFromEdge = fillInGPMLPropertiesFromParent(
+        gpmlEdge
+      );
+
+      const gpmlAnchors = Graphics.hasOwnProperty("Anchor") &&
+        Graphics.Anchor &&
+        Graphics.Anchor[0] &&
+        Graphics.Anchor[0]._exists !== false
+        ? Graphics.Anchor.filter(a => a.hasOwnProperty("GraphId"))
+        : [];
+      return hl(gpmlAnchors)
+        .map(preprocessGPMLElement)
+        .map(function(gpmlAnchor: GPMLElement) {
+          const filledInAnchor = fillInGPMLPropertiesFromEdge(gpmlAnchor);
+          filledInAnchor.GraphRef = GraphId;
+          return filledInAnchor;
+        })
+        .map(processPropertiesAndType("Anchor"))
+        .map(function(pvjsonAnchor: PvjsonNode): PvjsonNode {
+          const drawAnchorAs = pvjsonAnchor.drawAs;
+          if (drawAnchorAs === "None") {
+            defaultsDeep(pvjsonAnchor, {
+              Height: 4,
+              Width: 4
+            });
+          } else if (drawAnchorAs === "Circle") {
+            defaultsDeep(pvjsonAnchor, {
+              Height: 8,
+              Width: 8
+            });
+          }
+          return pvjsonAnchor;
+        });
+    });
+
+  /*
   const edgeStream = hl([
     cxmlSources["/Pathway/Interaction"]
       .errors(function(err) {
@@ -329,92 +392,184 @@ export function GPML2013aToPVJSON(
       })
       .through(createEdgeTransformStream(processor, "GraphicalLine"))
   ]).merge();
+	//*/
 
   const groupStream: Highland.Stream<PvjsonNode> = cxmlSources["/Pathway/Group"]
-    .map(preprocessGroupGPML)
-    .map(preprocessGPMLElement)
-    .flatMap(function(gpmlGroup: GPMLElement) {
-      const { GroupId } = gpmlGroup;
-      const graphIdOfGroup = gpmlGroup.GraphId;
-      return hl(processor.containedGraphIdsByGroupGroupId[GroupId])
-        .map(processor.getPvjsonEntityLatestByGraphId)
-        .flatMap(hl)
-        .collect()
-        .map(function(
-          groupedEntities: (PvjsonNode | PvjsonEdge)[]
-        ): PvjsonNode {
-          const pvjsonGroup = postprocessGroupPVJSON(
-            groupedEntities,
-            processor.processPropertiesAndType("Group", gpmlGroup)
+    .map(preprocessGroupGPML(processor))
+    // PathVisio shouldn't do this, but it sometimes makes empty Groups.
+    // We filter them out here.
+    .filter((Group: GPMLElement) => !!Group.Contains)
+    .map(processGeneral("Group"));
+
+  interface ReferencedEntitiesMap {
+    [key: string]: (PvjsonNode | PvjsonEdge);
+  }
+  const EDGES = ["Interaction", "GraphicalLine"];
+  const NODES = ["DataNode", "Shape", "Label", "State", "Group"];
+
+  function postprocessAll(s): Highland.Stream<(PvjsonNode | PvjsonEdge)> {
+    interface ProcessDependentAcc {
+      missing: (PvjsonNode | PvjsonEdge)[];
+      tranches: (PvjsonNode | PvjsonEdge)[][];
+    }
+
+    const independenceTests = [
+      curry(function(tranch, pvjsonEntity) {
+        return (
+          pvjsonEntity.gpmlElementName !== "Group" &&
+          (!pvjsonEntity.hasOwnProperty("isAttachedTo") ||
+            arrayify(pvjsonEntity.isAttachedTo)
+              .map(isAttachedToId => processor.output.entityMap[isAttachedToId])
+              .filter(
+                candidateEntity =>
+                  ["Group", "Interaction", "GraphicalLine"].indexOf(
+                    candidateEntity.gpmlElementName
+                  ) > -1
+              ).length === 0)
+        );
+      }),
+      curry(function(tranch, pvjsonEntity) {
+        const gpmlElementName = pvjsonEntity.gpmlElementName;
+        if (
+          ["Interaction", "GraphicalLine", "State"].indexOf(gpmlElementName) >
+          -1
+        ) {
+          // independent when edge or state not attached to a dependent
+          return (
+            arrayify(pvjsonEntity.isAttachedTo)
+              .map(isAttachedToId => processor.output.entityMap[isAttachedToId])
+              .filter(
+                candidateEntity => tranch.indexOf(candidateEntity.id) > -1
+              ).length > 0
           );
-          const graphIdToZIndex = processor.graphIdToZIndex;
-          pvjsonGroup.contains = sortBy(
-            [
-              function(thisEntityId) {
-                return graphIdToZIndex[thisEntityId];
-              }
-            ],
-            groupedEntities.map(x => x.id)
+        } else if (gpmlElementName === "Group") {
+          // independent when group does not contain a dependent
+          return (
+            arrayify(pvjsonEntity.contains)
+              .map(isAttachedToId => processor.output.entityMap[isAttachedToId])
+              .filter(
+                candidateEntity => tranch.indexOf(candidateEntity.id) > -1
+              ).length > 0
           );
+        }
+      })
+    ];
 
-          const { id, x, y } = pvjsonGroup;
+    const TEST_COUNT = independenceTests.length;
 
-          const groupedEntitiesFinal = groupedEntities.map(function(
-            groupedEntity
-          ) {
-            if (isPvjsonEdge(groupedEntity)) {
-              groupedEntity.points = map(groupedEntity.points, function(point) {
-                point.x -= x;
-                point.y -= y;
-                return point;
-              });
-            } else if (isPvjsonNode(groupedEntity)) {
-              groupedEntity.height;
-              groupedEntity.x -= x;
-              groupedEntity.y -= y;
-            }
-            // NOTE: this is needed for GPML2013a, because GPML2013a uses both
-            // GroupId/GroupRef and GraphId/GraphRef. GPML2017 uses a single
-            // identifier per entity. That identifier can be referenced by
-            // GroupRef and/or GraphRef. Pvjson follows GPML2017 in this, so
-            // we convert from GPML2013a format:
-            //   GroupRef="GROUP_ID_VALUE"
-            // to pvjson format:
-            //   {isPartOf: "GRAPH_ID_VALUE"}
-            groupedEntity.isPartOf = id;
-            return omit(["groupRef"], groupedEntity);
-          });
+    function processDependent(
+      { missing, tranches }: ProcessDependentAcc,
+      pvjsonEntity: PvjsonNode | PvjsonEdge
+    ) {
+      missing.push(pvjsonEntity);
 
-          groupedEntitiesFinal.forEach(function(pvjsonEntity) {
-            processor.setPvjsonEntity(pvjsonEntity);
-          });
+      let [notMissing, remainingMissing] = partition(function(pvjsonEntity) {
+        let referencedEntitiesProcessed;
+        if (pvjsonEntity.gpmlElementName === "Group") {
+          referencedEntitiesProcessed = arrayify(pvjsonEntity.contains).map(
+            containedId => processor.output.entityMap[containedId]
+          );
+        } else if (pvjsonEntity.hasOwnProperty("isAttachedTo")) {
+          referencedEntitiesProcessed = arrayify(pvjsonEntity.isAttachedTo).map(
+            isAttachedToId => processor.output.entityMap[isAttachedToId]
+          );
+        } else {
+          referencedEntitiesProcessed = [];
+        }
 
-          return pvjsonGroup;
-        });
-    });
+        return referencedEntitiesProcessed.indexOf(undefined) === -1;
+      }, missing);
+
+      let testIndex;
+      notMissing.forEach(function(x) {
+        const matchingTranchIndex = findIndex(function(tranch) {
+          const matchingTestIndex = findIndex(function(independenceTest) {
+            return independenceTest(tranch, x);
+          }, independenceTests);
+          if (matchingTestIndex > -1) {
+            testIndex = matchingTestIndex;
+          }
+          return matchingTestIndex > -1;
+        }, tranches);
+        if (matchingTranchIndex > -1 || testIndex > -1) {
+          const targetTranchIndex =
+            (matchingTranchIndex > -1 ? matchingTranchIndex : tranches.length) +
+            (testIndex > -1 ? testIndex : TEST_COUNT);
+          /*
+          console.log("vvv x vvv");
+          console.log(`matchingTranchIndex: ${matchingTranchIndex}`);
+          console.log(`testIndex: ${testIndex}`);
+          console.log(`targetTranchIndex: ${targetTranchIndex}`);
+          console.log(x);
+          console.log("");
+					//*/
+          tranches[targetTranchIndex] = tranches[targetTranchIndex] || [];
+          tranches[targetTranchIndex].push(x);
+        } else {
+          remainingMissing.push(x);
+        }
+      });
+
+      return {
+        tranches: tranches,
+        missing: remainingMissing
+      };
+    }
+
+    return (
+      s
+        .reduce(
+          {
+            missing: [],
+            tranches: [[]]
+          },
+          processDependent
+        )
+        /*
+        .doto(x => console.log("acc"))
+        .doto(console.log)
+        //*/
+        .map(function(acc) {
+          const { tranches, missing } = acc;
+          tranches.push(missing);
+          return hl(tranches.reduce((acc, tranch) => acc.concat(tranch), []));
+        })
+        .sequence()
+    );
+  }
 
   const pvjsonEntityStream = hl([
-    hl([
-      hl([dataNodeStream, stateStream]).sequence(),
-      shapeStream,
-      labelStream
-    ]).merge(),
-    hl([edgeStream, groupStream]).merge()
+    hl([dataNodeStream, stateStream, shapeStream, labelStream]).merge(),
+    hl(
+      [edgeStream, anchorStream] as Highland.Stream<
+        (PvjsonNode | PvjsonEntity)
+      >[]
+    ).merge(),
+    groupStream
   ])
     .sequence()
-    //		// NOTE: group members are handled in the groupStream.
-    //		// Past here, we only handle burrs and children
-    //		// of the top-level pathway.
-    //
-    //		// NOTE: This is only needed for the GPML2013a converter.
-    //    // See note in groupStream code re: GroupId vs. GraphId.
-    //		// The GPML2017 converter will use this test:
-    //    .filter(
-    //      (pvjsonEntity: (PvjsonNode | PvjsonEdge)) => !pvjsonEntity["isPartOf"]
-    //    )
+    .doto(setPvjsonEntity)
+    .through(postprocessAll)
+    /*
+    .map(function(pvjsonEntities: (PvjsonNode | PvjsonEdge)[]) {
+      return processor.output;
+    })
+		//*/
+    /*
+		// NOTE: group members are handled in the groupStream.
+		// Past here, we only handle burrs and children
+		// of the top-level pathway.
+
+		// NOTE: This is only needed for the GPML2013a converter.
+    // See note in groupStream code re: GroupId vs. GraphId.
+		// The GPML2017 converter will use this test:
+    .filter(
+      (pvjsonEntity: (PvjsonNode | PvjsonEdge)) => !pvjsonEntity["isPartOf"]
+    )
     .filter(
       (pvjsonEntity: (PvjsonNode | PvjsonEdge)) => !pvjsonEntity["groupRef"]
     )
+		//*/
     .flatMap(function(
       pvjsonEntity: PvjsonNode | PvjsonEdge
     ): Highland.Stream<{
@@ -454,14 +609,94 @@ export function GPML2013aToPVJSON(
           }
 					//*/
 
-          processor.setPvjsonEntity(pvjsonEntity);
+          setPvjsonEntity(pvjsonEntity);
 
           referencedEntity.burrs = referencedEntity.burrs || [];
           insertEntityIdAndSortByZIndex(referencedEntity.burrs);
-          processor.setPvjsonEntity(referencedEntity);
+          setPvjsonEntity(referencedEntity);
 
           return processor.output;
         });
+      } else if (isPvjsonGroup(pvjsonEntity)) {
+        //finalProcessedStream = hl([pvjsonEntity]);
+        const graphIdOfGroup = pvjsonEntity.id;
+        finalProcessedStream = hl(
+          pvjsonEntity.contains.map(
+            containedId => processor.output.entityMap[containedId]
+          )
+        )
+          .collect()
+          .map(function(
+            groupedEntities: (PvjsonNode | PvjsonEdge)[]
+          ): PvjsonNode {
+            const pvjsonGroup = postprocessGroupPVJSON(
+              groupedEntities,
+              pvjsonEntity
+            );
+            const graphIdToZIndex = processor.graphIdToZIndex;
+            pvjsonGroup.contains = sortBy(
+              [
+                function(thisEntityId) {
+                  return graphIdToZIndex[thisEntityId];
+                }
+              ],
+              groupedEntities.map(x => x.id)
+            );
+
+            const { id, x, y } = pvjsonGroup;
+
+            const groupedEntitiesFinal = groupedEntities.map(function(
+              groupedEntity
+            ) {
+              if (isPvjsonEdge(groupedEntity)) {
+                groupedEntity.points = map(groupedEntity.points, function(
+                  point
+                ) {
+                  point.x -= x;
+                  point.y -= y;
+                  return point;
+                });
+              } else if (isPvjsonNode(groupedEntity)) {
+                groupedEntity.height;
+                groupedEntity.x -= x;
+                groupedEntity.y -= y;
+              }
+              // NOTE: this is needed for GPML2013a, because GPML2013a uses both
+              // GroupId/GroupRef and GraphId/GraphRef. GPML2017 uses a single
+              // identifier per entity. That identifier can be referenced by
+              // GroupRef and/or GraphRef. Pvjson follows GPML2017 in this, so
+              // we convert from GPML2013a format:
+              //   GroupRef="GROUP_ID_VALUE"
+              // to pvjson format:
+              //   {isPartOf: "GRAPH_ID_VALUE"}
+              groupedEntity.isPartOf = id;
+              return omit(["groupRef"], groupedEntity);
+            });
+
+            groupedEntitiesFinal.forEach(function(pvjsonEntity) {
+              setPvjsonEntity(pvjsonEntity);
+            });
+
+            setPvjsonEntity(pvjsonGroup);
+
+            processor.output = iassign(
+              processor.output,
+              function(o) {
+                return o.pathway.contains;
+              },
+              function(contains) {
+                return insertEntityIdAndSortByZIndex(
+                  difference(contains, groupedEntitiesFinal.map(x => x.id)),
+                  id
+                );
+              }
+            );
+
+            return pvjsonGroup;
+          })
+          .map(function(pvjsonEntity) {
+            return processor.output;
+          });
       } else {
         processor.output = iassign(
           processor.output,
@@ -471,15 +706,12 @@ export function GPML2013aToPVJSON(
           insertEntityIdAndSortByZIndex
         );
 
-        processor.setPvjsonEntity(pvjsonEntity);
+        setPvjsonEntity(pvjsonEntity);
 
         finalProcessedStream = hl([processor.output]);
       }
 
       return finalProcessedStream;
-    })
-    .errors(function(err) {
-      throw err;
     });
 
   pvjsonEntityStream.observe().last().doto(function() {
@@ -489,9 +721,6 @@ export function GPML2013aToPVJSON(
   const openControlledVocabularyStream = hl(
     cxmlSources["/Pathway/Biopax/bp:openControlledVocabulary"]
   )
-    .errors(function(err) {
-      throw err;
-    })
     .map(processPropertiesAndType("openControlledVocabulary"))
     .map(function(openControlledVocabulary: Record<string, any>) {
       const vocabularyName = openControlledVocabulary.ontology;
@@ -532,9 +761,6 @@ export function GPML2013aToPVJSON(
   const publicationXrefStream = hl(
     cxmlSources["/Pathway/Biopax/bp:PublicationXref"]
   )
-    .errors(function(err) {
-      throw err;
-    })
     .map(processPropertiesAndType("PublicationXref"))
     .collect()
     .map(function(publicationXrefs: PvjsonPublicationXref[]) {
@@ -564,7 +790,7 @@ export function GPML2013aToPVJSON(
   //  //*/
   //  /* TODO should we sort by date, or by the order they appear in the GPML?
   //  data.PublicationXref
-  //    .reduce(getFromElementMapByIdIfExists, [])
+  //    .reduce(getFromEntityMapByIdIfExists, [])
   //    .sort(function(a, b) {
   //      const yearA = parseInt(a.year);
   //      const yearB = parseInt(b.year);
@@ -592,7 +818,11 @@ export function GPML2013aToPVJSON(
     pvjsonEntityStream,
     openControlledVocabularyStream,
     publicationXrefStream
-  ]).merge();
+  ])
+    .merge()
+    .errors(function(err) {
+      throw augmentErrorMessage(err, ` for pathway ${pathwayIri}`);
+    });
 
   //  // TODO Double-check old code to make sure nothing is missed.
   //  // TODO does the stream ever end?

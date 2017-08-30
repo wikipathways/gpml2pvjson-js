@@ -163,6 +163,6 @@ export function addressPathVisioShapeRenderingBugs(
   });
 }
 
-export function postprocess(pvjsonElement: PvjsonNode): PvjsonNode {
+export function postprocessPVJSON(pvjsonElement: PvjsonNode): PvjsonNode {
   return addressPathVisioShapeRenderingBugs(pvjsonElement);
 }

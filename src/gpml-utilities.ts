@@ -30,6 +30,12 @@ export function isPvjsonBurr(entity: PvjsonEntity): entity is PvjsonBurr {
   return intersectsLSV(entity.type, "Burr");
 }
 
+export function isPvjsonGroup(entity: PvjsonEntity): entity is PvjsonNode {
+  return (
+    entity.hasOwnProperty("contains") && intersectsLSV(entity.type, "Group")
+  );
+}
+
 export function isPvjsonEdge(entity: PvjsonEntity): entity is PvjsonEdge {
   return entity.hasOwnProperty("points");
 }
@@ -106,6 +112,11 @@ export let supportedNamespaces = [
   "http://genmapp.org/GPML/2008a",
   "http://genmapp.org/GPML/2007"
 ];
+
+export function augmentErrorMessage(err: Error, message: string): Error {
+  err.message = (err.message || "") + message;
+  return err;
+}
 
 // see http://blog.acipo.com/matrix-inversion-in-javascript/
 /**

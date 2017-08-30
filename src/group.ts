@@ -1,6 +1,15 @@
-import { assign, isArray, isPlainObject, isFinite, toPairs } from "lodash/fp";
+import {
+  assign,
+  curry,
+  isArray,
+  isPlainObject,
+  isFinite,
+  toPairs
+} from "lodash/fp";
 import { isPvjsonEdge, isPvjsonNode, unionLSV } from "./gpml-utilities";
 import * as GPML2013aGroupMappingsByStyle from "./GPML2013aGroupMappingsByStyle.json";
+// Only imported for its type
+import { Processor } from "./Processor";
 
 export function getGroupDimensions(
   padding: number,
@@ -118,9 +127,10 @@ export function getGroupDimensions(
 }
 
 // NOTE: side effects
-export function preprocess(Group: {
-  [key: string]: any;
-}): { [key: string]: any } {
+export const preprocessGPML = curry(function(
+  processor: Processor,
+  Group: GPMLElement
+): GPMLElement {
   // NOTE: The class "Group" is the only class that uses the "Style" property.
   // There are defaults for each Style, so we apply them here.
   toPairs(GPML2013aGroupMappingsByStyle[Group.Style]).forEach(function(
@@ -142,10 +152,11 @@ export function preprocess(Group: {
     }
     Group[mappingKey] = newValue;
   });
+  Group.Contains = processor.containedGraphIdsByGroupGroupId[Group.GroupId];
   return Group;
-}
+});
 
-export function postprocess(
+export function postprocessPVJSON(
   containedEntities: (PvjsonNode | PvjsonEdge)[],
   group: PvjsonNode
 ): PvjsonNode {

@@ -91,6 +91,7 @@ interface Pathway extends PathwayStarter {
 interface PvjsonBurr {
   id: string;
   drawAs: number;
+  gpmlElementName: string;
   type: string[];
   kaavioType: string;
   isAttachedTo: string;
@@ -151,6 +152,7 @@ type PvjsonEntityMergedStringProperties =
   | "fontStyle"
   | "fontWeight"
   //| "gpml:GroupRef"
+  | "gpmlElementName"
   | "href"
   | "id" // @id
   | "isPartOf"
@@ -228,6 +230,7 @@ type PvjsonNodeRequiredKeys =
   | "drawAs"
   | "height"
   | "id"
+  | "gpmlElementName"
   | "kaavioType"
   | "padding"
   | "type"
@@ -255,6 +258,7 @@ type PvjsonEdgeRequiredKeys =
   | "drawAs"
   | "color"
   | "drawAs"
+  | "gpmlElementName"
   | "kaavioType"
   | "zIndex"
   | "type";
@@ -288,6 +292,7 @@ type PvjsonEdge = { [K in PvjsonEdgeRequiredKeys]: PvjsonEntityMerged[K] } &
 
 type PvjsonInteractionRequiredKeys =
   | "biopaxType"
+  | "gpmlElementName"
   | "wpInteractionType"
   | "sboInteractionType";
 type PvjsonInteraction = PvjsonEdge &
@@ -310,13 +315,14 @@ interface Control extends PvjsonEdge {
 }
 
 type PvjsonPublicationXrefRequiredKeys =
-  | "id"
-  | "type"
-  | "year"
   | "authors"
-  | "source"
+  | "gpmlElementName"
+  | "id"
   | "kaavioType"
-  | "standardName";
+  | "source"
+  | "standardName"
+  | "type"
+  | "year";
 type PvjsonPublicationXrefOptionalKeys = "displayName" | "dbId" | "dbName";
 type PvjsonPublicationXref = {
   [K in PvjsonPublicationXrefRequiredKeys]: PvjsonEntityMerged[K]
