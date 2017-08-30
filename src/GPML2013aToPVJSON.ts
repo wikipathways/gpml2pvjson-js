@@ -697,7 +697,13 @@ export function GPML2013aToPVJSON(
           .map(function(pvjsonEntity) {
             return processor.output;
           });
-      } else {
+      } else if (isPvjsonEdge(pvjsonEntity)) {
+        const pvjsonEdge = postprocessEdgePVJSON(
+          processor.output.entityMap as {
+            [key: string]: PvjsonNode | PvjsonEdge;
+          },
+          pvjsonEntity
+        );
         processor.output = iassign(
           processor.output,
           function(o) {
@@ -706,8 +712,18 @@ export function GPML2013aToPVJSON(
           insertEntityIdAndSortByZIndex
         );
 
-        setPvjsonEntity(pvjsonEntity);
+        setPvjsonEntity(pvjsonEdge);
 
+        finalProcessedStream = hl([pvjsonEdge]);
+      } else {
+        setPvjsonEntity(pvjsonEntity);
+        processor.output = iassign(
+          processor.output,
+          function(o) {
+            return o.pathway.contains;
+          },
+          insertEntityIdAndSortByZIndex
+        );
         finalProcessedStream = hl([processor.output]);
       }
 
