@@ -31,7 +31,6 @@ import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 import * as GPMLDefaults from "./GPMLDefaults";
 
 import { Processor } from "./Processor";
-//import { createEdgeTransformStream } from "./edge";
 import {
   preprocessGPML as preprocessEdgeGPML,
   postprocessPVJSON as postprocessEdgePVJSON
@@ -153,7 +152,7 @@ export function GPML2013aToPVJSON(
     graphIdToZIndex,
     getGPMLElementByGraphId,
     preprocessGPMLElement,
-    processGeneral,
+    processGPMLAndPropertiesAndType,
     processProperties,
     processPropertiesAndType,
     setPvjsonEntity
@@ -196,9 +195,8 @@ export function GPML2013aToPVJSON(
           return o.pathway;
         },
         function(pathway): Pathway {
-          // NOTE: GPML schema specifies that name is required,
-          // but some pathways don't have a name.
-          const name = metadata.name || "Untitled Pathway";
+          // NOTE: GPML schema specifies that name is required
+          const { name } = metadata;
           const splitName = name.split(" (");
           if (
             !!splitName &&
@@ -232,6 +230,7 @@ export function GPML2013aToPVJSON(
             });
           } else {
             // If there's no pathway IRI specified, we at least give the user a URL
+            // to search WikiPathways. This way, the user at least has a chance of
             // to search WikiPathways to possibly find the source for this data.
 
             // NOTE: GPML schema specifies that organism is optional
@@ -274,7 +273,7 @@ export function GPML2013aToPVJSON(
   });
 
   const dataNodeStream = cxmlSources["/Pathway/DataNode"].map(
-    processGeneral("DataNode")
+    processGPMLAndPropertiesAndType("DataNode")
   );
 
   const stateStream = cxmlSources["/Pathway/State"]
@@ -301,7 +300,7 @@ export function GPML2013aToPVJSON(
   //		//*/
 
   const shapeStream = cxmlSources["/Pathway/Shape"]
-    .map(processGeneral("Shape"))
+    .map(processGPMLAndPropertiesAndType("Shape"))
     .map(postprocessShapePVJSON)
     .map(function(processed) {
       const { cellularComponent } = processed;
@@ -318,7 +317,7 @@ export function GPML2013aToPVJSON(
     });
 
   const labelStream = cxmlSources["/Pathway/Label"].map(
-    processGeneral("Label")
+    processGPMLAndPropertiesAndType("Label")
   );
 
   const gpmlInteractionStream = cxmlSources["/Pathway/Interaction"].map(
@@ -385,7 +384,7 @@ export function GPML2013aToPVJSON(
     // PathVisio shouldn't do this, but it sometimes makes empty Groups.
     // We filter them out here.
     .filter((Group: GPMLElement) => !!Group.Contains)
-    .map(processGeneral("Group"));
+    .map(processGPMLAndPropertiesAndType("Group"));
 
   interface ReferencedEntitiesMap {
     [key: string]: (PvjsonNode | PvjsonEdge);
@@ -782,7 +781,7 @@ export function GPML2013aToPVJSON(
   ])
     .merge()
     .errors(function(err) {
-      throw augmentErrorMessage(err, ` for pathway ${pathwayIri}`);
+      throw augmentErrorMessage(err, ` for pathway with id="${pathwayIri}"`);
     });
 
   //  // TODO Double-check old code to make sure nothing is missed.

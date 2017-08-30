@@ -343,17 +343,19 @@ export class Processor {
     return processedGPMLElement;
   };
 
-  processGeneral = curry((gpmlElementName: string, gpmlElement) => {
-    const {
-      preprocessGPMLElement,
-      processPropertiesAndType,
-      pvjsonEntityLatestStream
-    } = this;
-    return processPropertiesAndType(
-      gpmlElementName,
-      preprocessGPMLElement(gpmlElement)
-    );
-  });
+  processGPMLAndPropertiesAndType = curry(
+    (gpmlElementName: string, gpmlElement) => {
+      const {
+        preprocessGPMLElement,
+        processPropertiesAndType,
+        pvjsonEntityLatestStream
+      } = this;
+      return processPropertiesAndType(
+        gpmlElementName,
+        preprocessGPMLElement(gpmlElement)
+      );
+    }
+  );
 
   processProperties = curry((gpmlElement: GPMLElement): PvjsonEntity => {
     return fromPairs(

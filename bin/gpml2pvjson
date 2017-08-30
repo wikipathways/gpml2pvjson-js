@@ -52,8 +52,10 @@ var id = program.id;
 // This is for the CLI only; the library itself does not do this.
 var HASH_NAME = "sha256";
 
-var gpmlSeparator = '<?xml version="1.0" encoding="UTF-8"?>';
+// NOTE: some GPML files use lowercase "utf-8", so we need the ignore case flag to be set.
+var gpmlSeparator = /<\?xml version="1.0" encoding="UTF-8"\?>/i;
 
+// TODO this works if the XML file has the XML header. Should we handle it when it doesn't?
 //var source = hl(process.stdin).splitBy(gpmlSeparator).intersperse(gpmlSeparator);
 var source = hl(process.stdin).splitBy(gpmlSeparator).drop(1);
 /*
@@ -64,25 +66,6 @@ var source = id
     });
 //*/
 
-/*
-hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
-  const gpmlStreamFork = gpmlStream.fork();
-  const gpmlStreamLast = gpmlStream.fork().last();
-  gpmlStreamLast.each(function(gpml) {
-    console.log("lastgpml");
-    console.log(gpml);
-  });
-  gpmlStreamFork.each(function(gpml) {
-    console.log("gpmlStream");
-    console.log(gpmlStream);
-    console.log("gpml");
-    console.log(gpml);
-  });
-  gpmlStream.end();
-});
-//*/
-
-//*
 hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
   const hash = crypto.createHash(HASH_NAME);
   hash.setEncoding("hex");
@@ -91,14 +74,12 @@ hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
 
   gpml2pvjson(gpmlStream, id)
     .last()
-    //*
     .map(function(pvjson) {
       if (!pvjson.pathway.id) {
         pvjson.pathway.id = `hash://${HASH_NAME}/${hash.digest("hex")}`;
       }
       return pvjson;
     })
-    //*/
     .errors(function(err) {
       console.error(err);
       process.exit(1);
@@ -106,7 +87,6 @@ hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
     .pipe(ndjson.serialize())
     .pipe(process.stdout);
 });
-//*/
 
 // TODO does the process exit on its own?
 //process.exit(0);
