@@ -195,8 +195,9 @@ export function GPML2013aToPVJSON(
           return o.pathway;
         },
         function(pathway): Pathway {
+          const mergedPathway = assign(pathway, metadata);
           // NOTE: GPML schema specifies that name is required
-          const { name } = metadata;
+          const { name } = mergedPathway;
           const splitName = name.split(" (");
           if (
             !!splitName &&
@@ -206,11 +207,11 @@ export function GPML2013aToPVJSON(
             !!name.match(/\)/g) &&
             name.match(/\)/g).length === 1
           ) {
-            metadata.standardName = splitName[0];
-            metadata.displayName = splitName[1].replace(")", "");
+            mergedPathway.standardName = splitName[0];
+            mergedPathway.displayName = splitName[1].replace(")", "");
           } else {
-            metadata.standardName = name;
-            metadata.displayName = name;
+            mergedPathway.standardName = name;
+            mergedPathway.displayName = name;
           }
 
           // TODO where should these contexts be hosted?
@@ -224,9 +225,9 @@ export function GPML2013aToPVJSON(
             "https://wikipathwayscontexts.firebaseio.com/organism.json",
             "https://wikipathwayscontexts.firebaseio.com/bridgedb/.json"
           ];
-          if (metadata.hasOwnProperty("id")) {
+          if (mergedPathway.hasOwnProperty("id")) {
             context.push({
-              "@base": metadata.id + "/"
+              "@base": mergedPathway.id + "/"
             });
           } else {
             // If there's no pathway IRI specified, we at least give the user a URL
@@ -234,21 +235,22 @@ export function GPML2013aToPVJSON(
             // to search WikiPathways to possibly find the source for this data.
 
             // NOTE: GPML schema specifies that organism is optional
-            const organismIriComponent = metadata.hasOwnProperty("organism")
-              ? `&species=${metadata.organism}`
+            const organismIriComponent = mergedPathway.hasOwnProperty(
+              "organism"
+            )
+              ? `&species=${mergedPathway.organism}`
               : "";
-            metadata.isSimilarTo = encodeURI(
+            mergedPathway.isSimilarTo = encodeURI(
               `http://wikipathways.org/index.php/Special:SearchPathways?query=${name}${organismIriComponent}&doSearch=1`
             );
           }
 
-          return assignAll([
+          return assign(
             {
               "@context": context
             },
-            pathway,
-            metadata
-          ]);
+            mergedPathway
+          );
         }
       );
       return processor.output;

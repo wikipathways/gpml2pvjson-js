@@ -17,3 +17,4 @@ bin/try.ts
 bin/try.js
 src/toPvjson.ts-old
 xmlns/
+bin/usage-examples.sh

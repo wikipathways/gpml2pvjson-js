@@ -148,6 +148,7 @@ export class Processor {
     pathway: {
       contains: [],
       height: 0,
+      name: "New Pathway",
       width: 0,
       // NOTE: GPML does not contain a way to express background color.
       // It's always just white.

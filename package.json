@@ -1,21 +1,21 @@
 {
   "name": "gpml2pvjson",
-  "version": "2.0.0-beta.14",
+  "version": "2.0.0-beta.15",
   "description": "convert GPML (XML) to pvjson (json)",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "bin": "./bin/gpml2pvjson",
   "scripts": {
     "compile:es5": "npm run copyJSON && tsc --project tsconfig.json && echo ok || echo not ok",
-    "compile:es5-with-xpath": "npm run copyJSON && npm run compile:xpath && tsc --project tsconfig.json && echo ok || echo not ok",
-    "compile:es51": "tsc --project tsconfig.json && echo ok || echo not ok",
-    "compile:xpathts": "pegjs src/topublish/rx-sax/XPathParser.pegjs && mv src/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.ts && echo ok || echo not ok",
-    "compile:xpath": "mkdir -p lib/topublish/rx-sax && touch lib/topublish/rx-sax/XPathParser.js && rm lib/topublish/rx-sax/XPathParser.js && pegjs -o lib/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.pegjs && echo ok || echo not ok",
+    "compile-maybe-broken:es5-with-xpath": "npm run copyJSON && npm run compile:xpath && tsc --project tsconfig.json && echo ok || echo not ok",
+    "compile-maybe-broken:xpathts": "pegjs src/topublish/rx-sax/XPathParser.pegjs && mv src/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.ts && echo ok || echo not ok",
+    "compile-maybe-broken:xpath": "mkdir -p lib/topublish/rx-sax && touch lib/topublish/rx-sax/XPathParser.js && rm lib/topublish/rx-sax/XPathParser.js && pegjs -o lib/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.pegjs && echo ok || echo not ok",
     "compile:xsd": "rm -rf cache/* xmlns/* && cxsd https://cdn.rawgit.com/ariutta/GPML/9a8cb502c8745058c0611106f33a0f383819b3f0/GPML2013a.xsd",
     "compile:test": "cp src/GPMLDefaults.json lib/ && tsc -p tsconfig.cxmlplayground.json",
     "copyJSON": "cp src/*.json lib/ && echo ok || echo not ok",
     "prepare": "npm run compile:xsd && npm run compile:es5",
-    "test": "echo 'Get more/better tests working, please!' && bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 < ./test/input/WP554_77712.gpml"
+    "test": "echo \"TODO: These tests are only making sure the converter doesn't error out, but we should compare the actual outputs against validated expected outputs.\" && for f in ./test/input/*.gpml{,.xml}; do echo \"Testing converter against $f\" && WPID=`echo \"$f\" | sed \"s/.*_WP/WP/\" | sed \"s/_.*.gpml//\"`; cat \"$f\" | bin/gpml2pvjson --id \"http://identifiers.org/wikipathways/\"$WPID | jq . > /dev/null; done",
+    "test:against-pvjs-test-cases": "for f in ../pvjs/test/input-data/**/*.gpml{,.xml}; do echo \"Testing converter against $f\" && WPID=`echo \"$f\" | sed \"s/.*_WP/WP/\" | sed \"s/_.*.gpml//\"`; cat \"$f\" | bin/gpml2pvjson --id \"http://identifiers.org/wikipathways/\"$WPID | jq . > /dev/null; done"
   },
   "keywords": [
     "gpml",

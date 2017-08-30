@@ -90,31 +90,3 @@ hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
 
 // TODO does the process exit on its own?
 //process.exit(0);
-
-/*
-rebuild and run like this:
-npm run compile:es5 && bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 < ./test/input/WP554_77712.gpml
-
-currently need to run commands like this:
-../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway WP4 | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP4
-
-cat test/input/WP554_77712.gpml | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554
-
-for f in playground/wikipathways-20170510-gpml-Homo_sapiens/*.gpml; do cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; done
-
-for f in playground/wikipathways-20170510-gpml-Homo_sapiens/*.gpml; do WPID=`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"$WPID > ./playground/pvjson/$WPID.json; done
-
-for f in playground/wikipathways-20170510-gpml-Homo_sapiens/*.gpml; do echo && echo "$f" && WPID=`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"$WPID; done
-
-for f in ../pvjs/test/input-data/troublesome-pathways/*.gpml; do echo && echo "$f" && WPID=`echo "$f" | sed 's/.*_WP/WP/' | sed 's/_.*.gpml//'`; cat "$f" | bin/gpml2pvjson --id "http://identifiers.org/wikipathways/"$WPID; done
-
-//*/
-
-/*
-// These aren't fully working yet:
-../wikipathways-api-client-js/bin/wikipathways-api-client list | while read i; do echo "$i"; sleep 0.01; done | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
-
-../wikipathways-api-client-js/bin/wikipathways-api-client list | head | while read i; do echo "$i"; sleep 0.01; done | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
-
-../wikipathways-api-client-js/bin/wikipathways-api-client list | while read i; do echo "$i"; sleep 0.01; done | head | jq '.identifier' | ../wikipathways-api-client-js/bin/wikipathways-api-client get-pathway | bin/gpml2pvjson
-//*/
