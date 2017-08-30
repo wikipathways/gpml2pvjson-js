@@ -380,21 +380,6 @@ export function GPML2013aToPVJSON(
         });
     });
 
-  /*
-  const edgeStream = hl([
-    cxmlSources["/Pathway/Interaction"]
-      .errors(function(err) {
-        throw err;
-      })
-      .through(createEdgeTransformStream(processor, "Interaction")),
-    cxmlSources["/Pathway/GraphicalLine"]
-      .errors(function(err) {
-        throw err;
-      })
-      .through(createEdgeTransformStream(processor, "GraphicalLine"))
-  ]).merge();
-	//*/
-
   const groupStream: Highland.Stream<PvjsonNode> = cxmlSources["/Pathway/Group"]
     .map(preprocessGroupGPML(processor))
     // PathVisio shouldn't do this, but it sometimes makes empty Groups.
@@ -537,26 +522,6 @@ export function GPML2013aToPVJSON(
     .sequence()
     .doto(setPvjsonEntity)
     .through(postprocessAll)
-    /*
-    .map(function(pvjsonEntities: (PvjsonNode | PvjsonEdge)[]) {
-      return processor.output;
-    })
-		//*/
-    /*
-		// NOTE: group members are handled in the groupStream.
-		// Past here, we only handle burrs and children
-		// of the top-level pathway.
-
-		// NOTE: This is only needed for the GPML2013a converter.
-    // See note in groupStream code re: GroupId vs. GraphId.
-		// The GPML2017 converter will use this test:
-    .filter(
-      (pvjsonEntity: (PvjsonNode | PvjsonEdge)) => !pvjsonEntity["isPartOf"]
-    )
-    .filter(
-      (pvjsonEntity: (PvjsonNode | PvjsonEdge)) => !pvjsonEntity["groupRef"]
-    )
-		//*/
     .flatMap(function(
       pvjsonEntity: PvjsonNode | PvjsonEdge
     ): Highland.Stream<{

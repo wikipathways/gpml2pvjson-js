@@ -293,29 +293,6 @@ export class Processor {
     }
   );
 
-  /*
-  getGraphIdByGroupId = targetGroupId => {
-    let promisedGraphId = this.promisedGraphIdByGroupId[targetGroupId];
-    if (promisedGraphId) {
-      return promisedGraphId;
-    } else {
-      const { groupIdToGraphIdStream } = this;
-      // NOTE: we don't need to set the cache here, because the cache is
-      // set for every item that flows through groupIdToGraphIdStream
-      promisedGraphId = new Promise(function(resolve, reject) {
-        groupIdToGraphIdStream
-          .observe()
-          .find(([groupId, graphId]) => groupId === targetGroupId)
-          .map(([groupId, graphId]) => graphId)
-          .errors(reject)
-          .each(resolve);
-      });
-
-      return promisedGraphId;
-    }
-  };
-	//*/
-
   getPvjsonEntityLatestByGraphId = graphId => {
     let promisedPvjsonEntity = this.promisedPvjsonEntityLatestByGraphId[
       graphId
@@ -357,28 +334,6 @@ export class Processor {
       return promisedGPMLElement;
     }
   };
-
-  /*
-  getByGroupId = targetGroupId => {
-    const { getPvjsonEntityByGraphId, groupIdToGraphIdStream } = this;
-    let promisedGraphId = this.promisedGraphIdByGroupId[targetGroupId];
-    if (!promisedGraphId) {
-      promisedGraphId = this.promisedGraphIdByGroupId[
-        targetGroupId
-      ] = new Promise(function(resolve, reject) {
-        groupIdToGraphIdStream
-          .observe()
-          .find(([groupId, graphId]) => groupId === targetGroupId)
-          .errors(reject)
-          .each(function([groupId, graphId]) {
-            resolve(graphId);
-          });
-      });
-    }
-
-    return promisedGraphId.then(getPvjsonEntityByGraphId);
-  };
-	//*/
 
   preprocessGPMLElement = (gpmlElement: GPMLElement): GPMLElement => {
     const { ensureGraphIdExists, gpmlElementStream } = this;
