@@ -6,7 +6,7 @@
   "typings": "lib/index.d.ts",
   "bin": "./bin/gpml2pvjson",
   "scripts": {
-    "compile": "npm run copyJSON && npm run compile:xsd && npm run compile:es5",
+    "compile": "mkdir -p lib && npm run copyJSON && npm run compile:xsd && npm run compile:es5",
     "compile:xsd": "rm -rf cache/* xmlns/* && cxsd https://cdn.rawgit.com/ariutta/GPML/9a8cb502c8745058c0611106f33a0f383819b3f0/GPML2013a.xsd",
     "compile:es5": "tsc --project tsconfig.json && echo ok || echo not ok",
     "copyJSON": "cp src/*.json lib/ && echo ok || echo not ok",
