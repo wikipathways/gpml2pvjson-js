@@ -5,9 +5,8 @@ var crypto = require("crypto");
 var fs = require("fs");
 var gpml2pvjson = require("../lib/GPML2013aToPVJSON").GPML2013aToPVJSON;
 var hl = require("highland");
-var npmPackage = JSON.parse(
-  fs.readFileSync("./package.json", { encoding: "utf8" })
-);
+var path = require("path");
+var npmPackage = require("../package.json");
 var ndjson = require("ndjson");
 var program = require("commander");
 var VError = require("verror");
