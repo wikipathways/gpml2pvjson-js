@@ -53,24 +53,38 @@ var id = program.id;
 var HASH_NAME = "sha256";
 
 // NOTE: some GPML files use lowercase "utf-8", so we need the ignore case flag to be set.
-var gpmlSeparator = /<\?xml version="1.0" encoding="UTF-8"\?>/i;
+var primaryDelimiterBetweenGPMLFiles = /<\?xml version="1.0" encoding="UTF-8"\?>/i;
+var secondaryDelimiterBetweenGPMLFiles = "</Pathway>";
 
-// TODO this works if the XML file has the XML header. Should we handle it when it doesn't?
-//var source = hl(process.stdin).splitBy(gpmlSeparator).intersperse(gpmlSeparator);
-var source = hl(process.stdin).splitBy(gpmlSeparator).drop(1);
-/*
-var source = id
-  ? process.stdin
-  : hl(process.stdin).doto(function(chunk) {
-      hash.update(chunk);
-    });
-//*/
+var source = hl(process.stdin)
+  // NOTE this splitter (the next two steps) successfully splits the stream when
+  // the XML file has the XML header. We don't want to process the XML header
+  // with CXML, so this splitter has the additional benefit of removing the
+  // header, in addition to splitting the stream.
+  .splitBy(primaryDelimiterBetweenGPMLFiles)
+  .drop(1)
+  // This splitter (next three steps) is needed to handle the case of a stream
+  // of GPML files when one or more of those files don't have the XML header.
+  // It just splits the stream at the new file boundary, without removing or
+  // otherwise changing anything.
+  .splitBy(secondaryDelimiterBetweenGPMLFiles)
+  // NOTE: We are appending the secondary delimiter back in, because we need to
+  // include it, and the splitter removed it.
+  // TODO can't we use intersperse instead of this?
+  // Problem: two streams where we want just one.
+  .map(x => x + secondaryDelimiterBetweenGPMLFiles)
+  // NOTE: w/out this filter, the final value in the stream would always be just
+  // the secondaryDelimiterBetweenGPMLFiles.
+  .filter(
+    x =>
+      !new RegExp("^[\r\n]*" + secondaryDelimiterBetweenGPMLFiles + "$").test(x)
+  );
 
 hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
   const hash = crypto.createHash(HASH_NAME);
   hash.setEncoding("hex");
 
-  gpmlStream.observe().doto(chunk => hash.update(chunk.toString()));
+  gpmlStream.observe().each(chunk => hash.update(chunk.toString()));
 
   gpml2pvjson(gpmlStream, id)
     .last()

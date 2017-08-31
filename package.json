@@ -11,11 +11,13 @@
     "compile-maybe-broken:xpathts": "pegjs src/topublish/rx-sax/XPathParser.pegjs && mv src/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.ts && echo ok || echo not ok",
     "compile-maybe-broken:xpath": "mkdir -p lib/topublish/rx-sax && touch lib/topublish/rx-sax/XPathParser.js && rm lib/topublish/rx-sax/XPathParser.js && pegjs -o lib/topublish/rx-sax/XPathParser.js src/topublish/rx-sax/XPathParser.pegjs && echo ok || echo not ok",
     "compile:xsd": "rm -rf cache/* xmlns/* && cxsd https://cdn.rawgit.com/ariutta/GPML/9a8cb502c8745058c0611106f33a0f383819b3f0/GPML2013a.xsd",
-    "compile:test": "cp src/GPMLDefaults.json lib/ && tsc -p tsconfig.cxmlplayground.json",
+    "compile-maybe-broken:test": "cp src/GPMLDefaults.json lib/ && tsc -p tsconfig.cxmlplayground.json",
     "copyJSON": "cp src/*.json lib/ && echo ok || echo not ok",
     "prepare": "npm run compile:xsd && npm run compile:es5",
-    "test": "echo \"TODO: These tests are only making sure the converter doesn't error out, but we should compare the actual outputs against validated expected outputs.\" && for f in ./test/input/*.gpml{,.xml}; do echo \"Testing converter against $f\" && WPID=`echo \"$f\" | sed \"s/.*_WP/WP/\" | sed \"s/_.*.gpml//\"`; cat \"$f\" | bin/gpml2pvjson --id \"http://identifiers.org/wikipathways/\"$WPID | jq . > /dev/null; done",
-    "test:against-pvjs-test-cases": "for f in ../pvjs/test/input-data/**/*.gpml{,.xml}; do echo \"Testing converter against $f\" && WPID=`echo \"$f\" | sed \"s/.*_WP/WP/\" | sed \"s/_.*.gpml//\"`; cat \"$f\" | bin/gpml2pvjson --id \"http://identifiers.org/wikipathways/\"$WPID | jq . > /dev/null; done"
+    "test": "echo \"TODO: These tests are only making sure the converter doesn't throw any errors, but it would be better to compare the actual outputs against validated expected outputs.\" && npm-run-all test:*",
+    "test:multiple": "for f in ./test/input/*.gpml{,.xml}; do echo \"Testing converter against $f\" && WPID=`echo \"$f\" | sed \"s/.*_WP/WP/\" | sed \"s/_.*.gpml//\"`; cat \"$f\" | bin/gpml2pvjson --id \"http://identifiers.org/wikipathways/\"$WPID | jq . > /dev/null; done",
+    "test:chunked": "curl --limit-rate 10K \"http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=xml\" | xpath \"*/ns1:data/text()\" | base64 --decode | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 | jq . > /dev/null",
+    "test-against-pvjs-gpml-samples": "echo \"TODO: Break out these GPML files as a test suite with its own repo. Then make that a dependency for both pvjs and gpml2pvjson-js.\" && for f in ../pvjs/test/input-data/**/*.gpml{,.xml}; do echo \"Testing converter against $f\" && WPID=`echo \"$f\" | sed \"s/.*_WP/WP/\" | sed \"s/_.*.gpml//\"`; cat \"$f\" | bin/gpml2pvjson --id \"http://identifiers.org/wikipathways/\"$WPID | jq . > /dev/null; done"
   },
   "keywords": [
     "gpml",
