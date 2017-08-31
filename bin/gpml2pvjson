@@ -66,15 +66,25 @@ var source = hl(process.stdin)
   // This splitter (next three steps) is needed to handle the case of a stream
   // of GPML files when one or more of those files don't have the XML header.
   // It just splits the stream at the new file boundary, without removing or
-  // otherwise changing anything.
-  .splitBy(secondaryDelimiterBetweenGPMLFiles)
-  // NOTE: We are appending the secondary delimiter back in, because we need to
-  // include it, and the splitter removed it.
-  // TODO can't we use intersperse instead of this?
-  // Problem: two streams where we want just one.
+  // otherwise changing anything, because we add the separator back in.
+  .splitBy(
+    new RegExp(
+      // TODO Do we need to replace the forward slash to make it work in the
+      // RegExp? I checked the latest versions of Chrome and FF, and they don't
+      // appear to need this, because they automatically do this, so both of
+      // the following are equivalent:
+      //secondaryDelimiterBetweenGPMLFiles.replace("/", "\\/") + "[\r\n]*$"
+      secondaryDelimiterBetweenGPMLFiles + "[\r\n]*$"
+    )
+  )
+  // NOTE: We are appending the secondary delimiter back in, because the
+  // splitter removed it, but we need to include it so CXML can process
+  // the GPML.
+  // TODO can we use intersperse or something instead of this?
+  // Problem with intersperse: we get two streams where we want just one.
   .map(x => x + secondaryDelimiterBetweenGPMLFiles)
-  // NOTE: w/out this filter, the final value in the stream would always be just
-  // the secondaryDelimiterBetweenGPMLFiles.
+  // NOTE: w/out this filter, the final value in the stream would always just be
+  // an extraneous, isolated copy of the secondary delimiter.
   .filter(
     x =>
       !new RegExp("^[\r\n]*" + secondaryDelimiterBetweenGPMLFiles + "$").test(x)

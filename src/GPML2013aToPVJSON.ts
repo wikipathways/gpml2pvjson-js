@@ -495,20 +495,24 @@ export function GPML2013aToPVJSON(
       };
     }
 
-    return s
-      .reduce(
-        {
-          missing: [],
-          tranches: [[]]
-        },
-        processDependent
-      )
-      .map(function(acc) {
-        const { tranches, missing } = acc;
-        tranches.push(missing);
-        return hl(tranches.reduce((acc, tranch) => acc.concat(tranch), []));
-      })
-      .sequence();
+    return (
+      s
+        // TODO should we use scan and debounce here to pipe out the in-progress
+        // pvjson as it's being converted?
+        .reduce(
+          {
+            missing: [],
+            tranches: [[]]
+          },
+          processDependent
+        )
+        .map(function(acc) {
+          const { tranches, missing } = acc;
+          tranches.push(missing);
+          return hl(tranches.reduce((acc, tranch) => acc.concat(tranch), []));
+        })
+        .sequence()
+    );
   }
 
   const pvjsonEntityStream = hl([
