@@ -34,7 +34,7 @@ export function augmentErrorMessage(err: Error, message: string): Error {
  * a DataNode with GraphId="d8a".
  */
 export function generatePublicationXrefId(originalId: string) {
-  return "PublicationXref" + originalId;
+  return "publicationXref" + originalId;
 }
 
 export const insertIfNotExists = curry(function<T>(item: T, list: T[]): T[] {
