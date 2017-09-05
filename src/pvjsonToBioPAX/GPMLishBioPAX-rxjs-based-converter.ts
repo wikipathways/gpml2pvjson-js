@@ -22,7 +22,11 @@ export function parseBioPAXElements(acc: any, el: SimpleElement) {
           const textContentDecoded = He.decode(textContent);
 
           const key = BIOPAX_TO_PVJSON[tagName];
-          if (["dbId", "dbName", "title", "source", "year"].indexOf(key) > -1) {
+          if (
+            ["dbId", "dbConventionalName", "title", "source", "year"].indexOf(
+              key
+            ) > -1
+          ) {
             publicationXrefAcc[key] = textContentDecoded;
           } else {
             publicationXrefAcc[key].push(textContentDecoded);

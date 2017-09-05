@@ -1,6 +1,6 @@
 {
   "dbId": "id",
-  "dbName": "db",
+  "dbConventionalName": "db",
   "title": "title",
   "source": "source",
   "year": "year",

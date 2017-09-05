@@ -143,7 +143,7 @@ type PvjsonEntityMergedStringProperties =
   | "conversionDirection"
   | "dataSource"
   | "dbId" // xref identifier, e.g., 1234 for Entrez Gene 1234
-  | "dbName" // e.g., Entrez Gene
+  | "dbConventionalName" // e.g., Entrez Gene
   | "displayName"
   | "drawAs"
   | "email"
@@ -244,7 +244,7 @@ type PvjsonNodeOptionalKeys =
   | "cellularComponent"
   | "contains"
   | "dbId"
-  | "dbName"
+  | "dbConventionalName"
   | "isPartOf"
   | "rotation"
   | "strokeDasharray";
@@ -265,7 +265,7 @@ type PvjsonEdgeRequiredKeys =
 type PvjsonEdgeOptionalKeys =
   | "burrs"
   | "dbId"
-  | "dbName"
+  | "dbConventionalName"
   | "attachmentDisplay"
   | "strokeDasharray"
   | "markerStart"
@@ -276,7 +276,7 @@ type PvjsonEdgeOptionalKeys =
   | "sboInteractionType"
   | "dbId"
   | "conversionDirection"
-  | "dbName"
+  | "dbConventionalName"
   | "participants"
   | "controlType"
   | "controller"
@@ -323,7 +323,10 @@ type PvjsonPublicationXrefRequiredKeys =
   | "standardName"
   | "type"
   | "year";
-type PvjsonPublicationXrefOptionalKeys = "displayName" | "dbId" | "dbName";
+type PvjsonPublicationXrefOptionalKeys =
+  | "displayName"
+  | "dbId"
+  | "dbConventionalName";
 type PvjsonPublicationXref = {
   [K in PvjsonPublicationXrefRequiredKeys]: PvjsonEntityMerged[K]
 } &
@@ -435,7 +438,7 @@ declare type jsonldListSetValue =
 
 //const COMMON_PROPS: ReadonlyArray<keyof PvjsonEntity> = [
 //	'color',
-//	'dbName', // e.g., Entrez Gene
+//	'dbConventionalName', // e.g., Entrez Gene
 //	'dbId', // xref identifier, e.g., 1234 for Entrez Gene 1234
 //	'displayName',
 //	'gpmlElementName',
