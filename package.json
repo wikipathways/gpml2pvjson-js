@@ -1,6 +1,6 @@
 {
   "name": "gpml2pvjson",
-  "version": "2.0.0-beta.19",
+  "version": "2.0.0-beta.20",
   "engines": {
     "node": ">=7.0.0"
   },
@@ -9,6 +9,7 @@
   "typings": "lib/index.d.ts",
   "bin": "./bin/gpml2pvjson",
   "scripts": {
+    "build": "npm run compile",
     "compile": "mkdir -p lib && npm run copyJSON && npm run compile:xsd && npm run compile:es5",
     "compile:xsd": "rm -rf cache/* xmlns/* && cxsd https://cdn.rawgit.com/ariutta/GPML/9a8cb502c8745058c0611106f33a0f383819b3f0/GPML2013a.xsd",
     "compile:es5": "tsc --project tsconfig.json && echo ok || echo not ok",
@@ -36,7 +37,7 @@
     "lodash": "^4.17.4",
     "ndjson": "^1.5.0",
     "rgbcolor": "^1.0.0",
-    "source-map-support": "^0.4.16"
+    "source-map-support": "^0.4.17"
   },
   "devDependencies": {
     "@wikipathways/cxsd": "^0.2.4",
@@ -46,11 +47,11 @@
     "colors": "~0.6.2",
     "deep-diff": "~0.2.0",
     "mocha": "^3.4.2",
-    "npm-run-all": "^4.0.2",
+    "npm-run-all": "^4.1.1",
     "pretty-data": "~0.40.0",
     "pretty-error": "^1.2.0",
     "sinon": "^2.3.1",
-    "typescript": "^2.4.2",
+    "typescript": "^2.5.2",
     "verror": "^1.6.0",
     "webpack": "^2.4.1"
   },

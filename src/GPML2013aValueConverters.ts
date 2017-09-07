@@ -209,15 +209,11 @@ export function gpmlColorToCssColor(colorValue) {
   }
 }
 
-export const Color = function(gpmlElement) {
-  const { Color } = gpmlElement.Graphics;
-  const result = gpmlColorToCssColor(Color);
-  return result;
-};
+export const Color = flow(get("Graphics.Color"), gpmlColorToCssColor);
 
 export function FillColor(gpmlElement) {
   const { FillColor, ShapeType } = gpmlElement.Graphics;
-  const result = !!ShapeType && ShapeType.toLowerCase() !== "none"
+  return !!ShapeType && ShapeType.toLowerCase() !== "none"
     ? gpmlColorToCssColor(FillColor)
     : "transparent";
 }
