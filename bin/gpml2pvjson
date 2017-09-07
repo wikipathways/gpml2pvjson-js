@@ -5,7 +5,6 @@ var crypto = require("crypto");
 var fs = require("fs");
 var gpml2pvjson = require("../lib/GPML2013aToPVJSON").GPML2013aToPVJSON;
 var hl = require("highland");
-var path = require("path");
 var npmPackage = require("../package.json");
 var ndjson = require("ndjson");
 var program = require("commander");
@@ -19,6 +18,7 @@ program
     'Specify unique ID of this pathway, e.g., "http://identifiers.org/wikipathways/WP4"'
   );
 
+// NOTE: this is in addition to the automatically generated help text
 program.on("--help", function() {
   console.log("  Examples:");
   console.log();

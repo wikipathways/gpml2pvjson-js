@@ -191,18 +191,17 @@ export const Valign = flow(get("Graphics.Valign"), kebabCase);
 
 export const Href = flow(get("Href"), decodeIfNotEmpty, encodeURI);
 
-export function gpmlColorToCssColor(gpmlElement) {
-  const { Color } = gpmlElement.Graphics;
-  if (Color.toLowerCase() === "transparent") {
+export function gpmlColorToCssColor(colorValue) {
+  if (colorValue.toLowerCase() === "transparent") {
     return "transparent";
   } else {
-    let color = new RGBColor(Color);
+    let color = new RGBColor(colorValue);
     if (color.ok) {
       return color.toHex();
     } else {
       console.warn(
-        'Could not convert GPML Color value of "' +
-          Color +
+        'Could not convert GPML Color or FillColor value of "' +
+          colorValue +
           '" to a valid CSS color. Using "#c0c0c0" as a fallback.'
       );
       return "#c0c0c0";
@@ -210,12 +209,16 @@ export function gpmlColorToCssColor(gpmlElement) {
   }
 }
 
-export const Color = gpmlColorToCssColor;
+export const Color = function(gpmlElement) {
+  const { Color } = gpmlElement.Graphics;
+  const result = gpmlColorToCssColor(Color);
+  return result;
+};
 
 export function FillColor(gpmlElement) {
-  const { Color, ShapeType } = gpmlElement.Graphics;
-  return !!ShapeType && ShapeType.toLowerCase() !== "none"
-    ? gpmlColorToCssColor(gpmlElement)
+  const { FillColor, ShapeType } = gpmlElement.Graphics;
+  const result = !!ShapeType && ShapeType.toLowerCase() !== "none"
+    ? gpmlColorToCssColor(FillColor)
     : "transparent";
 }
 
