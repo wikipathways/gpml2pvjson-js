@@ -31,7 +31,7 @@
   "Shape": "drawAs",
   "ShapeType": "drawAs",
   "Style": "pvjson:delete",
-  "TextLabel": "displayName",
+  "TextLabel": "textContent",
   "Title": "name",
   "TITLE": "standardName",
   "Type": "wpType",

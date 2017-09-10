@@ -4,8 +4,8 @@ import "source-map-support/register";
 import { transform } from "./gpml-utilities";
 
 export function addressPathVisioShapeRenderingBugs(
-  pvjsonElement: PvjsonNode
-): PvjsonNode {
+  pvjsonElement: PvjsonSingleFreeNode
+): PvjsonSingleFreeNode {
   const ShapeType = pvjsonElement.drawAs;
   // rotation in radians
   const Rotation = (pvjsonElement.rotation || 0) * (Math.PI / 180);
@@ -163,6 +163,8 @@ export function addressPathVisioShapeRenderingBugs(
   });
 }
 
-export function postprocessPVJSON(pvjsonElement: PvjsonNode): PvjsonNode {
+export function postprocessPVJSON(
+  pvjsonElement: PvjsonSingleFreeNode
+): PvjsonSingleFreeNode {
   return addressPathVisioShapeRenderingBugs(pvjsonElement);
 }

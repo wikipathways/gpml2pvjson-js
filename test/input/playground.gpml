@@ -1,19 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="New Pathway" Version="20170828">
-  <Graphics BoardWidth="432.0" BoardHeight="283.7003555104114" />
-  <DataNode TextLabel="GeneProduct" GraphId="f62a6" Type="GeneProduct">
-    <Graphics CenterX="362.0" CenterY="169.0" Width="80.0" Height="20.0" ZOrder="32768" FillColor="00ff66" FontSize="10" Valign="Middle" Color="ff0099" />
+<Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="Rendering Test Protocol for anchors" Version="20130715" Organism="Anopheles gambiae">
+  <Comment Source="WikiPathways-description">This pathway can be deleted once release 36 is shipped.</Comment>
+  <Graphics BoardWidth="675.2490464047896" BoardHeight="692.9037843977742" />
+  <DataNode TextLabel="Metabolite" GraphId="ba19a" Type="Metabolite">
+    <Graphics CenterX="312.0137901181125" CenterY="612.6537843977742" Width="487.86407766990294" Height="100.5" ZOrder="32768" FontSize="10" Valign="Middle" Color="0000ff" />
     <Xref Database="" ID="" />
   </DataNode>
-  <Interaction GraphId="id6acf926b">
-    <Graphics ZOrder="12288" LineThickness="1.0">
-      <Point X="362.0" Y="179.0" GraphRef="f62a6" RelX="0.0" RelY="1.0" />
-      <Point X="320.2554596241747" Y="253.70035551041138" ArrowHead="Arrow" />
+  <Interaction GraphId="idc439346d">
+    <Comment>connected to doubleline</Comment>
+    <Graphics ConnectorType="Curved" ZOrder="12288" LineThickness="1.0">
+      <Point X="230.6602413677505" Y="397.23174432287504" GraphRef="a32cc" RelX="0.0" RelY="0.0" />
+      <Point X="276.8421052631579" Y="351.247451108806" />
+      <Point X="471.04557583397377" Y="305.2631578947369" />
+      <Point X="665.2490464047896" Y="295.86481714230257" />
+      <Point X="645.2490464047896" Y="286.46647638986826" ArrowHead="Arrow" />
+      <Anchor Position="0.4205481513654782" Shape="Circle" GraphId="bd89f" />
     </Graphics>
     <Xref Database="" ID="" />
   </Interaction>
-  <Group GroupId="ef117" GraphId="c657d" Style="Complex" />
-  <Group GroupId="f1c1a" GraphId="e3688" Style="Complex" />
+  <Interaction GraphId="id2f6ecf01">
+    <Comment>connected to metab and single line</Comment>
+    <Graphics ConnectorType="Elbow" ZOrder="12288" LineThickness="1.0">
+      <Point X="433.97980953558823" Y="562.4037843977742" GraphRef="ba19a" RelX="0.5" RelY="-1.0" />
+      <Point X="400.9022292728868" Y="307.73302102755196" GraphRef="bd89f" RelX="0.0" RelY="0.0" ArrowHead="Arrow" />
+    </Graphics>
+    <Xref Database="" ID="" />
+  </Interaction>
+  <Interaction GraphId="id785e01ae">
+    <Attribute Key="org.pathvisio.DoubleLineProperty" Value="Double" />
+    <Graphics ZOrder="32769" LineThickness="5.0">
+      <Point X="190.04777070063682" Y="562.4037843977742" GraphRef="ba19a" RelX="-0.5" RelY="-1.0" />
+      <Point X="291.57894736842104" Y="149.47368421052633" />
+      <Anchor Position="0.4" Shape="Circle" GraphId="a32cc" />
+      <Anchor Position="0.4" Shape="None" />
+    </Graphics>
+    <Xref Database="" ID="" />
+  </Interaction>
   <InfoBox CenterX="0.0" CenterY="0.0" />
   <Biopax />
 </Pathway>

@@ -1,12 +1,34 @@
-import { curry, defaultsDeep, isNumber, isString, map, omit } from "lodash/fp";
+// TODO don't repeat this here and in kaavio
+import * as edgeDrawers from "./edgeDrawers";
+import { curry, defaultsDeep, isFinite, isString, map, omit } from "lodash/fp";
 import * as hl from "highland";
 import {
   arrayify,
   intersectsLSV,
+  isGPMLAnchor,
+  isPvjsonBurr,
   isPvjsonEdge,
+  isPvjsonSingleFreeNode,
+  isPvjsonGroup,
   unionLSV
 } from "./gpml-utilities";
 import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
+
+export const GPMLPoint =
+  GPML2013a.document.Pathway.Interaction[0].Graphics.Point[0];
+
+interface SegmentPoint {
+  x: number;
+  y: number;
+  angle?: number;
+}
+
+interface SegmentOption {
+  side: string;
+  orientationX: number;
+  orientationY: number;
+  angle: number;
+}
 
 interface DataPositionAndOrientationMapping {
   position: number;
@@ -27,14 +49,57 @@ interface Sides {
   comparison: "same" | "perpendicular" | "opposing";
 }
 
+const SEGMENT_OPTIONS: SegmentOption[] = [
+  {
+    side: "top",
+    orientationX: 0,
+    orientationY: -1
+  },
+  {
+    side: "right",
+    orientationX: 1,
+    orientationY: 0
+  },
+  {
+    side: "bottom",
+    orientationX: 0,
+    orientationY: 1
+  },
+  {
+    side: "left",
+    orientationX: -1,
+    orientationY: 0
+  }
+].map(function(segmentOption: SegmentOption) {
+  segmentOption.angle = Math.atan2(
+    segmentOption.orientationY,
+    segmentOption.orientationX
+  );
+  return segmentOption;
+});
+
+function isDefinedCXML(x: any) {
+  return x._exists !== false;
+}
+
 // a stub is a short path segment that is used for the first and/or last segment(s) of a path
 const DEFAULT_STUB_LENGTH = 20;
 
-function attachedToCompleteAttachmentDisplay(point: Point): boolean {
+// Validate orientation of attachment display.
+//
+// When attached to a normal Node, we can calculate the orientation immediately
+// so this will return true right away.
+// When attached to an Edge or Group, we need to do more processing,
+// so this will at least initially return false.
+// TODO: Not sure whether a point attached to an Edge or a Group
+// ever gets its orientation set.
+function validateOrientation(
+  attachmentDisplay: AttachmentDisplay = {} as AttachmentDisplay
+): boolean {
   return (
-    point.hasOwnProperty("attachmentDisplay") &&
-    isNumber(point.attachmentDisplay.orientation[0]) &&
-    isNumber(point.attachmentDisplay.orientation[1])
+    attachmentDisplay.hasOwnProperty("orientation") &&
+    isFinite(attachmentDisplay.orientation[0]) &&
+    isFinite(attachmentDisplay.orientation[1])
   );
 }
 
@@ -62,36 +127,42 @@ function calculateImplicitPoints(
   let sidesToRouteAround;
 
   // TODO check whether it's correct to specify <PvjsonEdge> as the type for
-  // sourceEntity/targetEntity when running getSideEquivalentForLine below
+  // sourceEntity/targetEntity when running setOrientationForPointAttachedToAnchor below
 
-  // if first and last points are not attached to other attachmentDisplay entities
+  const firstAttachmentDisplay = firstExplicitPoint.attachmentDisplay;
+  const lastAttachmentDisplay = lastExplicitPoint.attachmentDisplay;
+
+  // first point: attached and valid orientation specified
+  // last point: attached and valid orientation specified
   if (
-    attachedToCompleteAttachmentDisplay(firstExplicitPoint) &&
-    attachedToCompleteAttachmentDisplay(lastExplicitPoint)
+    validateOrientation(firstAttachmentDisplay) &&
+    validateOrientation(lastAttachmentDisplay)
   ) {
     firstPoint = firstExplicitPoint;
     lastPoint = lastExplicitPoint;
     sideCombination = getSideCombination(firstPoint, lastPoint);
 
-    // if first point is not attached to another attachmentDisplay entity and last point is attached to an attachmentDisplay (not a group)
+    // first point: attached and valid orientation specified
+    // last point: attached but orientation is NOT valid
   } else if (
-    attachedToCompleteAttachmentDisplay(firstExplicitPoint) &&
-    lastExplicitPoint.hasOwnProperty("attachmentDisplay")
+    validateOrientation(firstAttachmentDisplay) &&
+    lastExplicitPoint.hasOwnProperty("isAttachedTo")
   ) {
     firstPoint = firstExplicitPoint;
-    lastPoint = getSideEquivalentForLine(
+    lastPoint = setOrientationForPointAttachedToAnchor(
       firstExplicitPoint,
       lastExplicitPoint,
       <PvjsonEdge>targetEntity
     );
     sideCombination = getSideCombination(firstPoint, lastPoint);
 
-    // if last point is not attached to another attachmentDisplay entity and first point is attached to an attachmentDisplay (not a group)
+    // first point: attached but orientation is NOT valid
+    // last point: attached and valid orientation specified
   } else if (
-    attachedToCompleteAttachmentDisplay(lastExplicitPoint) &&
-    firstExplicitPoint.hasOwnProperty("attachmentDisplay")
+    validateOrientation(lastAttachmentDisplay) &&
+    firstExplicitPoint.hasOwnProperty("isAttachedTo")
   ) {
-    firstPoint = getSideEquivalentForLine(
+    firstPoint = setOrientationForPointAttachedToAnchor(
       lastExplicitPoint,
       firstExplicitPoint,
       <PvjsonEdge>sourceEntity
@@ -99,17 +170,18 @@ function calculateImplicitPoints(
     lastPoint = lastExplicitPoint;
     sideCombination = getSideCombination(firstPoint, lastPoint);
 
-    // if first and last points are attached to attachmentDisplays
+    // first point: attached but orientation is NOT valid
+    // last point: attached but orientation is NOT valid
   } else if (
-    firstExplicitPoint.hasOwnProperty("attachmentDisplay") &&
-    lastExplicitPoint.hasOwnProperty("attachmentDisplay")
+    firstExplicitPoint.hasOwnProperty("isAttachedTo") &&
+    lastExplicitPoint.hasOwnProperty("isAttachedTo")
   ) {
-    firstPoint = getSideEquivalentForLine(
+    firstPoint = setOrientationForPointAttachedToAnchor(
       lastExplicitPoint,
       firstExplicitPoint,
       <PvjsonEdge>sourceEntity
     );
-    lastPoint = getSideEquivalentForLine(
+    lastPoint = setOrientationForPointAttachedToAnchor(
       firstExplicitPoint,
       lastExplicitPoint,
       <PvjsonEdge>targetEntity
@@ -123,19 +195,29 @@ function calculateImplicitPoints(
     // Note: each of the following options indicate an unconnected edge on one or both ends
     // We are not calculating the implicit points for these, because they are probably already in error.
 
-    // if first point is attached to an attachmentDisplay and last point is unconnected
-  } else if (firstExplicitPoint.hasOwnProperty("attachmentDisplay")) {
+    // first point: attached but orientation is NOT valid
+    // last point: unattached
+  } else if (firstExplicitPoint.hasOwnProperty("isAttachedTo")) {
+    firstPoint = firstExplicitPoint;
+    const firstPoint1 = setOrientationForPointAttachedToAnchor(
+      lastExplicitPoint,
+      firstExplicitPoint,
+      <PvjsonEdge>sourceEntity
+    );
+    lastPoint = lastExplicitPoint;
+    sideCombination = {};
+    sideCombination.expectedPointCount = 2;
+
+    // first point: unattached
+    // last point: attached but orientation is NOT valid
+  } else if (lastExplicitPoint.hasOwnProperty("isAttachedTo")) {
     firstPoint = firstExplicitPoint;
     lastPoint = lastExplicitPoint;
     sideCombination = {};
     sideCombination.expectedPointCount = 2;
-    // if last point is attached to an attachmentDisplay and first point is unconnected
-  } else if (lastExplicitPoint.hasOwnProperty("attachmentDisplay")) {
-    firstPoint = firstExplicitPoint;
-    lastPoint = lastExplicitPoint;
-    sideCombination = {};
-    sideCombination.expectedPointCount = 2;
-    // if both ends are unconnected
+
+    // first point: unattached
+    // last point: unattached
   } else {
     firstPoint = firstExplicitPoint;
     lastPoint = lastExplicitPoint;
@@ -145,7 +227,7 @@ function calculateImplicitPoints(
   expectedPointCount = sideCombination.expectedPointCount;
   sidesToRouteAround = sideCombination.sidesToRouteAround;
 
-  //check to see whether all implicit points are provided
+  // checking to see whether all implicit points are provided
   if (explicitPoints.length >= expectedPointCount) {
     return explicitPoints;
   } else {
@@ -376,6 +458,10 @@ function crossProduct(u: [number, number], v: [number, number]): number {
   return u[0] * v[1] - v[0] * u[1];
 }
 
+function getAngleFromPointToPoint({ x: x0, y: y0 }, { x: x1, y: y1 }) {
+  return Math.atan2(y1 - y0, x1 - x0);
+}
+
 function getAndCompareSides(firstPoint: Point, lastPoint: Point): Sides {
   const firstSide = getSide(firstPoint);
   const lastSide = getSide(lastPoint);
@@ -430,115 +516,46 @@ function getSideCombination(firstPoint: Point, lastPoint: Point): Combination {
   return sideCombination;
 }
 
-function getSideEquivalentForLine(
-  pointOnShape: Point,
+// Set attachmentDisplay orientation for a point attached to an anchor
+function setOrientationForPointAttachedToAnchor(
+  otherPoint: Point,
   pointOnEdge: Point,
-  //referencedEdge: (PvjsonNode | PvjsonEdge)
   referencedEdge: PvjsonEdge
 ): Point {
-  var riseFromPointOnEdgeToPointOnShape = pointOnShape.y - pointOnEdge.y;
-  var runFromPointOnEdgeToPointOnShape = pointOnShape.x - pointOnEdge.x;
-  var angleFromPointOnEdgeToPointOnShape = Math.atan2(
-    riseFromPointOnEdgeToPointOnShape,
-    runFromPointOnEdgeToPointOnShape
+  if (!referencedEdge) {
+    throw new Error(
+      "Missing referencedEdge in setOrientationForPointAttachedToAnchor"
+    );
+  }
+
+  const position = pointOnEdge.attachmentDisplay.position[0];
+  const angleFromPointOnEdgeToOtherPoint = getAngleFromPointToPoint(
+    pointOnEdge,
+    otherPoint
   );
 
-  var angleOfReferencedEdge,
+  const referencedEdgePoints = referencedEdge.points;
+
+  const referencedPath = new edgeDrawers[(referencedEdge.drawAs.toLowerCase())](
     referencedEdgePoints,
-    firstPointOfReferencedEdge,
-    lastPointOfReferencedEdge;
+    referencedEdge.id,
+    referencedEdge.markerStart,
+    referencedEdge.markerEnd
+  );
 
-  if (!!referencedEdge) {
-    // TODO handle case where referenced edge is not straight.
-    // currently, the code below assumes the referenced edge is always straight, never elbowed or curved.
-    // This would require being able to calculate a point at a distance along an elbow or curve.
-    referencedEdgePoints = referencedEdge.points;
+  const positionOffset = 0.01;
+  const firstPointOfReferencedEdgeSegment = referencedPath.getPointAtPosition(
+    Math.max(0, position - positionOffset)
+  );
+  const lastPointOfReferencedEdgeSegment = referencedPath.getPointAtPosition(
+    Math.min(1, position + positionOffset)
+  );
+  const angleOfReferencedEdge = getAngleFromPointToPoint(
+    firstPointOfReferencedEdgeSegment,
+    lastPointOfReferencedEdgeSegment
+  );
 
-    firstPointOfReferencedEdge = referencedEdgePoints[0];
-
-    firstPointOfReferencedEdge.x = parseFloat(
-      firstPointOfReferencedEdge.x ||
-        firstPointOfReferencedEdge.attributes.X.value
-    );
-    firstPointOfReferencedEdge.y = parseFloat(
-      firstPointOfReferencedEdge.y ||
-        firstPointOfReferencedEdge.attributes.Y.value
-    );
-
-    lastPointOfReferencedEdge =
-      referencedEdgePoints[referencedEdgePoints.length - 1];
-    lastPointOfReferencedEdge.x = parseFloat(
-      lastPointOfReferencedEdge.x ||
-        lastPointOfReferencedEdge.attributes.X.value
-    );
-    lastPointOfReferencedEdge.y = parseFloat(
-      lastPointOfReferencedEdge.y ||
-        lastPointOfReferencedEdge.attributes.Y.value
-    );
-
-    var riseOfReferencedEdge =
-      lastPointOfReferencedEdge.y - firstPointOfReferencedEdge.y;
-    var runOfReferencedEdge =
-      lastPointOfReferencedEdge.x - firstPointOfReferencedEdge.x;
-
-    angleOfReferencedEdge = Math.atan2(
-      riseOfReferencedEdge,
-      runOfReferencedEdge
-    );
-  }
-
-  var firstSegmentOptions: SegmentOption[] = [
-    {
-      side: "top",
-      orientationX: 0,
-      orientationY: -1
-    },
-    {
-      side: "right",
-      orientationX: 1,
-      orientationY: 0
-    },
-    {
-      side: "bottom",
-      orientationX: 0,
-      orientationY: 1
-    },
-    {
-      side: "left",
-      orientationX: -1,
-      orientationY: 0
-    }
-  ];
-
-  let side;
-  let orientationX;
-  let orientationY;
-  let selectedFirstSegmentCalculation;
-  let minimumAngleBetweenFirstSegmentOptionsAndAttachedEdge;
-  let firstSegmentCalculations = [];
-
-  interface SegmentPoint {
-    x: number;
-    y: number;
-    angle?: number;
-  }
-
-  interface SegmentOption {
-    side: string;
-    orientationX: number;
-    orientationY: number;
-    angle?: number;
-    angleBetweenFirstSegmentOptionAndAttachedEdge?: number;
-    angleBetweenFirstSegmentOptionAndReferencedEdge?: number;
-  }
-
-  firstSegmentOptions.forEach(function(firstSegmentOption) {
-    var angleOption = Math.atan2(
-      firstSegmentOption.orientationY,
-      firstSegmentOption.orientationX
-    );
-    var angleBetweenFirstSegmentOptionAndAttachedEdge;
-
+  const firstSegmentCalculations = SEGMENT_OPTIONS.map(function(segmentOption) {
     /*
 		 *   referenced edge 
 		 *         /
@@ -556,22 +573,45 @@ function getSideEquivalentForLine(
 		 *
 		 */
 
-    var firstSegmentEndPoint = <SegmentPoint>{};
-    firstSegmentEndPoint.x =
-      pointOnEdge.x + DEFAULT_STUB_LENGTH * firstSegmentOption.orientationX;
-    firstSegmentEndPoint.y =
-      pointOnEdge.y + DEFAULT_STUB_LENGTH * firstSegmentOption.orientationY;
-    if (
-      !!referencedEdge &&
-      sameSide(
-        firstPointOfReferencedEdge,
-        lastPointOfReferencedEdge,
+    const firstSegmentEndPoint: SegmentPoint = {
+      x: pointOnEdge.x + DEFAULT_STUB_LENGTH * segmentOption.orientationX,
+      y: pointOnEdge.y + DEFAULT_STUB_LENGTH * segmentOption.orientationY
+    };
+    return {
+      firstPointOfReferencedEdgeSegment,
+      lastPointOfReferencedEdgeSegment,
+      firstSegmentEndPoint,
+      otherPoint,
+      angle: segmentOption.angle,
+      orientationX: segmentOption.orientationX,
+      orientationY: segmentOption.orientationY
+      //{...segmentOption}
+    };
+  })
+    .filter(function({
+      firstPointOfReferencedEdgeSegment,
+      lastPointOfReferencedEdgeSegment,
+      firstSegmentEndPoint,
+      otherPoint
+    }) {
+      return sameSide(
+        firstPointOfReferencedEdgeSegment,
+        lastPointOfReferencedEdgeSegment,
         firstSegmentEndPoint,
-        pointOnShape
-      )
-    ) {
-      angleBetweenFirstSegmentOptionAndAttachedEdge = Math.abs(
-        angleOption - angleFromPointOnEdgeToPointOnShape
+        otherPoint
+      );
+    })
+    .map(function({
+      firstPointOfReferencedEdgeSegment,
+      lastPointOfReferencedEdgeSegment,
+      firstSegmentEndPoint,
+      otherPoint,
+      angle: angle,
+      orientationX: orientationX,
+      orientationY: orientationY
+    }) {
+      let angleBetweenFirstSegmentOptionAndAttachedEdge = Math.abs(
+        angle - angleFromPointOnEdgeToOtherPoint
       );
       if (angleBetweenFirstSegmentOptionAndAttachedEdge > Math.PI) {
         angleBetweenFirstSegmentOptionAndAttachedEdge =
@@ -579,51 +619,60 @@ function getSideEquivalentForLine(
       }
 
       var angleBetweenFirstSegmentOptionAndReferencedEdge = Math.abs(
-        angleOfReferencedEdge - angleOption
+        angleOfReferencedEdge - angle
       );
       if (angleBetweenFirstSegmentOptionAndReferencedEdge > Math.PI) {
         angleBetweenFirstSegmentOptionAndReferencedEdge =
           2 * Math.PI - angleBetweenFirstSegmentOptionAndReferencedEdge;
       }
 
-      firstSegmentOption.angle = angleOption;
-      firstSegmentOption.angleBetweenFirstSegmentOptionAndAttachedEdge = angleBetweenFirstSegmentOptionAndAttachedEdge;
-      firstSegmentOption.angleBetweenFirstSegmentOptionAndReferencedEdge = angleBetweenFirstSegmentOptionAndReferencedEdge;
-      firstSegmentCalculations.push(firstSegmentOption);
-    } else {
-      angleBetweenFirstSegmentOptionAndAttachedEdge = null;
-    }
-  });
+      return {
+        //angle,
+        //angleBetweenFirstSegmentOptionAndReferencedEdge,
+        angleBetweenFirstSegmentOptionAndAttachedEdge,
+        angleFromPerpendicularToReferencedEdge: Math.abs(
+          angleBetweenFirstSegmentOptionAndReferencedEdge - Math.PI / 2
+        ),
+        orientationX,
+        orientationY
+      };
+    })
+    // sorting so that the first segment option is the one that is
+    // most nearly perpendicular to the referenced edge
+    .sort(function(a, b) {
+      if (
+        a.angleFromPerpendicularToReferencedEdge >
+        b.angleFromPerpendicularToReferencedEdge
+      ) {
+        return 1;
+      } else if (
+        a.angleFromPerpendicularToReferencedEdge <
+        b.angleFromPerpendicularToReferencedEdge
+      ) {
+        return -1;
+      } else if (
+        a.angleBetweenFirstSegmentOptionAndAttachedEdge >
+        b.angleBetweenFirstSegmentOptionAndAttachedEdge
+      ) {
+        return 1;
+      } else if (
+        a.angleBetweenFirstSegmentOptionAndAttachedEdge <
+        b.angleBetweenFirstSegmentOptionAndAttachedEdge
+      ) {
+        return -1;
+      } else {
+        return 0;
+      }
+    });
 
-  if (!!firstSegmentCalculations && firstSegmentCalculations.length > 0) {
-    if (!!referencedEdge) {
-      // note we don't currently have logic to correctly determine the angle of the referenced edge if it's not straight.
-      // sort so that first segment option closest to perpendicular to referenced edge is first
-      firstSegmentCalculations.sort(function(a, b) {
-        return (
-          Math.abs(
-            a.angleBetweenFirstSegmentOptionAndReferencedEdge - Math.PI / 2
-          ) -
-          Math.abs(
-            b.angleBetweenFirstSegmentOptionAndReferencedEdge - Math.PI / 2
-          )
-        );
-      });
-    } else {
-      // sort so that first segment option closest to attached edge is first
-      firstSegmentCalculations.sort(function(a, b) {
-        return (
-          a.angleBetweenFirstSegmentOptionAndAttachedEdge -
-          b.angleBetweenFirstSegmentOptionAndAttachedEdge
-        );
-      });
-    }
+  let selectedFirstSegmentCalculation;
+  if (firstSegmentCalculations.length > 0) {
     selectedFirstSegmentCalculation = firstSegmentCalculations[0];
   } else {
     console.warn(
-      'The pathway author appears to have specified that the edges should cross but did not specify how to do it, so we arbitrarily choose to emanate from the "top"'
+      "The pathway author appears to have specified that the edges should cross but did not specify how to do it, so we arbitrarily choose to emanate from the top"
     );
-    selectedFirstSegmentCalculation = firstSegmentOptions[0];
+    selectedFirstSegmentCalculation = SEGMENT_OPTIONS[0];
   }
 
   pointOnEdge.attachmentDisplay.orientation = [
@@ -751,20 +800,19 @@ function getDataPositionAndOrientationMapping(
   return result;
 }
 
-function entityIdReferencedByEdgeIsPvjsonNode(
-  entityIdReferencedByEdge: PvjsonNode | PvjsonEdge,
-  entityReferencedByPoint
-): entityIdReferencedByEdge is PvjsonNode {
-  //return !intersectsLSV(["Interaction", "GraphicalLine"], entityReferencedByEdge.type);
-  return entityReferencedByPoint.type.indexOf("Anchor") === -1;
-}
-
 export function preprocessGPML(
   Edge: GPML2013a.InteractionType | GPML2013a.GraphicalLineType
 ): GPMLElement {
-  Edge["GraphRef"] = Edge.Graphics.Point
-    .filter(p => p.GraphRef && p.GraphRef["_exists"] !== false)
+  const isAttachedToOrVia = Edge.Graphics.Point
+    .filter(p => p.GraphRef && isDefinedCXML(p.GraphRef))
     .map(p => p.GraphRef);
+
+  if (isAttachedToOrVia.length > 0) {
+    // In pvjson, an edge attaches directly to another entity (Node, Edge, Group),
+    // not to an anchor.
+    // If the edge attaches to another edge, it does so VIA an anchor.
+    Edge["isAttachedToOrVia"] = isAttachedToOrVia;
+  }
   return Edge;
 }
 
@@ -776,11 +824,12 @@ export function postprocessPVJSON(
 
   const pointCount = points.length;
   let index = 0;
-  const explicitPoints = map(function(point) {
+  pvjsonEdge.isAttachedTo = [];
+  const explicitPoints = map(function(point: typeof GPMLPoint) {
     const { ArrowHead, GraphRef, RelX, RelY, X, Y } = point;
     const explicitPoint: Point = {} as Point;
 
-    if (ArrowHead._exists !== false) {
+    if (isDefinedCXML(ArrowHead)) {
       // NOTE: side effects below
       if (index === 0) {
         pvjsonEdge.markerStart = ArrowHead;
@@ -789,7 +838,7 @@ export function postprocessPVJSON(
       }
     }
 
-    if (typeof X !== "undefined") {
+    if (isDefinedCXML(X)) {
       explicitPoint.x = X;
       explicitPoint.y = Y;
     }
@@ -801,24 +850,11 @@ export function postprocessPVJSON(
     // a "burr" that is always stuck (isAttachedTo) the other edge.
     const entityReferencedByPoint =
       referencedEntities &&
-      GraphRef &&
+      isDefinedCXML(GraphRef) &&
       (referencedEntities[GraphRef] as PvjsonNode);
 
     if (entityReferencedByPoint) {
-      /*
-      let entityIdReferencedByEdge;
-			if (entityReferencedByPoint.type.indexOf(
-        "Anchor"
-      ) > -1) {
-				entityIdReferencedByEdge = entityReferencedByPoint.isAttachedTo;
-			} else {
-				entityIdReferencedByEdge = entityReferencedByPoint.id;
-			}
-			//*/
-
-      const entityIdReferencedByEdge = entityReferencedByPoint.type.indexOf(
-        "Anchor"
-      ) > -1
+      const entityIdReferencedByEdge = isGPMLAnchor(entityReferencedByPoint)
         ? entityReferencedByPoint.isAttachedTo
         : entityReferencedByPoint.id;
 
@@ -826,14 +862,16 @@ export function postprocessPVJSON(
       // When we do this, we say that the POINT attaches to an ANCHOR on the other edge,
       // but the EDGE attaches to the other EDGE, never the anchor.
       explicitPoint.isAttachedTo = entityReferencedByPoint.id;
-      // WARNING: side effects below
-      pvjsonEdge.isAttachedTo = unionLSV(
-        pvjsonEdge.isAttachedTo,
-        entityIdReferencedByEdge
-      ) as string[];
+
+      // WARNING: side effect
+      pvjsonEdge.isAttachedTo.push(entityIdReferencedByEdge);
 
       const entityReferencedByEdge =
         referencedEntities[entityIdReferencedByEdge];
+
+      explicitPoint.attachmentDisplay =
+        explicitPoint.attachmentDisplay ||
+        ({ position: [], orientation: [] } as AttachmentDisplay);
 
       // attachmentDisplay: { position: [x: number, y: number], offset: [xOffset: number, yOffset: number], orientation: [dx: number, dy: number] }
       //
@@ -878,23 +916,20 @@ export function postprocessPVJSON(
       //       offsetX, offsetY are obvious from the name. Notice they are absolute, unlike x,y.
       //       dx, dy are unit vector coordinates of a point that specifies how the edge emanates from the node
 
-      // NOTE: section below only runs for points that are not attached to edges
       if (
-        entityIdReferencedByEdgeIsPvjsonNode(
-          entityReferencedByEdge,
-          entityReferencedByPoint
-        )
+        isPvjsonSingleFreeNode(entityReferencedByEdge) ||
+        isPvjsonGroup(entityReferencedByEdge) ||
+        isPvjsonBurr(entityReferencedByEdge)
       ) {
+        // edge connected to a SingleFreeNode, a Group or a Burr, but NOT another edge or an anchor
         const dataPositionAndOrientationX = getDataPositionAndOrientationMapping(
           RelX,
           "RelX",
           entityReferencedByEdge
         );
-        explicitPoint.attachmentDisplay =
-          explicitPoint.attachmentDisplay || ({} as AttachmentDisplay);
         if (
           !!dataPositionAndOrientationX &&
-          isNumber(dataPositionAndOrientationX.position)
+          isFinite(dataPositionAndOrientationX.position)
         ) {
           explicitPoint.attachmentDisplay.position =
             explicitPoint.attachmentDisplay.position || [];
@@ -902,7 +937,7 @@ export function postprocessPVJSON(
             dataPositionAndOrientationX.position;
           if (
             dataPositionAndOrientationX.hasOwnProperty("orientation") &&
-            isNumber(dataPositionAndOrientationX.orientation)
+            isFinite(dataPositionAndOrientationX.orientation)
           ) {
             explicitPoint.attachmentDisplay.orientation =
               explicitPoint.attachmentDisplay.orientation ||
@@ -930,7 +965,7 @@ export function postprocessPVJSON(
           explicitPoint.attachmentDisplay || ({} as AttachmentDisplay);
         if (
           !!dataPositionAndOrientationY &&
-          isNumber(dataPositionAndOrientationY.position)
+          isFinite(dataPositionAndOrientationY.position)
         ) {
           explicitPoint.attachmentDisplay.position =
             explicitPoint.attachmentDisplay.position || [];
@@ -938,7 +973,7 @@ export function postprocessPVJSON(
             dataPositionAndOrientationY.position;
           if (
             dataPositionAndOrientationY.hasOwnProperty("orientation") &&
-            isNumber(dataPositionAndOrientationY.orientation)
+            isFinite(dataPositionAndOrientationY.orientation)
           ) {
             explicitPoint.attachmentDisplay.orientation =
               explicitPoint.attachmentDisplay.orientation ||
@@ -960,6 +995,18 @@ export function postprocessPVJSON(
               dataPositionAndOrientationY.offset;
           }
         }
+      } else if (isGPMLAnchor(entityReferencedByPoint)) {
+        // edge is connected to another edge via an anchor
+        explicitPoint.attachmentDisplay.position =
+          entityReferencedByPoint.attachmentDisplay.position;
+      } else {
+        console.error("entityReferencedByPoint:");
+        console.error(entityReferencedByPoint);
+        console.error("entityReferencedByEdge:");
+        console.error(entityReferencedByEdge);
+        throw new Error(
+          "Edge or Point attached to unexpected entity (logged above)."
+        );
       }
     }
 

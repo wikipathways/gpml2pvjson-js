@@ -6,7 +6,11 @@ import {
   isFinite,
   toPairs
 } from "lodash/fp";
-import { isPvjsonEdge, isPvjsonNode, unionLSV } from "./gpml-utilities";
+import {
+  isPvjsonEdge,
+  isPvjsonSingleFreeNode,
+  unionLSV
+} from "./gpml-utilities";
 import * as GPML2013aGroupMappingsByStyle from "./GPML2013aGroupMappingsByStyle.json";
 // Only imported for its type
 import { Processor } from "./Processor";
@@ -31,11 +35,11 @@ export function getGroupDimensions(
     throw new Error("Invalid borderWidth value: ${borderWidth}");
   }
   const dimensions = containedEntities
-    .filter(entity => isPvjsonNode(entity) || isPvjsonEdge(entity))
+    .filter(entity => isPvjsonSingleFreeNode(entity) || isPvjsonEdge(entity))
     .reduce(
       function(
         { runningDimensions, topLeftCorner, bottomRightCorner },
-        entity: PvjsonNode | PvjsonEdge
+        entity: PvjsonSingleFreeNode | PvjsonEdge
       ) {
         const { zIndex } = entity;
         const zIndexIsFinite = isFinite(zIndex);
@@ -157,9 +161,9 @@ export const preprocessGPML = curry(function(
 });
 
 export function postprocessPVJSON(
-  containedEntities: (PvjsonNode | PvjsonEdge)[],
-  group: PvjsonNode
-): PvjsonNode {
+  containedEntities: (PvjsonSingleFreeNode | PvjsonEdge)[],
+  group: PvjsonGroup
+): PvjsonGroup {
   return assign(
     group,
     getGroupDimensions(group.padding, group.borderWidth, containedEntities)

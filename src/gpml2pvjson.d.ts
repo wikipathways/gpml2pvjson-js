@@ -59,48 +59,11 @@ declare type GPML_ATTRIBUTE_NAMES_AND_TYPES = {
 
 declare type GPMLElement = Record<string, any>;
 
-interface PathwayStarter {
-  backgroundColor: string;
-  contains: string[];
-  height: number;
-  type: string[];
-  width: number;
-  author?: string;
-  comments?: Comment[];
-  "@context"?: any;
-  dataSource?: string;
-  email?: string;
-  id?: string;
-  isSimilarTo?: string;
-  lastModified?: string;
-  license?: string;
-  maintainer?: string;
-  name?: string;
-  organism?: string;
-}
-
-interface Pathway extends PathwayStarter {
-  "@context": any;
-  name: string;
-}
-
 /* pvjson */
 
-// decorations or other small elements attached to another element,
-// e.g., GPML States and Anchors
-interface PvjsonBurr {
-  id: string;
-  drawAs: number;
-  gpmlElementName: string;
-  type: string[];
-  kaavioType: string;
-  isAttachedTo: string;
-  attachmentDisplay?: AttachmentDisplay;
-}
-
 interface Point {
-  x?: number;
-  y?: number;
+  x: number;
+  y: number;
   isAttachedTo?: string;
   attachmentDisplay?: AttachmentDisplay;
 }
@@ -122,8 +85,8 @@ interface AttachmentDisplay {
   // position takes two numbers for GPML States and Points, but
   // just one for GPML Anchors, which are attached to edges.
   position: number[];
+  orientation: [number, number];
   offset?: [number, number];
-  orientation?: [number, number];
 }
 
 interface Comment {
@@ -169,6 +132,7 @@ type PvjsonEntityMergedStringProperties =
   | "standardName"
   | "strokeDasharray"
   | "textAlign"
+  | "textContent"
   | "verticalAlign"
   | "wpInteractionType"
   | "wpType"
@@ -204,7 +168,7 @@ declare type PvjsonEntityMergedWithNumberProperties = {
 type PvjsonEntityMergedStringArrayProperties =
   | "authors"
   | "burrs"
-  | "citation"
+  | "citations"
   | "contains"
   | "lineStyle"
   | "sboInteractionType"
@@ -224,7 +188,9 @@ declare type PvjsonEntityMerged = PvjsonEntityMergedWithStringProperties &
     points?: Point[];
   };
 
-type PvjsonNodeRequiredKeys =
+// Includes GPML DataNode, Shape and Label
+type PvjsonSingleFreeNodeRequiredKeys =
+  | "backgroundColor"
   | "borderWidth"
   | "color"
   | "drawAs"
@@ -238,20 +204,109 @@ type PvjsonNodeRequiredKeys =
   | "x"
   | "y"
   | "zIndex";
-type PvjsonNodeOptionalKeys =
-  | "attachmentDisplay"
+type PvjsonSingleFreeNodeOptionalKeys =
   | "burrs"
+  | "citations"
+  | "comments"
   | "cellularComponent"
-  | "contains"
   | "dbId"
   | "dbConventionalName"
+  | "fontWeight"
   | "isPartOf"
   | "rotation"
-  | "strokeDasharray";
-type PvjsonNode = { [K in PvjsonNodeRequiredKeys]: PvjsonEntityMerged[K] } &
-  { [K in PvjsonNodeOptionalKeys]?: PvjsonEntityMerged[K] } & {
-    isAttachedTo?: string;
+  | "strokeDasharray"
+  | "textAlign"
+  | "verticalAlign";
+type PvjsonSingleFreeNode = {
+  [K in PvjsonSingleFreeNodeRequiredKeys]: PvjsonEntityMerged[K]
+} &
+  { [K in PvjsonSingleFreeNodeOptionalKeys]?: PvjsonEntityMerged[K] };
+
+type PvjsonGroupRequiredKeys =
+  | "backgroundColor"
+  | "borderWidth"
+  | "color"
+  | "contains"
+  | "drawAs"
+  | "height"
+  | "id"
+  | "gpmlElementName"
+  | "kaavioType"
+  | "padding"
+  | "type"
+  | "width"
+  | "x"
+  | "y"
+  | "zIndex";
+type PvjsonGroupOptionalKeys =
+  | "burrs"
+  | "cellularComponent"
+  | "citations"
+  | "comments"
+  | "dbId"
+  | "dbConventionalName"
+  | "strokeDasharray"
+  | "textContent";
+type PvjsonGroup = { [K in PvjsonGroupRequiredKeys]: PvjsonEntityMerged[K] } &
+  { [K in PvjsonGroupOptionalKeys]?: PvjsonEntityMerged[K] };
+
+type PathwayStarterRequiredKeys = "fontWeight" | "textAlign" | "verticalAlign";
+type PathwayStarter = PvjsonGroup &
+  { [K in PathwayStarterRequiredKeys]: PvjsonEntityMerged[K] } & {
+    // NOTE: the alignment and text properties only apply contents of current element.
+    // They do not affect children.
+    fontWeight: "bold";
+    textAlign: "left";
+    verticalAlign: "top";
+    "@context"?: any;
+    author?: string;
+    dataSource?: string;
+    email?: string;
+    id?: string;
+    isSimilarTo?: string;
+    lastModified?: string;
+    license?: string;
+    maintainer?: string;
+    name?: string;
+    organism?: string;
   };
+
+interface Pathway extends PathwayStarter {
+  "@context": any;
+  name: string;
+}
+
+// decorations or other small elements attached to another element,
+// e.g., GPML States and Anchors
+type PvjsonBurrRequiredKeys =
+  | "attachmentDisplay"
+  | "backgroundColor"
+  | "borderWidth"
+  | "color"
+  | "drawAs"
+  | "height"
+  | "id"
+  | "gpmlElementName"
+  | "kaavioType"
+  | "padding"
+  | "type"
+  | "width"
+  | "x"
+  | "y"
+  | "zIndex";
+type PvjsonBurrOptionalKeys =
+  | "citations"
+  | "comments"
+  | "dbId"
+  | "dbConventionalName"
+  | "rotation"
+  | "strokeDasharray";
+type PvjsonBurr = { [K in PvjsonBurrRequiredKeys]: PvjsonEntityMerged[K] } &
+  { [K in PvjsonBurrOptionalKeys]?: PvjsonEntityMerged[K] } & {
+    isAttachedTo: string;
+  };
+
+type PvjsonNode = PvjsonSingleFreeNode | PvjsonGroup | PvjsonBurr;
 
 type PvjsonEdgeRequiredKeys =
   | "id"
@@ -263,26 +318,25 @@ type PvjsonEdgeRequiredKeys =
   | "zIndex"
   | "type";
 type PvjsonEdgeOptionalKeys =
-  | "burrs"
-  | "dbId"
-  | "dbConventionalName"
-  | "attachmentDisplay"
-  | "strokeDasharray"
-  | "markerStart"
-  | "markerEnd"
-  | "isPartOf"
   | "biopaxType"
-  | "wpInteractionType"
-  | "sboInteractionType"
-  | "dbId"
+  | "burrs"
+  | "citations"
+  | "comments"
+  | "controlled"
+  | "controller"
+  | "controlType"
   | "conversionDirection"
   | "dbConventionalName"
-  | "participants"
-  | "controlType"
-  | "controller"
-  | "controlled"
+  | "dbId"
+  | "isPartOf"
   | "left"
-  | "right";
+  | "markerEnd"
+  | "markerStart"
+  | "participants"
+  | "right"
+  | "sboInteractionType"
+  | "strokeDasharray"
+  | "wpInteractionType";
 type PvjsonEdge = { [K in PvjsonEdgeRequiredKeys]: PvjsonEntityMerged[K] } &
   { [K in PvjsonEdgeOptionalKeys]?: PvjsonEntityMerged[K] } & {
     //explicitPoints?: any;
@@ -293,8 +347,8 @@ type PvjsonEdge = { [K in PvjsonEdgeRequiredKeys]: PvjsonEntityMerged[K] } &
 type PvjsonInteractionRequiredKeys =
   | "biopaxType"
   | "gpmlElementName"
-  | "wpInteractionType"
-  | "sboInteractionType";
+  | "sboInteractionType"
+  | "wpInteractionType";
 type PvjsonInteraction = PvjsonEdge &
   { [K in PvjsonInteractionRequiredKeys]: PvjsonEntityMerged[K] } & {
     //interactionType: string;
@@ -321,22 +375,21 @@ type PvjsonPublicationXrefRequiredKeys =
   | "kaavioType"
   | "source"
   | "standardName"
+  | "textContent"
   | "type"
   | "year";
-type PvjsonPublicationXrefOptionalKeys =
-  | "displayName"
-  | "dbId"
-  | "dbConventionalName";
+type PvjsonPublicationXrefOptionalKeys = "dbId" | "dbConventionalName";
 type PvjsonPublicationXref = {
   [K in PvjsonPublicationXrefRequiredKeys]: PvjsonEntityMerged[K]
 } &
   { [K in PvjsonPublicationXrefOptionalKeys]?: PvjsonEntityMerged[K] } & {};
 
 type PvjsonEntity =
-  | PvjsonNode
+  | PvjsonSingleFreeNode
+  | PvjsonGroup
+  | PvjsonBurr
   | PvjsonEdge
-  | PvjsonPublicationXref
-  | PvjsonBurr;
+  | PvjsonPublicationXref;
 
 declare type PvjsonEntityMap = {
   // TODO this could likely be improved
@@ -453,7 +506,7 @@ declare type jsonldListSetValue =
 //	'rotation',
 //	'comment',
 //	'type',
-//	'citation',
+//	'citations',
 //];
 //
 //const PATHWAY_PROPS: ReadonlyArray<keyof PvjsonEntity> = COMMON_PROPS.concat([

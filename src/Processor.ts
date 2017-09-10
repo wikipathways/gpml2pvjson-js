@@ -37,14 +37,14 @@ import * as GPML2013aValueConverters from "./GPML2013aValueConverters";
 const GPML_ELEMENT_NAME_TO_KAAVIO_TYPE = {
   Anchor: "Burr",
   BiopaxRef: "Citation",
-  DataNode: "Node",
+  DataNode: "SingleFreeNode",
   GraphicalLine: "Edge",
   Group: "Group",
   Interaction: "Edge",
-  Label: "Node",
+  Label: "SingleFreeNode",
   //openControlledVocabulary: "Skip",
   //PublicationXref: "Skip",
-  Shape: "Node",
+  Shape: "SingleFreeNode",
   State: "Burr"
 };
 
@@ -146,14 +146,31 @@ export class Processor {
     entityMap: PvjsonEntityMap;
   } = {
     pathway: {
-      contains: [],
-      height: 0,
-      name: "New Pathway",
-      width: 0,
       // NOTE: GPML does not contain a way to express background color.
       // It's always just white.
       backgroundColor: "white",
-      type: ["Pathway"]
+      borderWidth: 0,
+      color: "white",
+      contains: [],
+      drawAs: "Rectangle",
+      gpmlElementName: "Pathway",
+      height: 0,
+      // it appears type = {id: string} & type = {id?: string} makes id required.
+      // TODO can we override that just for PathwayStarter?
+      id: undefined,
+      kaavioType: "Group",
+      name: "New Pathway",
+      // TODO what should the padding be?
+      padding: 5,
+      type: ["Pathway"],
+      width: 0,
+      x: 0,
+      y: 0,
+      zIndex: -Infinity,
+      // NOTE: these properties only apply contents of current element. They do not affect children.
+      fontWeight: "bold",
+      textAlign: "left",
+      verticalAlign: "top"
     },
     entityMap: {}
   };
@@ -205,10 +222,14 @@ export class Processor {
     });
 
     pvjsonEntityLatestStream
-      .doto(function(pvjsonEntity: PvjsonNode | PvjsonEdge) {
-        const { id, isAttachedTo, isPartOf, zIndex } = pvjsonEntity;
-        //console.log("Latest");
-        //console.log(pvjsonEntity);
+      .doto(function(
+        pvjsonEntity:
+          | PvjsonSingleFreeNode
+          | PvjsonGroup
+          | PvjsonBurr
+          | PvjsonEdge
+      ) {
+        const { id, zIndex } = pvjsonEntity;
 
         graphIdToZIndex[id] = zIndex;
         promisedPvjsonEntityLatestByGraphId[id] = Promise.resolve(pvjsonEntity);

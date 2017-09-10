@@ -1,6 +1,6 @@
 {
   "name": "gpml2pvjson",
-  "version": "2.0.0-beta.21",
+  "version": "2.0.0-beta.22",
   "engines": {
     "node": ">=7.0.0"
   },
@@ -14,7 +14,7 @@
     "compile:xsd": "rm -rf cache/* xmlns/* && cxsd https://cdn.rawgit.com/ariutta/GPML/9a8cb502c8745058c0611106f33a0f383819b3f0/GPML2013a.xsd",
     "compile:es5": "tsc --project tsconfig.json && echo ok || echo not ok",
     "copyJSON": "cp src/*.json lib/ && echo ok || echo not ok",
-    "prepare": "npm run compile",
+    "prepare": "npm run build",
     "test": "echo \"TODO: These tests are only making sure the converter doesn't throw any errors, but it would be better to compare the actual outputs against validated expected outputs.\" && npm-run-all test:*",
     "test:multiple": "for f in ./test/input/*.gpml{,.xml}; do echo \"Testing converter against $f\" && WPID=`echo \"$f\" | sed \"s/.*_WP/WP/\" | sed \"s/_.*.gpml//\"`; cat \"$f\" | bin/gpml2pvjson --id \"http://identifiers.org/wikipathways/\"$WPID | jq . > /dev/null; done",
     "test:chunked": "curl --limit-rate 10K \"http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=xml\" | xpath \"*/ns1:data/text()\" | base64 --decode | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 | jq . > /dev/null",
@@ -36,6 +36,7 @@
     "immutable-assign": "^1.0.34",
     "lodash": "^4.17.4",
     "ndjson": "^1.5.0",
+    "point-at-length": "^1.0.2",
     "rgbcolor": "^1.0.0",
     "source-map-support": "^0.4.17"
   },

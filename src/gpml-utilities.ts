@@ -48,23 +48,42 @@ export function isPvjsonBurr(entity: PvjsonEntity): entity is PvjsonBurr {
   return intersectsLSV(entity.type, "Burr");
 }
 
-export function isPvjsonGroup(entity: PvjsonEntity): entity is PvjsonNode {
+export function isPvjsonGroup(entity: PvjsonEntity): entity is PvjsonGroup {
   return (
     entity.hasOwnProperty("contains") && intersectsLSV(entity.type, "Group")
   );
 }
 
-export function isPvjsonEdge(entity: PvjsonEntity): entity is PvjsonEdge {
-  return entity.hasOwnProperty("points");
+export function isPvjsonSingleFreeNode(
+  entity: PvjsonEntity
+): entity is PvjsonSingleFreeNode {
+  return entity.kaavioType === "SingleFreeNode";
 }
 
 export function isPvjsonNode(entity: PvjsonEntity): entity is PvjsonNode {
+  return ["SingleFreeNode", "Burr", "Group"].indexOf(entity.kaavioType) > -1;
+  /*
   return (
     entity.hasOwnProperty("x") &&
     entity.hasOwnProperty("y") &&
     entity.hasOwnProperty("width") &&
     entity.hasOwnProperty("height")
   );
+	//*/
+}
+
+export function isPvjsonEdge(entity: PvjsonEntity): entity is PvjsonEdge {
+  return entity.hasOwnProperty("points");
+}
+
+export function isPvjsonEdgeOrBurr(
+  entity: PvjsonEntity
+): entity is PvjsonEdge | PvjsonBurr {
+  return isPvjsonEdge(entity) || isPvjsonBurr(entity);
+}
+
+export function isGPMLAnchor(entity: PvjsonEntity): entity is PvjsonBurr {
+  return entity.gpmlElementName === "Anchor";
 }
 
 export const sortByMap = curry(function(
