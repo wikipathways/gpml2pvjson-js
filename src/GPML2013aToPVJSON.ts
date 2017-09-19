@@ -11,7 +11,9 @@ import {
   defaults,
   difference,
   findIndex,
+  flatten,
   flow,
+  intersection,
   isArray,
   isEmpty,
   isObject,
@@ -86,8 +88,8 @@ iassign.setOption({
 });
 
 interface SortUnsortedAcc {
+  sortedIds: string[];
   unsorted: (PvjsonNode | PvjsonEdge)[];
-  tranches: (PvjsonNode | PvjsonEdge)[][];
 }
 interface ReferencedEntitiesMap {
   [key: string]: (PvjsonNode | PvjsonEdge);
@@ -452,12 +454,13 @@ export function GPML2013aToPVJSON(
   function postprocessAll(
     s
   ): Highland.Stream<(PvjsonSingleFreeNode | PvjsonEdge)> {
+    /*
     // We are sorting the elements by the order in which we must do their
     // post-processing, e.g., if one edge is attached to another edge via
     // an anchor, we must post-process the edge with the anchor before we
     // post-process the other edge.
     const isProcessableTests = [
-      curry(function(tranche, pvjsonEntity) {
+      curry(function(sortedIds: string[], pvjsonEntity: PvjsonEntity) {
         // In this test, we ensure the entity
         // 1) is not a group AND
         // 2) is not attached to a group and not to an edge
@@ -466,7 +469,10 @@ export function GPML2013aToPVJSON(
 
         return (
           pvjsonEntity.gpmlElementName !== "Group" &&
-          unionLSV(pvjsonEntity["isAttachedToOrVia"], pvjsonEntity.isAttachedTo)
+          unionLSV(
+            pvjsonEntity["isAttachedToOrVia"],
+            pvjsonEntity["isAttachedTo"]
+          )
             .map(
               (isAttachedToOrViaId: string) =>
                 processor.output.entityMap[isAttachedToOrViaId].gpmlElementName
@@ -482,7 +488,7 @@ export function GPML2013aToPVJSON(
             ).length === 0
         );
       }),
-      curry(function(tranche, pvjsonEntity) {
+      curry(function(sortedIds: string[], pvjsonEntity: PvjsonEntity) {
         const gpmlElementName = pvjsonEntity.gpmlElementName;
         if (
           ["Interaction", "GraphicalLine", "State", "Anchor"].indexOf(
@@ -493,89 +499,82 @@ export function GPML2013aToPVJSON(
           // All entities to which this entity is attached must be processable
           // before it is itself processable.
           // That means all entities to which this entity is attached to must
-          // be available in this tranche (TODO how about previous tranches?).
+          // be processed before it can be processed.
           const isAttachedToIds = unionLSV(
-            pvjsonEntity.isAttachedTo,
+            pvjsonEntity["isAttachedTo"],
             pvjsonEntity["isAttachedToOrVia"]
           ) as string[];
-          const isAttachedToInTrancheIds = isAttachedToIds.filter(
-            // entity with this id is in this tranche
-            isAttachedToId => tranche.indexOf(isAttachedToId) > -1
+          const isAttachedToInSortedIds = isAttachedToIds.filter(
+            // entity with this id is sortedIds
+            isAttachedToId => sortedIds.indexOf(isAttachedToId) > -1
           );
-          /*
-            .map(isAttachedToId => processor.output.entityMap[isAttachedToId])
-            .filter(
-              candidateEntity => tranche.indexOf(candidateEntity.id) > -1
-            );
-						//*/
-          // Does this tranche contain all the entities to which this entity is attached?
-          return isAttachedToIds.length === isAttachedToInTrancheIds.length;
+          return isAttachedToIds.length === isAttachedToInSortedIds.length;
         } else if (gpmlElementName === "Group") {
           // is processable when group does not contain an entity that is not processable
           return (
-            arrayify(pvjsonEntity.contains)
+            arrayify(pvjsonEntity["contains"])
               .map(isAttachedToId => processor.output.entityMap[isAttachedToId])
               .filter(
-                candidateEntity => tranche.indexOf(candidateEntity.id) > -1
+                candidateEntity => sortedIds.indexOf(candidateEntity.id) > -1
               ).length > 0
           );
         }
       })
     ];
+		//*/
 
-    const TEST_COUNT = isProcessableTests.length;
+    function sortUnsortedRecursive({ sortedIds, unsorted }: SortUnsortedAcc) {
+      if (unsorted.length === 0) {
+        return { sortedIds, unsorted };
+      }
+      return sortUnsortedRecursive(sortUnsortedOnce({ sortedIds, unsorted }));
+    }
 
-    function tryToSortUnsorted(
-      { unsorted, tranches }: SortUnsortedAcc,
-      pvjsonEntity: PvjsonNode | PvjsonEdge
-    ) {
-      unsorted.push(pvjsonEntity);
-
+    function sortUnsortedOnce({ sortedIds, unsorted }: SortUnsortedAcc) {
       let [sortedOnThisIteration, stillUnsorted] = partition(function(
         pvjsonEntity
       ) {
-        // NOTE: I think this works because we're using ".sequence()" in
-        // the pvjsonEntityStream. Otherwise, I think the entityMap would
-        // be filled up too soon or in the wrong order.
+        const dependencies = unionLSV(
+          pvjsonEntity.contains,
+          pvjsonEntity["isAttachedToOrVia"],
+          pvjsonEntity.isAttachedTo
+        );
+
         return (
-          unionLSV(
-            pvjsonEntity.contains,
-            pvjsonEntity["isAttachedToOrVia"],
-            pvjsonEntity.isAttachedTo
-          )
+          /*
+          dependencies
             .map((id: string) => processor.output.entityMap[id])
-            .indexOf(undefined) === -1
+            .indexOf(undefined) === -1 &&
+					//*/
+          intersection(dependencies, sortedIds).length === dependencies.length
         );
       }, unsorted);
 
-      let testIndex;
-      // TODO Is it possible one entity could have contained or attached
-      // elements from different tranches?
-      // I think we need to do more of a running check, not just tranche by
-      // tranche.
-      sortedOnThisIteration.forEach(function(x) {
-        const matchingTranchIndex = findIndex(function(tranche) {
-          const matchingTestIndex = findIndex(function(isProcessableTest) {
-            return isProcessableTest(tranche, x);
-          }, isProcessableTests);
-          if (matchingTestIndex > -1) {
-            testIndex = matchingTestIndex;
-          }
-          return matchingTestIndex > -1;
-        }, tranches);
-        if (matchingTranchIndex > -1 || testIndex > -1) {
-          const targetTranchIndex =
-            (matchingTranchIndex > -1 ? matchingTranchIndex : tranches.length) +
-            (testIndex > -1 ? testIndex : TEST_COUNT);
-          tranches[targetTranchIndex] = tranches[targetTranchIndex] || [];
-          tranches[targetTranchIndex].push(x);
-        } else {
-          stillUnsorted.push(x);
-        }
-      });
+      sortedOnThisIteration
+        /*
+				.map(function(pvjsonEntity) {
+					const testIndex = findIndex(function(isProcessableTest) {
+						return isProcessableTest(sortedIds, pvjsonEntity);
+					}, isProcessableTests);
+					return { testIndex, pvjsonEntity };
+				})
+				.sort(function(a, b) {
+					if (a.testIndex < b.testIndex) {
+						return -1;
+					} else if (a.testIndex > b.testIndex) {
+						return 1;
+					} else {
+						return 0;
+					}
+				})
+        .map(x => x["pvjsonEntity"]["id"])
+				//*/
+        .forEach(function(pvjsonEntity) {
+          sortedIds.push(pvjsonEntity.id);
+        });
 
       return {
-        tranches: tranches,
+        sortedIds: sortedIds,
         unsorted: stillUnsorted
       };
     }
@@ -586,15 +585,23 @@ export function GPML2013aToPVJSON(
         // pvjson as it's being converted?
         .reduce(
           {
-            unsorted: [],
-            tranches: [[]]
+            sortedIds: [],
+            unsorted: []
           },
-          tryToSortUnsorted
+          function(
+            { sortedIds, unsorted }: SortUnsortedAcc,
+            pvjsonEntity: PvjsonNode | PvjsonEdge
+          ) {
+            unsorted.push(pvjsonEntity);
+            return sortUnsortedOnce({ sortedIds, unsorted });
+          }
         )
-        .map(function(acc) {
-          const { tranches, unsorted } = acc;
-          tranches.push(unsorted);
-          return hl(tranches.reduce((acc, tranche) => acc.concat(tranche), []));
+        .map(sortUnsortedRecursive)
+        .map(function(acc: SortUnsortedAcc) {
+          const { sortedIds, unsorted } = acc;
+          return sortedIds
+            .map((id: string): PvjsonEntity => processor.output.entityMap[id])
+            .concat(unsorted);
         })
         .sequence()
     );
@@ -610,6 +617,7 @@ export function GPML2013aToPVJSON(
     groupStream
   ])
     .sequence()
+    // TODO should this be happening BEFORE the postprocessing step?
     .doto(setPvjsonEntity)
     .through(postprocessAll)
     .flatMap(function(
@@ -685,91 +693,110 @@ export function GPML2013aToPVJSON(
           finalSortedStream = hl([processor.output]);
         }
       } else if (isPvjsonGroup(pvjsonEntity)) {
-        //finalSortedStream = hl([pvjsonEntity]);
-        const graphIdOfGroup = pvjsonEntity.id;
-        finalSortedStream = hl(
-          pvjsonEntity.contains.map(
-            containedId => processor.output.entityMap[containedId]
+        // We still have some GPML files with empty Groups and/or nested Groups
+        // floating around, but we don't process them, because that's a
+        // curation issue, not a gpml2pvjson issue.
+        const containedCount = pvjsonEntity.contains.length;
+        if (containedCount === 0 || pvjsonEntity.hasOwnProperty("groupRef")) {
+          if (containedCount === 0) {
+            console.warn(pvjsonEntity);
+            console.warn(
+              `Warning: Group logged above in pathway ${processor.output.pathway
+                .id} is empty.`
+            );
+          }
+          if (pvjsonEntity.hasOwnProperty("groupRef")) {
+            console.warn(pvjsonEntity);
+            console.warn(
+              `Warning: Group logged above in pathway ${processor.output.pathway
+                .id} is nested.`
+            );
+          }
+          finalSortedStream = hl([processor.output]);
+        } else {
+          const graphIdOfGroup = pvjsonEntity.id;
+          finalSortedStream = hl(
+            pvjsonEntity.contains.map(
+              containedId => processor.output.entityMap[containedId]
+            )
           )
-        )
-          .collect()
-          // PathVisio still sometimes makes empty Groups,
-          // but we don't want them.
-          .filter(groupedEntities => groupedEntities.length > 0)
-          .map(function(
-            groupedEntities: (PvjsonSingleFreeNode | PvjsonEdge)[]
-          ): PvjsonGroup {
-            const pvjsonGroup = postprocessGroupPVJSON(
-              groupedEntities,
-              pvjsonEntity
-            );
-            const graphIdToZIndex = processor.graphIdToZIndex;
-            pvjsonGroup.contains = sortBy(
-              [
-                function(thisEntityId) {
-                  return graphIdToZIndex[thisEntityId];
+            .filter(groupedEntity => groupedEntity.kaavioType !== "Group")
+            .collect()
+            .map(function(
+              groupedEntities: (PvjsonSingleFreeNode | PvjsonEdge)[]
+            ): PvjsonGroup {
+              const pvjsonGroup = postprocessGroupPVJSON(
+                groupedEntities,
+                pvjsonEntity
+              );
+              const graphIdToZIndex = processor.graphIdToZIndex;
+              pvjsonGroup.contains = sortBy(
+                [
+                  function(thisEntityId) {
+                    return graphIdToZIndex[thisEntityId];
+                  }
+                ],
+                groupedEntities.map(x => x.id)
+              );
+
+              const { id, x, y } = pvjsonGroup;
+
+              const groupedEntitiesFinal = groupedEntities.map(function(
+                groupedEntity
+              ) {
+                if (isPvjsonEdge(groupedEntity)) {
+                  groupedEntity.points = map(groupedEntity.points, function(
+                    point
+                  ) {
+                    point.x -= x;
+                    point.y -= y;
+                    return point;
+                  });
+                } else if (isPvjsonSingleFreeNode(groupedEntity)) {
+                  groupedEntity.height;
+                  groupedEntity.x -= x;
+                  groupedEntity.y -= y;
+                } else {
+                  console.error(groupedEntity);
+                  throw new Error("Unexpected groupedEntity (logged above)");
                 }
-              ],
-              groupedEntities.map(x => x.id)
-            );
+                // NOTE: this is needed for GPML2013a, because GPML2013a uses both
+                // GroupId/GroupRef and GraphId/GraphRef. GPML2017 uses a single
+                // identifier per entity. That identifier can be referenced by
+                // GroupRef and/or GraphRef. Pvjson follows GPML2017 in this, so
+                // we convert from GPML2013a format:
+                //   GroupRef="GROUP_ID_VALUE"
+                // to pvjson format:
+                //   {isPartOf: "GRAPH_ID_VALUE"}
+                groupedEntity.isPartOf = id;
+                return omit(["groupRef"], groupedEntity);
+              });
 
-            const { id, x, y } = pvjsonGroup;
+              groupedEntitiesFinal.forEach(function(pvjsonEntity) {
+                setPvjsonEntity(pvjsonEntity);
+              });
 
-            const groupedEntitiesFinal = groupedEntities.map(function(
-              groupedEntity
-            ) {
-              if (isPvjsonEdge(groupedEntity)) {
-                groupedEntity.points = map(groupedEntity.points, function(
-                  point
-                ) {
-                  point.x -= x;
-                  point.y -= y;
-                  return point;
-                });
-              } else if (isPvjsonSingleFreeNode(groupedEntity)) {
-                groupedEntity.height;
-                groupedEntity.x -= x;
-                groupedEntity.y -= y;
-              } else {
-                console.error(groupedEntity);
-                throw new Error("Unexpected groupedEntity (logged above)");
-              }
-              // NOTE: this is needed for GPML2013a, because GPML2013a uses both
-              // GroupId/GroupRef and GraphId/GraphRef. GPML2017 uses a single
-              // identifier per entity. That identifier can be referenced by
-              // GroupRef and/or GraphRef. Pvjson follows GPML2017 in this, so
-              // we convert from GPML2013a format:
-              //   GroupRef="GROUP_ID_VALUE"
-              // to pvjson format:
-              //   {isPartOf: "GRAPH_ID_VALUE"}
-              groupedEntity.isPartOf = id;
-              return omit(["groupRef"], groupedEntity);
+              setPvjsonEntity(pvjsonGroup);
+
+              processor.output = iassign(
+                processor.output,
+                function(o) {
+                  return o.pathway.contains;
+                },
+                function(contains) {
+                  return insertEntityIdAndSortByZIndex(
+                    difference(contains, groupedEntitiesFinal.map(x => x.id)),
+                    id
+                  );
+                }
+              );
+
+              return pvjsonGroup;
+            })
+            .map(function(pvjsonEntity) {
+              return processor.output;
             });
-
-            groupedEntitiesFinal.forEach(function(pvjsonEntity) {
-              setPvjsonEntity(pvjsonEntity);
-            });
-
-            setPvjsonEntity(pvjsonGroup);
-
-            processor.output = iassign(
-              processor.output,
-              function(o) {
-                return o.pathway.contains;
-              },
-              function(contains) {
-                return insertEntityIdAndSortByZIndex(
-                  difference(contains, groupedEntitiesFinal.map(x => x.id)),
-                  id
-                );
-              }
-            );
-
-            return pvjsonGroup;
-          })
-          .map(function(pvjsonEntity) {
-            return processor.output;
-          });
+        }
       } else {
         setPvjsonEntity(pvjsonEntity);
         processor.output = iassign(

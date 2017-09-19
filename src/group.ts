@@ -130,7 +130,7 @@ export function getGroupDimensions(
     !isFinite(dimensions.width) ||
     !isFinite(dimensions.height)
   ) {
-    console.error(containedEntities);
+    console.error(JSON.stringify(containedEntities, null, "  "));
     throw new Error(
       `Error calculating group dimensions for group members logged above. Cannot calculate one or more of the following: x, y, width, height, zIndex.`
     );
