@@ -44,7 +44,7 @@
       "Padding": 8,
       "ShapeType": "Rectangle",
       "LineStyle": "Broken",
-      "LineThickness": 1,
+      "LineThickness": 0.5,
       "FillColor": "00FF00"
     },
     "type": [

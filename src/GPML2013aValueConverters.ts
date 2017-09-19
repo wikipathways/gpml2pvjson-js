@@ -216,14 +216,25 @@ export const Color = flow(get("Graphics.Color"), gpmlColorToCssColor);
 export function FillColor(gpmlElement) {
   const { FillColor, ShapeType } = gpmlElement.Graphics;
   // If it's a GPML Group, DataNode, Shape, Label or State, it needs a
-  // ShapeType in order for it to have a FillColor.
-  //
-  // A GPML Interaction or GraphicalLine can have a FillColor w/out
-  // a ShapeType.
+  // ShapeType in order for it to have a FillColor, but a
+  // GPML Interaction or GraphicalLine can have a FillColor
+  // without having a ShapeType.
   return (!!ShapeType && ShapeType.toLowerCase() !== "none") ||
     gpmlElement.Graphics.hasOwnProperty("Point")
     ? gpmlColorToCssColor(FillColor)
     : "transparent";
+}
+
+export function LineThickness(gpmlElement) {
+  const { LineThickness, ShapeType } = gpmlElement.Graphics;
+  // If it's a GPML Group, DataNode, Shape, Label or State, it needs a
+  // ShapeType in order for it to have a LineThickness > 0, but a
+  // GPML Interaction or GraphicalLine can have a LineThickness > 0
+  // without having a ShapeType.
+  return (!!ShapeType && ShapeType.toLowerCase() !== "none") ||
+    gpmlElement.Graphics.hasOwnProperty("Point")
+    ? LineThickness
+    : 0;
 }
 
 export function ConnectorType(gpmlElement): string {

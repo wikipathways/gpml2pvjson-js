@@ -95,6 +95,8 @@ interface ReferencedEntitiesMap {
   [key: string]: (PvjsonNode | PvjsonEdge);
 }
 
+export const RECURSION_LIMIT = 1000;
+
 function partitionStream<T>(
   s: Highland.Stream<T>,
   partitioner: (x: T) => boolean
@@ -523,11 +525,21 @@ export function GPML2013aToPVJSON(
     ];
 		//*/
 
-    function sortUnsortedRecursive({ sortedIds, unsorted }: SortUnsortedAcc) {
-      if (unsorted.length === 0) {
+    function sortUnsortedRecursive(
+      { sortedIds, unsorted }: SortUnsortedAcc,
+      i = 0
+    ) {
+      // TODO is there something better we can do than use RECURSION_LIMIT?
+      // WP2037 revision 90015 won't terminate without a limit, but converts
+      // OK with the limit set.
+      if (unsorted.length === 0 || i > RECURSION_LIMIT) {
         return { sortedIds, unsorted };
       }
-      return sortUnsortedRecursive(sortUnsortedOnce({ sortedIds, unsorted }));
+      i += 1;
+      return sortUnsortedRecursive(
+        sortUnsortedOnce({ sortedIds, unsorted }),
+        i
+      );
     }
 
     function sortUnsortedOnce({ sortedIds, unsorted }: SortUnsortedAcc) {
@@ -745,13 +757,11 @@ export function GPML2013aToPVJSON(
                 groupedEntity
               ) {
                 if (isPvjsonEdge(groupedEntity)) {
-                  groupedEntity.points = map(groupedEntity.points, function(
-                    point
-                  ) {
+                  groupedEntity.points = map(function(point) {
                     point.x -= x;
                     point.y -= y;
                     return point;
-                  });
+                  }, groupedEntity.points);
                 } else if (isPvjsonSingleFreeNode(groupedEntity)) {
                   groupedEntity.height;
                   groupedEntity.x -= x;

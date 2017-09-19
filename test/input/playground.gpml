@@ -1,39 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="Rendering Test Protocol for anchors" Version="20130715" Organism="Anopheles gambiae">
-  <Comment Source="WikiPathways-description">This pathway can be deleted once release 36 is shipped.</Comment>
-  <Graphics BoardWidth="652.2518126765515" BoardHeight="692.9037843977742" />
-  <DataNode TextLabel="Metabolite" GraphId="ba19a" Type="Metabolite">
-    <Graphics CenterX="312.0137901181125" CenterY="612.6537843977742" Width="487.86407766990294" Height="100.5" ZOrder="32768" FontSize="10" Valign="Middle" Color="0000ff" />
+<Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="New Pathway" Version="20170919">
+  <Graphics BoardWidth="425.84415584415586" BoardHeight="173.33333333333334" />
+  <DataNode TextLabel="GeneProduct" GraphId="dfb83" Type="GeneProduct" GroupRef="b18cb">
+    <Graphics CenterX="344.5887445887446" CenterY="76.19047619047619" Width="80.0" Height="20.0" ZOrder="32768" FontSize="10" Valign="Middle" />
     <Xref Database="" ID="" />
   </DataNode>
-  <DataNode TextLabel="GeneProduct" GraphId="ca19d" Type="GeneProduct">
-    <Graphics CenterX="543.1974648504645" CenterY="328.0393939617285" Width="158.108695652174" Height="61.18840579710138" ZOrder="32768" FontSize="10" Valign="Middle" />
+  <DataNode TextLabel="Metabolite" GraphId="d766c" Type="Metabolite" GroupRef="b18cb">
+    <Graphics CenterX="355.84415584415586" CenterY="133.33333333333334" Width="80.0" Height="20.0" ZOrder="32768" FontSize="10" Valign="Middle" Color="0000ff" />
     <Xref Database="" ID="" />
   </DataNode>
-  <Interaction GraphId="idc439346d">
-    <Graphics ConnectorType="Curved" ZOrder="12288" LineThickness="1.0">
-      <Point X="230.10968543400892" Y="386.8600613145828" GraphRef="a32cc" RelX="0.0" RelY="0.0" />
-      <Point X="341.4012738853503" Y="349.80117691351796" />
-      <Point X="464.1431170243775" Y="312.7422925124531" GraphRef="ca19d" RelX="-1.0" RelY="-0.5" ArrowHead="Arrow" />
-    </Graphics>
-    <Xref Database="" ID="" />
-  </Interaction>
-  <Interaction GraphId="id785e01ae">
-    <Attribute Key="org.pathvisio.DoubleLineProperty" Value="Double" />
-    <Graphics ZOrder="32769" LineThickness="5.0">
-      <Point X="190.04777070063682" Y="562.4037843977742" GraphRef="ba19a" RelX="-0.5" RelY="-1.0" />
-      <Point X="290.20255753406707" Y="123.54447668979583" GraphRef="fd415" RelX="0.0" RelY="1.0" />
-      <Anchor Position="0.4" Shape="Circle" GraphId="a32cc" />
-      <Anchor Position="0.4" Shape="None" />
-    </Graphics>
-    <Xref Database="" ID="" />
-  </Interaction>
-  <Shape GraphId="d5d4e" GroupRef="b1bd1">
-    <Attribute Key="org.pathvisio.CellularComponentProperty" Value="Endoplasmic Reticulum" />
-    <Graphics CenterX="290.20255753406707" CenterY="83.79447668979583" Width="200.5" Height="55.5" ZOrder="16384" FontSize="10" Valign="Middle" ShapeType="Endoplasmic Reticulum" LineThickness="3.0" Color="c0c0c0" Rotation="0.0" />
-  </Shape>
-  <Group GroupId="b1bd1" GraphId="fd415" Style="Complex" />
+  <Group GroupId="b18cb" Style="Pathway" />
   <InfoBox CenterX="0.0" CenterY="0.0" />
-  <Biopax />
 </Pathway>
 
