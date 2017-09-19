@@ -26,7 +26,23 @@ import {
 } from "lodash/fp";
 import * as hl from "highland";
 
-import { CXMLXPath } from "./topublish/cxml-xpath";
+import { CXMLXPath } from "./spinoffs/cxml-xpath";
+import {
+  InteractionType,
+  PvjsonNode,
+  PvjsonSingleFreeNode,
+  PvjsonBurr,
+  PvjsonEdge,
+  PvjsonGroup,
+  PvjsonEntity,
+  GraphicalLineType,
+  GPMLElement,
+  Pathway,
+  PathwayStarter,
+  PvjsonEntityMap,
+  PvjsonPublicationXref,
+  PvjsonInteraction
+} from "./gpml2pvjson";
 
 import * as GPML2013a from "../xmlns/pathvisio.org/GPML/2013a";
 
@@ -36,7 +52,7 @@ import { Processor } from "./Processor";
 import {
   preprocessGPML as preprocessEdgeGPML,
   postprocessPVJSON as postprocessEdgePVJSON
-} from "./edge";
+} from "./edge/edge";
 import {
   preprocessGPML as preprocessGroupGPML,
   postprocessPVJSON as postprocessGroupPVJSON
@@ -57,7 +73,9 @@ import {
   supportedNamespaces,
   unionLSV
 } from "./gpml-utilities";
-import * as VOCABULARY_NAME_TO_IRI from "./VOCABULARY_NAME_TO_IRI.json";
+import * as VOCABULARY_NAME_TO_IRI from "./spinoffs/VOCABULARY_NAME_TO_IRI.json";
+
+// TODO get text alignment correctly mapped to Box Model CSS terms
 
 import * as iassign from "immutable-assign";
 iassign.setOption({
@@ -88,16 +106,25 @@ function extendDeep(targetOrTargetArray, source) {
   const target = isArray(targetOrTargetArray)
     ? targetOrTargetArray[0]
     : targetOrTargetArray;
-
-  toPairsIn(target)
-    .filter(
-      ([targetKey, targetValue]) =>
-        source.hasOwnProperty(targetKey) && isObject(source[targetKey])
-    )
-    .forEach(function([targetKey, targetValue]) {
-      extendDeep(targetValue, source[targetKey]);
-    });
-  assignM(target.constructor.prototype, source);
+  // TODO: We run into problems if we try to extend both
+  // GraphicalLine and Interaction, because they share
+  // EdgeGraphicsType. To avoid an infinite recursion of
+  // extending, I'm using a short-term solution of just
+  // marking whether a target has been extended, and
+  // if so, skipping it.
+  // Look into a better way of handling this.
+  if (!target.hasOwnProperty("_extended")) {
+    toPairsIn(target)
+      .filter(
+        ([targetKey, targetValue]) =>
+          source.hasOwnProperty(targetKey) && isObject(source[targetKey])
+      )
+      .forEach(function([targetKey, targetValue]) {
+        extendDeep(targetValue, source[targetKey]);
+      });
+    assignM(target.constructor.prototype, source);
+    target._extended = true;
+  }
 }
 
 const stringifyKeyValue = curry(function(source, key) {
@@ -251,7 +278,7 @@ export function GPML2013aToPVJSON(
             "https://wikipathwayscontexts.firebaseio.com/organism.json",
             "https://wikipathwayscontexts.firebaseio.com/bridgedb/.json"
           ];
-          if (mergedPathway.hasOwnProperty("id")) {
+          if (!!mergedPathway.id) {
             context.push({
               "@base": mergedPathway.id + "/"
             });
@@ -507,6 +534,9 @@ export function GPML2013aToPVJSON(
       let [sortedOnThisIteration, stillUnsorted] = partition(function(
         pvjsonEntity
       ) {
+        // NOTE: I think this works because we're using ".sequence()" in
+        // the pvjsonEntityStream. Otherwise, I think the entityMap would
+        // be filled up too soon or in the wrong order.
         return (
           unionLSV(
             pvjsonEntity.contains,
@@ -519,7 +549,10 @@ export function GPML2013aToPVJSON(
       }, unsorted);
 
       let testIndex;
-      // TODO I think we need to do more of a running check, not just tranche by tranche
+      // TODO Is it possible one entity could have contained or attached
+      // elements from different tranches?
+      // I think we need to do more of a running check, not just tranche by
+      // tranche.
       sortedOnThisIteration.forEach(function(x) {
         const matchingTranchIndex = findIndex(function(tranche) {
           const matchingTestIndex = findIndex(function(isProcessableTest) {

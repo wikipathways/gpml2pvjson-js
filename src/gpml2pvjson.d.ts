@@ -1,8 +1,17 @@
-/// <reference path="../rgbcolor.d.ts" />
-/// <reference path="./json.d.ts" />
-/// <reference path="../xmlns/pathvisio.org/GPML/2013a.d.ts" />
+/// <reference path="./spinoffs/rgbcolor.d.ts" />
+/// <reference path="./spinoffs/json.d.ts" />
 
-//////// <reference path="./topublish/rx-sax/XPathParser.d.ts" />
+// TODO look at how this definition file should be written.
+// Is it best practice to essentially make this an ES module?
+// That's what I need to do if I use the CXML-generated schema definitions
+// in here, because CXML creates .d.ts files that use import/export.
+// If I use import/export in this file, then declare doesn't work. Maybe it
+// stops being an ambient/global declaration?
+//
+// Anyway, I think it's OK for now in terms of what gets published for this
+// library, because the TS compiler extracts all the types into d.ts files.
+
+export * from "../xmlns/pathvisio.org/GPML/2013a";
 
 /* GPML */
 
@@ -53,22 +62,45 @@ type GPMLClassNames =
   | "InfoBox"
   | "State";
 
-declare type GPML_ATTRIBUTE_NAMES_AND_TYPES = {
-  [K in GPMLAttributeNames]?: string
-};
+type GPML_ATTRIBUTE_NAMES_AND_TYPES = { [K in GPMLAttributeNames]?: string };
 
-declare type GPMLElement = Record<string, any>;
+export type GPMLElement = Record<string, any>;
 
 /* pvjson */
 
-interface Point {
+export interface SegmentPoint {
   x: number;
   y: number;
+  angle?: number;
+}
+
+export type Side = "top" | "right" | "bottom" | "left";
+export interface StartSegmentDetailsMap {
+  sideAttachedTo: Side;
+  orientation: [number, number];
+  angle: number; // radians
+}
+
+export interface OffsetOrientationAndPositionScalarsAlongAxis {
+  positionScalar: number;
+  orientationScalar: number;
+  offsetScalar: number;
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+// currently can only be first or last point
+export interface AttachablePoint extends Point {
+  tangentDirection?: number; // angle in radians
+  orientation?: [number, number];
   isAttachedTo?: string;
   attachmentDisplay?: AttachmentDisplay;
 }
 
-interface NodeDimensions {
+export interface NodeDimensions {
   x: number;
   y: number;
   width: number;
@@ -76,20 +108,41 @@ interface NodeDimensions {
   zIndex: number;
 }
 
-interface Corner {
+export interface Corner {
   x: number;
   y: number;
 }
 
-interface AttachmentDisplay {
-  // position takes two numbers for GPML States and Points, but
-  // just one for GPML Anchors, which are attached to edges.
-  position: number[];
-  orientation: [number, number];
+export interface AttachmentDisplay {
+  // for GPML States and Points:
+  //   position: [
+  //     distance to travel from left toward right / referenced entity width,
+  //     distance to travel from top toward bottom / referenced entity height,
+  //   ];
+  //   because their attachment is defined in x, y
+  //   vectors along the rectangular shape of what
+  //   they're attached to.
+  //
+  // for GPML Anchors (which are attached to edges):
+  //   position: [
+  //     distance to travel from first toward last pt / referenced edge length,
+  //     always zero, because an edge only has one dimension
+  //   ];
+  //   because their attachment is defined along
+  //   a single axis, the axis of the edge to
+  //   which they are attached.
+  //
+  // the origin is the top-left-most part of the entity to which
+  // the other entity is attached.
+  position: [number, number];
   offset?: [number, number];
 }
 
-interface Comment {
+// This is not part of AttachmentDisplay, because the first point of an elbow
+// connector has an orientation, even if it's not connected to anything.
+export type Orientation = [number, number];
+
+export interface Comment {
   content: string;
   source?: string;
 }
@@ -157,11 +210,11 @@ type PvjsonEntityMergedNumberProperties =
   | "y"
   | "zIndex";
 
-declare type PvjsonEntityMergedWithStringProperties = {
+type PvjsonEntityMergedWithStringProperties = {
   [K in PvjsonEntityMergedStringProperties]?: string
 };
 
-declare type PvjsonEntityMergedWithNumberProperties = {
+type PvjsonEntityMergedWithNumberProperties = {
   [K in PvjsonEntityMergedNumberProperties]?: number
 };
 
@@ -175,11 +228,11 @@ type PvjsonEntityMergedStringArrayProperties =
   | "participants"
   | "type";
 
-declare type PvjsonEntityMergedWithStringArrayProperties = {
+type PvjsonEntityMergedWithStringArrayProperties = {
   [K in PvjsonEntityMergedStringArrayProperties]?: string[]
 };
 
-declare type PvjsonEntityMerged = PvjsonEntityMergedWithStringProperties &
+type PvjsonEntityMerged = PvjsonEntityMergedWithStringProperties &
   PvjsonEntityMergedWithNumberProperties &
   PvjsonEntityMergedWithStringArrayProperties & {
     attachmentDisplay?: AttachmentDisplay;
@@ -217,7 +270,7 @@ type PvjsonSingleFreeNodeOptionalKeys =
   | "strokeDasharray"
   | "textAlign"
   | "verticalAlign";
-type PvjsonSingleFreeNode = {
+export type PvjsonSingleFreeNode = {
   [K in PvjsonSingleFreeNodeRequiredKeys]: PvjsonEntityMerged[K]
 } &
   { [K in PvjsonSingleFreeNodeOptionalKeys]?: PvjsonEntityMerged[K] };
@@ -247,11 +300,13 @@ type PvjsonGroupOptionalKeys =
   | "dbConventionalName"
   | "strokeDasharray"
   | "textContent";
-type PvjsonGroup = { [K in PvjsonGroupRequiredKeys]: PvjsonEntityMerged[K] } &
+export type PvjsonGroup = {
+  [K in PvjsonGroupRequiredKeys]: PvjsonEntityMerged[K]
+} &
   { [K in PvjsonGroupOptionalKeys]?: PvjsonEntityMerged[K] };
 
 type PathwayStarterRequiredKeys = "fontWeight" | "textAlign" | "verticalAlign";
-type PathwayStarter = PvjsonGroup &
+export type PathwayStarter = PvjsonGroup &
   { [K in PathwayStarterRequiredKeys]: PvjsonEntityMerged[K] } & {
     // NOTE: the alignment and text properties only apply contents of current element.
     // They do not affect children.
@@ -271,7 +326,7 @@ type PathwayStarter = PvjsonGroup &
     organism?: string;
   };
 
-interface Pathway extends PathwayStarter {
+export interface Pathway extends PathwayStarter {
   "@context": any;
   name: string;
 }
@@ -301,12 +356,14 @@ type PvjsonBurrOptionalKeys =
   | "dbConventionalName"
   | "rotation"
   | "strokeDasharray";
-type PvjsonBurr = { [K in PvjsonBurrRequiredKeys]: PvjsonEntityMerged[K] } &
+export type PvjsonBurr = {
+  [K in PvjsonBurrRequiredKeys]: PvjsonEntityMerged[K]
+} &
   { [K in PvjsonBurrOptionalKeys]?: PvjsonEntityMerged[K] } & {
     isAttachedTo: string;
   };
 
-type PvjsonNode = PvjsonSingleFreeNode | PvjsonGroup | PvjsonBurr;
+export type PvjsonNode = PvjsonSingleFreeNode | PvjsonGroup | PvjsonBurr;
 
 type PvjsonEdgeRequiredKeys =
   | "id"
@@ -337,7 +394,9 @@ type PvjsonEdgeOptionalKeys =
   | "sboInteractionType"
   | "strokeDasharray"
   | "wpInteractionType";
-type PvjsonEdge = { [K in PvjsonEdgeRequiredKeys]: PvjsonEntityMerged[K] } &
+export type PvjsonEdge = {
+  [K in PvjsonEdgeRequiredKeys]: PvjsonEntityMerged[K]
+} &
   { [K in PvjsonEdgeOptionalKeys]?: PvjsonEntityMerged[K] } & {
     //explicitPoints?: any;
     isAttachedTo?: string[];
@@ -349,12 +408,12 @@ type PvjsonInteractionRequiredKeys =
   | "gpmlElementName"
   | "sboInteractionType"
   | "wpInteractionType";
-type PvjsonInteraction = PvjsonEdge &
+export type PvjsonInteraction = PvjsonEdge &
   { [K in PvjsonInteractionRequiredKeys]: PvjsonEntityMerged[K] } & {
     //interactionType: string;
   };
 
-interface Controlled extends PvjsonInteraction {
+export interface Controlled extends PvjsonInteraction {
   left: string;
   right: string;
 }
@@ -362,7 +421,7 @@ interface Controlled extends PvjsonInteraction {
 // example controller: an enzyme
 // example Control: a catalysis
 // example controlled: a conversion
-interface Control extends PvjsonEdge {
+export interface Control extends PvjsonEdge {
   controlled: string;
   controller: string;
   controlType: string;
@@ -379,169 +438,19 @@ type PvjsonPublicationXrefRequiredKeys =
   | "type"
   | "year";
 type PvjsonPublicationXrefOptionalKeys = "dbId" | "dbConventionalName";
-type PvjsonPublicationXref = {
+export type PvjsonPublicationXref = {
   [K in PvjsonPublicationXrefRequiredKeys]: PvjsonEntityMerged[K]
 } &
   { [K in PvjsonPublicationXrefOptionalKeys]?: PvjsonEntityMerged[K] } & {};
 
-type PvjsonEntity =
+export type PvjsonEntity =
   | PvjsonSingleFreeNode
   | PvjsonGroup
   | PvjsonBurr
   | PvjsonEdge
   | PvjsonPublicationXref;
 
-declare type PvjsonEntityMap = {
+export type PvjsonEntityMap = {
   // TODO this could likely be improved
   [key: string]: PvjsonEntity;
 };
-
-declare type DataManual = {
-  "@context"?: string | any;
-  tagName: string;
-  organism: string;
-  type: string | string[];
-  // NOTE that data.elementMap may have more entries than data.elements.
-  // For example, if the source GPML has one or more empty Groups, these
-  // Groups will be in data.elementMap but not in data.elements.
-  elementMap: PvjsonEntityMap;
-  elements: PvjsonEntity[];
-  GraphIdToGroupId: {
-    [key: string]: string;
-  };
-  GroupIdToGraphId: {
-    [key: string]: string;
-  };
-  containedIdsByGroupId: {
-    [key: string]: string[];
-  };
-  node: string[];
-  edge: string[];
-  width: number;
-  height: number;
-  backgroundColor: string;
-};
-
-declare type Container = {
-  // NOTE that data.elementMap may have more entries than data.elements.
-  // For example, if the source GPML has one or more empty Groups, these
-  // Groups will be in data.elementMap but not in data.elements.
-  elementMap: PvjsonEntityMap;
-  elements: PvjsonEntity[];
-  GraphIdToGroupId: {
-    [key: string]: string;
-  };
-  containedIdsByGroupId: {
-    [key: string]: string[];
-  };
-  node: string[];
-  edge: string[];
-} & { [K in GPMLClassNames]?: string[] };
-
-declare type PvjsonEntitiesByClass = { [K in GPMLClassNames]?: string[] };
-declare type Data = PvjsonEntitiesByClass & DataManual;
-
-/* jsonld and jsonld-extra */
-
-// TODO how do I specify this? see http://json-ld.org/spec/latest/json-ld/#dfn-node-object
-// any JSON object that is not in the JSON-LD context and that meets one of these criteria:
-// * does not contain the @value, @list, or @set keywords, or
-// * not the top-most JSON object in the JSON-LD document consisting of no other members than @graph and @context.
-//
-// Since I don't know how to do this for now, I'll just use a modification of Map.
-// Maybe one of the commented out options is more appropriate?
-declare type jsonldNodeObject = {
-  //[key: string]: jsonPrimitive | jsonPrimitive[];
-  //[key: string]: jsonldNodeObject;
-  [key: string]: jsonldListSetPrimitive;
-};
-declare type jsonPrimitive =
-  | string
-  | number
-  | boolean
-  | null
-  | jsonldNodeObject;
-interface jsonldValueObjectWithType {
-  "@value": string | number | boolean | null;
-  "@type"?: string | null;
-  "@index"?: string;
-  "@context"?: any;
-}
-interface jsonldValueObjectWithLanguage {
-  "@value": string | number | boolean | null;
-  // TODO use an enum
-  "@language"?: string | null;
-  "@index"?: string;
-  "@context"?: any;
-}
-
-declare type jsonldValueObject =
-  | jsonldValueObjectWithType
-  | jsonldValueObjectWithLanguage;
-declare type jsonldListSetPrimitive =
-  | string
-  | number
-  | boolean
-  | null
-  | jsonldNodeObject
-  | jsonldValueObject;
-declare type jsonldListSetValue =
-  | jsonldListSetPrimitive
-  | jsonldListSetPrimitive[];
-
-//const COMMON_PROPS: ReadonlyArray<keyof PvjsonEntity> = [
-//	'color',
-//	'dbConventionalName', // e.g., Entrez Gene
-//	'dbId', // xref identifier, e.g., 1234 for Entrez Gene 1234
-//	'displayName',
-//	'gpmlElementName',
-//	'href',
-//	'id', // @id
-//	'isAttachedTo',
-//	'drawAs',
-//	'strokeDasharray',
-//	'wpType',
-//	'borderWidth',
-//	'zIndex',
-//	'rotation',
-//	'comment',
-//	'type',
-//	'citations',
-//];
-//
-//const PATHWAY_PROPS: ReadonlyArray<keyof PvjsonEntity> = COMMON_PROPS.concat([
-//	'author',
-//	'dataSource',
-//	'email',
-//	'lastModified',
-//	'license',
-//	'maintainer',
-//	'organism',
-//]);
-//
-//const NODE_PROPS: ReadonlyArray<keyof PvjsonEntity> = [
-//	'x',
-//	'y',
-//	'width',
-//	'height',
-//	'backgroundColor',
-//	'textAlign',
-//	'fontFamily',
-//	'fontStyle',
-//	'fontWeight',
-//	'padding',
-//	'standardName',
-//	'verticalAlign',
-//	'fillOpacity',
-//	'fontSize',
-//];
-//
-//const GROUP_PROPS: ReadonlyArray<keyof PvjsonEntity> = NODE_PROPS.concat([
-//	'contains',
-//	'style',
-//]);
-//
-//const EDGE_PROPS: ReadonlyArray<keyof PvjsonEntity> = COMMON_PROPS.concat([
-//	'position',
-//	'points',
-//]);

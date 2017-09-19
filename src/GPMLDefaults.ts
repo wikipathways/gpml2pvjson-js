@@ -108,7 +108,8 @@ export const GPMLEdge = {
 		//*/
     Anchor: Anchor,
     // these aren't explicitly set in the XSD but maybe should be.
-    FillColor: "Transparent",
+    //FillColor: "Transparent",
+    FillColor: "ffffff",
     LineThickness: 1
   }
 };

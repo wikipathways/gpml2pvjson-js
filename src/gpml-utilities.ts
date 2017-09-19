@@ -9,17 +9,29 @@ import {
   union
 } from "lodash";
 import { curry, sortBy } from "lodash/fp";
-import { intersectsLSV } from "./jsonld-utils";
+import { intersectsLSV } from "./spinoffs/jsonld-utils";
+import {
+  Point,
+  PvjsonNode,
+  PvjsonSingleFreeNode,
+  PvjsonBurr,
+  PvjsonEdge,
+  PvjsonGroup,
+  PvjsonEntity,
+  AttachablePoint,
+  EdgeGraphicsTypePointType
+} from "./gpml2pvjson";
 
 export * from "./geom-utils";
-export * from "./jsonld-utils";
 
+// TODO this line conflicts with the section below it
+export * from "./spinoffs/jsonld-utils";
 export {
   arrayify,
   getValuesLSV,
   intersectsLSV,
   unionLSV
-} from "./jsonld-utils";
+} from "./spinoffs/jsonld-utils";
 
 export function augmentErrorMessage(err: Error, message: string): Error {
   err.message = (err.message || "") + message;
@@ -43,6 +55,17 @@ export const insertIfNotExists = curry(function<T>(item: T, list: T[]): T[] {
   }
   return list;
 });
+
+export function isAttachablePoint(
+  GPMLPoint: EdgeGraphicsTypePointType,
+  pvjsonPoint: Point | AttachablePoint
+): pvjsonPoint is AttachablePoint {
+  return isDefinedCXML(GPMLPoint.GraphRef);
+}
+
+export function isDefinedCXML(x: any) {
+  return x._exists !== false;
+}
 
 export function isPvjsonBurr(entity: PvjsonEntity): entity is PvjsonBurr {
   return intersectsLSV(entity.type, "Burr");

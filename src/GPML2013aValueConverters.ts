@@ -18,6 +18,8 @@ import {
 import { decode } from "he";
 import RGBColor = require("rgbcolor");
 
+import { AttachmentDisplay } from "./gpml2pvjson";
+
 function decodeIfNotEmpty(input) {
   return isEmpty(input) ? input : decode(input);
 }
@@ -49,7 +51,7 @@ export function ID(gpmlElement) {
     return gpmlElement.Xref.ID;
   }
 }
-// GPML2013a incorrectly used "rdf:id" where it was intented
+// GPML2013-ish incorrectly used "rdf:id" where it was intented
 // to use "rdf:ID". We corrected that error before processing,
 // but CXML turns "rdf:ID" into "ID", and since we already have
 // a property "ID" on the element, CXML uses "$ID".
@@ -213,27 +215,39 @@ export const Color = flow(get("Graphics.Color"), gpmlColorToCssColor);
 
 export function FillColor(gpmlElement) {
   const { FillColor, ShapeType } = gpmlElement.Graphics;
-  return !!ShapeType && ShapeType.toLowerCase() !== "none"
+  // If it's a GPML Group, DataNode, Shape, Label or State, it needs a
+  // ShapeType in order for it to have a FillColor.
+  //
+  // A GPML Interaction or GraphicalLine can have a FillColor w/out
+  // a ShapeType.
+  return (!!ShapeType && ShapeType.toLowerCase() !== "none") ||
+    gpmlElement.Graphics.hasOwnProperty("Point")
     ? gpmlColorToCssColor(FillColor)
     : "transparent";
 }
 
-export function ConnectorType(gpmlElement) {
+export function ConnectorType(gpmlElement): string {
   const { ConnectorType } = gpmlElement.Graphics;
   return ConnectorType + "Line";
 }
 
-export function Position(gpmlElement) {
+// We return a partial attachmentDisplay, because it's
+// merged with the other items as we come across them.
+export function Position(gpmlElement): AttachmentDisplay {
   const { Position } = gpmlElement;
   return {
-    position: [Position]
-  };
+    position: [Position, 0]
+  } as AttachmentDisplay;
 }
 
-// actually handling both RelX and RelY
-export function RelX(gpmlElement) {
+// We actually handle both RelX and RelY together
+// when we hit RelX and then ignoring when we
+// hit RelY.
+// We return a partial attachmentDisplay, because it's
+// merged with the other items as we come across them.
+export function RelX(gpmlElement): AttachmentDisplay {
   const { RelX, RelY } = gpmlElement.Graphics;
   return {
     position: [(RelX + 1) / 2, (RelY + 1) / 2]
-  };
+  } as AttachmentDisplay;
 }

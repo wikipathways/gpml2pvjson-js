@@ -1,4 +1,4 @@
-import { SimpleElement } from "./topublish/rx-sax/rx-sax";
+import { SimpleElement } from "./extractable/rx-sax/rx-sax";
 import * as He from "he";
 import { reduce } from "lodash";
 import { generatePublicationXrefId } from "./gpml-utilities";

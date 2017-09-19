@@ -1,6 +1,7 @@
 import "source-map-support/register";
 // TODO should I get rid of the lib above for production browser build?
 
+import { PvjsonSingleFreeNode } from "./gpml2pvjson";
 import { transform } from "./gpml-utilities";
 
 export function addressPathVisioShapeRenderingBugs(
@@ -166,5 +167,8 @@ export function addressPathVisioShapeRenderingBugs(
 export function postprocessPVJSON(
   pvjsonElement: PvjsonSingleFreeNode
 ): PvjsonSingleFreeNode {
+  // should we use one of these libraryies to determine what's inside a cell component?
+  // https://www.npmjs.com/package/rbush
+  // https://www.npmjs.com/package/@types/point-in-polygon
   return addressPathVisioShapeRenderingBugs(pvjsonElement);
 }

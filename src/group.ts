@@ -14,6 +14,15 @@ import {
 import * as GPML2013aGroupMappingsByStyle from "./GPML2013aGroupMappingsByStyle.json";
 // Only imported for its type
 import { Processor } from "./Processor";
+import {
+  NodeDimensions,
+  Corner,
+  PvjsonSingleFreeNode,
+  PvjsonEdge,
+  PvjsonGroup,
+  PvjsonEntity,
+  GPMLElement
+} from "./gpml2pvjson";
 
 export function getGroupDimensions(
   padding: number,

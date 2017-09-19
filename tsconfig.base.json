@@ -10,10 +10,10 @@
     "pretty": true
   },
   "files": [
-    "highland.d.ts",
-    "rgbcolor.d.ts",
-    "sax.d.ts",
-    "src/json.d.ts",
+    "src/spinoffs/highland.d.ts",
+    "src/spinoffs/rgbcolor.d.ts",
+    "src/spinoffs/sax.d.ts",
+    "src/spinoffs/json.d.ts",
     "src/gpml2pvjson.d.ts",
     "src/index.ts"
   ],

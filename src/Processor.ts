@@ -19,6 +19,17 @@ import {
 import { defaultsDeep as defaultsDeepM } from "lodash";
 import * as hl from "highland";
 
+import {
+  PvjsonSingleFreeNode,
+  PvjsonBurr,
+  PvjsonEdge,
+  PvjsonGroup,
+  PvjsonEntity,
+  GPMLElement,
+  Pathway,
+  PathwayStarter,
+  PvjsonEntityMap
+} from "./gpml2pvjson";
 import { unionLSV } from "./gpml-utilities";
 
 import * as iassign from "immutable-assign";

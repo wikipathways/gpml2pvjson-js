@@ -1,4 +1,294 @@
-import { isFinite } from "lodash";
+/*
+ * I need to do the following:
+ * diff angles between vectors
+ * find perpendicular vector to a point on a path
+ * find tangent to a point on a path
+ * transform (translate, rotate) for nodes and edges
+ * es modules so I can pull out just what I need
+ *
+ * Specs to compare:
+ * tests
+ * typescript
+ * maintained (open issues unresolved for a long time?)
+ * node and browser
+*/
+
+import { assign as assignM } from "lodash";
+import { fromPairs, isFinite, isUndefined, last, toPairs } from "lodash/fp";
+import * as Vector from "vectory";
+import {
+  degreesToRadians,
+  distance,
+  fromSlope,
+  normalize
+} from "./spinoffs/Angle";
+import { position } from "points";
+import * as edgeDrawers from "./edge/edgeDrawers";
+import {
+  Point,
+  PvjsonNode,
+  AttachablePoint,
+  Orientation,
+  PvjsonEdge,
+  StartSegmentDetailsMap,
+  Side
+} from "./gpml2pvjson";
+
+// We are using the standard SVG coordinate system where:
+//   the origin is the upper-left-most point
+//   positive x is to the right
+//   positive y is down
+//   uses left hand rule, so positive angle is clockwise,
+//     starting with 0 pointing to the right
+
+// The orientation is a unit vector that indicates the orientation of an
+// at a point. When it is attached to a rectangle, we almost always want it to
+// point away from the side to which it is attached.
+export const START_SIDE_TO_ORIENTATION_MAP = {
+  right: [1, 0],
+  bottom: [0, 1],
+  left: [-1, 0],
+  top: [0, -1]
+};
+
+export const START_SIDE_TO_EMANATION_ANGLE_MAPPINGS = fromPairs(
+  toPairs(START_SIDE_TO_ORIENTATION_MAP).map(function(
+    [startSide, orientation]
+  ) {
+    return [startSide, fromSlope([0, 0], orientation)];
+  })
+);
+
+export const EMANATION_ANGLE_TO_START_SIDE_MAPPINGS = toPairs(
+  START_SIDE_TO_EMANATION_ANGLE_MAPPINGS
+).reduce(function(acc, [side, angle]) {
+  acc.set(angle, side);
+  return acc;
+}, new Map());
+
+export const START_SEGMENT_DETAILS_MAPS: StartSegmentDetailsMap[] = toPairs(
+  START_SIDE_TO_ORIENTATION_MAP
+).map(function([startSide, orientation]) {
+  const [orientationX, orientationY] = orientation;
+  return {
+    sideAttachedTo: startSide,
+    orientation: orientation,
+    angle: normalize(Math.atan2(orientationY, orientationX))
+  };
+});
+
+export interface ISmartPoint {
+  x: number;
+  y: number;
+  curve?: any;
+  moveTo?: any;
+  orientation?: Orientation;
+}
+
+export class SmartPoint implements ISmartPoint {
+  x: number;
+  y: number;
+  curve?: any;
+  moveTo?: any;
+  orientation?: Orientation;
+  //orientationVector?: SmartVector;
+  constructor(point: ISmartPoint) {
+    assignM(this, point);
+    /*
+    if (!isUndefined(this.orientation)) {
+      this.orientationVector = new SmartVector(
+        { x: 0, y: 0 },
+        { x: this.orientation[0], y: this.orientation[1] }
+      );
+    }
+		//*/
+  }
+  angle = () => {
+    return fromSlope([0, 0], this.orientation);
+  };
+  fromArray = ([x, y]: [number, number]) => {
+    this.x = x;
+    this.y = y;
+  };
+  toArray = () => {
+    return [this.x, this.y];
+  };
+}
+
+export class SmartVector {
+  angle: number; // radians
+  p0: SmartPoint;
+  p1: SmartPoint;
+  constructor(p0: ISmartPoint, p1: ISmartPoint) {
+    this.p0 = new SmartPoint(p0);
+    this.p1 = new SmartPoint(p1);
+    this.angle = fromSlope(this.p0.toArray(), this.p1.toArray());
+  }
+  angleDistance = vector2 => {
+    return distance(this.angle, vector2.angle);
+  };
+}
+
+export class SmartPath {
+  points: SmartPoint[];
+  sum: SmartVector;
+  path: any;
+  constructor(points: ISmartPoint[], edge?) {
+    const smartPoints = points.map(point => new SmartPoint(point));
+    this.points = smartPoints;
+    this.sum = new SmartVector(smartPoints[0], last(smartPoints));
+
+    if (!isUndefined(edge)) {
+      const { points, markerStart, markerEnd } = edge;
+      this.path = new edgeDrawers[(edge.drawAs.toLowerCase())](
+        smartPoints,
+        markerStart,
+        markerEnd
+      );
+    }
+  }
+  position = (scalar: number, accuracy?: number) => {
+    const { x, y, angle: degreesFromNorth } = position(
+      this.path.points,
+      scalar,
+      accuracy
+    );
+    /* the points library returns the angle from north, in degrees, increasing CW, so
+		 * this has an angle of 0 deg.:
+		 * 
+		 *       ^
+		 *       |
+		 *       |
+		 *       |
+		 * 
+		 * and this has an angle of 90 deg.:
+		 *
+		 *    ------->
+		 */
+    return {
+      x,
+      y,
+      // convert to radians and use angle orientation of SVG coordinate system
+      angle: normalize(degreesToRadians(degreesFromNorth + 270))
+    };
+  };
+}
+
+// TODO explore using the packages points and angles (and maybe vectory) together
+const smartPath1 = new SmartPath([
+  { x: 50, y: 30, moveTo: true },
+  { x: 50, y: 70, curve: { type: "arc", rx: 20, ry: 20, sweepFlag: 1 } },
+  { x: 150, y: 100, curve: { type: "arc", rx: 20, ry: 20, sweepFlag: 1 } }
+]);
+
+const smartPath2 = new SmartPath([
+  { x: 100, y: 50, moveTo: true },
+  { x: 50, y: 70, curve: { type: "arc", rx: 20, ry: 20, sweepFlag: 1 } }
+  //{ x: 200, y: 100 }
+]);
+
+/* OLD CODE BELOW */
+
+export function addAngles(angle1: number, angle2: number): number {
+  const sum = angle1 + angle2;
+  const singleRevolutionSum = sum % (2 * Math.PI);
+  return Math.sign(singleRevolutionSum) === -1
+    ? 2 * Math.PI + singleRevolutionSum
+    : singleRevolutionSum;
+}
+
+// see https://gist.github.com/ahwolf/4349166 and
+// http://www.blackpawn.com/texts/pointinpoly/default.html
+export function crossProduct(u: [number, number], v: [number, number]): number {
+  return u[0] * v[1] - v[0] * u[1];
+}
+
+export function flipOrientation(orientation: Orientation) {
+  return orientation.map(orientationScalar => -1 * orientationScalar);
+}
+
+export function flipSide(side: Side): Side {
+  return EMANATION_ANGLE_TO_START_SIDE_MAPPINGS.get(
+    reverseAngle(START_SIDE_TO_EMANATION_ANGLE_MAPPINGS[side])
+  );
+}
+
+export function getMinimumAngleBetweenVectors(
+  vectorDirectionAngle1: number,
+  vectorDirectionAngle2: number
+): number {
+  const vectors = [vectorDirectionAngle1, vectorDirectionAngle2];
+  const minVector = Math.min.apply(undefined, vectors);
+  const maxVector = Math.max.apply(undefined, vectors);
+  if (minVector < 0 || maxVector >= 2 * Math.PI) {
+    throw new Error(
+      `getMinimumAngleBetweenVectors(${vectorDirectionAngle1}, ${vectorDirectionAngle2})
+										inputs must be in interval [0, 2 * Math.PI).`
+    );
+  }
+  return (
+    Math.max(vectorDirectionAngle1, vectorDirectionAngle2) -
+    Math.min(vectorDirectionAngle1, vectorDirectionAngle2)
+  );
+  /*
+  const diff = addAngles(vectorDirectionAngle1, -1 * vectorDirectionAngle2);
+	return diff <= Math.PI ? diff : diff % Math.PI;
+	//*/
+  //return diff > Math.PI ? diff - Math.PI : diff;
+}
+
+export function getAngleOfEmanationFromPoint(point: AttachablePoint): number {
+  const [orientationX, orientationY] = point.orientation;
+  return Math.atan2(orientationY, orientationX);
+}
+
+export function reverseAngle(angle) {
+  return addAngles(angle, Math.PI);
+}
+
+export function getAngleAtPoint(edge: PvjsonEdge, positionX: number): number {
+  const { id, points, markerStart, markerEnd } = edge;
+
+  const referencedPath = new edgeDrawers[(edge.drawAs.toLowerCase())](
+    points,
+    markerStart,
+    markerEnd
+  );
+
+  const tangentLength = 0.02;
+
+  const firstPointOfTangent = referencedPath.getPointAtPosition(
+    Math.max(0, positionX - tangentLength / 2)
+  );
+
+  const lastPointOfTangent = referencedPath.getPointAtPosition(
+    Math.min(1, positionX + tangentLength / 2)
+  );
+
+  return getAngleFromPointToPoint(firstPointOfTangent, lastPointOfTangent);
+}
+
+export function getAngleFromPointToPoint({ x: x0, y: y0 }, { x: x1, y: y1 }) {
+  return Math.atan2(y1 - y0, x1 - x0);
+}
+
+export function getStartSideByOrientation(
+  [orientationX, orientationY]: Orientation
+): Side {
+  if (Math.abs(orientationX) > Math.abs(orientationY)) {
+    if (orientationX > 0) {
+      return "right"; //East
+    } else {
+      return "left"; //West
+    }
+  } else {
+    if (orientationY > 0) {
+      return "bottom"; //South
+    } else {
+      return "top"; //North
+    }
+  }
+}
 
 // see http://blog.acipo.com/matrix-inversion-in-javascript/
 /**
@@ -221,6 +511,72 @@ export function multiplyMatrixByVector(transformationMatrix, vector) {
       vector[2][0] * transformationMatrix[2][2];
 
   return [[x], [y], [z]];
+}
+
+/**
+ * sameSide
+ *
+ * Calculate whether the current edge's second point, a, (end of first segment)
+ * and its final point, b, are both on the same side of the referenced edge.
+ *
+ * current edge: pipes/hyphens
+ * referenced edge: dots
+ *
+ * Example of True
+ *
+ *  p1
+ *    .
+ *     .
+ *      *------------a
+ *       .           |
+ *        .          |
+ *         .         |
+ *          .        |
+ *           .       |
+ *            .      |
+ *             .     |
+ *              .    |
+ *               .   |
+ *                .  |
+ *                 . *-----b
+ *                  .
+ *                   .
+ *                    p2
+ *
+ * 
+ * Example of False
+ *
+ *  p1
+ *    .
+ *      *------------a
+ *        .          |
+ *          .        |
+ *            .      |
+ *              .    |
+ *                .  |
+ *                  .|
+ *                   |.
+ *                   |  .
+ *                   |    .
+ *                   |      .
+ *                   *-----b  .
+ *                              .
+ *                                p2
+ *
+ *
+ * @param {Object} p1 - first point of the referenced edge
+ * @param {Object} p2 - last point of the referenced edge
+ * @param {Object} a - last point of the first segment of the current edge (the point following the start point)
+ * @param {Object} b - point where the current edge ends
+ * @return {Boolean) - whether the last point of the first segment of the current edge is on the same side as the last point of the current edge
+ */
+export function sameSide(p1: Point, p2: Point, a: Point, b: Point): boolean {
+  const bMinusA: [number, number] = [b.x - a.x, b.y - a.y];
+  const p1MinusA: [number, number] = [p1.x - a.x, p1.y - a.y];
+  const p2MinusA: [number, number] = [p2.x - a.x, p2.y - a.y];
+  const crossProduct1 = crossProduct(bMinusA, p1MinusA);
+  const crossProduct2 = crossProduct(bMinusA, p2MinusA);
+  return Math.sign(crossProduct1) === Math.sign(crossProduct2);
 }
 
 export function transform({
