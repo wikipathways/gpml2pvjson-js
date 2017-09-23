@@ -2,13 +2,13 @@
 <Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="New Pathway" Version="20170919">
   <Graphics BoardWidth="618.1818181818181" BoardHeight="491.8181818181818" />
   <DataNode TextLabel="GeneProduct" GraphId="bc282" Type="GeneProduct">
-    <Graphics CenterX="332.81004709576115" CenterY="176.6091051805337" Width="80.0" Height="20.0" ZOrder="32768" FillColor="ff2a21" FontSize="10" Valign="Middle" Color="002dd7" />
+    <Graphics CenterX="359.5276043476696" CenterY="246.26559373015195" Width="80.0" Height="20.0" ZOrder="32768" FillColor="ff2a21" FontSize="10" Valign="Middle" Color="002dd7" />
     <Xref Database="" ID="" />
   </DataNode>
   <Interaction>
-    <Graphics ZOrder="12288" LineThickness="1.0">
-      <Point X="79.27786499215067" Y="109.10518053375192" ArrowHead="mim-binding" />
-      <Point X="292.81004709576115" Y="176.6091051805337" GraphRef="bc282" RelX="-1.0" RelY="0.0" ArrowHead="Arrow" />
+    <Graphics ConnectorType="Elbow" ZOrder="12288" LineThickness="1.0">
+      <Point X="144.00837257980118" Y="189.4529042386186" GraphRef="e3548" RelX="0.0" RelY="-1.0" ArrowHead="mim-binding" />
+      <Point X="359.5276043476696" Y="236.26559373015198" GraphRef="bc282" RelX="0.0" RelY="-1.0" ArrowHead="Arrow" />
     </Graphics>
     <Xref Database="" ID="" />
   </Interaction>

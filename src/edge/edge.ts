@@ -227,9 +227,6 @@ export function postprocessPVJSON(
           );
         }
 
-        orientation[0] = orientationScalarX;
-        orientation[1] = orientationScalarY;
-        /* TODO what was this below? Can we delete it?
         if (index === 0) {
           orientation[0] = orientationScalarX;
           orientation[1] = orientationScalarY;
@@ -237,7 +234,6 @@ export function postprocessPVJSON(
           orientation[0] = -1 * orientationScalarX;
           orientation[1] = -1 * orientationScalarY;
         }
-				//*/
 
         // TODO is there a case where we would ever use offset for edges?
         attachmentDisplay.offset[0] = offsetScalarX;
