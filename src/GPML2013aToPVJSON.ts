@@ -423,12 +423,12 @@ export function GPML2013aToPVJSON(
         .map(processPropertiesAndType("Anchor"))
         .map(function(pvjsonAnchor: PvjsonBurr): PvjsonBurr {
           const drawAnchorAs = pvjsonAnchor.drawAs;
-          if (drawAnchorAs === "None") {
+          if (drawAnchorAs === "none") {
             return defaults(pvjsonAnchor, {
               height: 4,
               width: 4
             });
-          } else if (drawAnchorAs === "Circle") {
+          } else if (drawAnchorAs === "ellipse") {
             return defaults(pvjsonAnchor, {
               height: 8,
               width: 8

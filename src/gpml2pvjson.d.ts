@@ -90,6 +90,7 @@ export interface OffsetOrientationAndPositionScalarsAlongAxis {
 export interface Point {
   x: number;
   y: number;
+  marker?: string;
 }
 
 // currently can only be first or last point
@@ -135,6 +136,7 @@ export interface AttachmentDisplay {
   // the origin is the top-left-most part of the entity to which
   // the other entity is attached.
   position: [number, number];
+  relativeOffset?: [number, number];
   offset?: [number, number];
 }
 

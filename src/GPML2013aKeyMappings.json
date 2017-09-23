@@ -1,6 +1,7 @@
 {
   "Align": "textAlign",
   "Anchor": "pvjson:delete",
+  "ArrowHead": "marker",
   "AUTHORS": "authors",
   "BiopaxRef": "citations",
   "BoardHeight": "height",
@@ -13,6 +14,8 @@
   "Database": "dbConventionalName",
   "FillColor": "backgroundColor",
   "FontName": "fontFamily",
+  "FontDecoration": "textDecoration",
+  "FontStrikethru": "textDecoration",
   "Graphics": "pvjson:lift",
   "GraphId": "id",
   "GraphRef": "isAttachedTo",

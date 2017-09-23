@@ -57,14 +57,13 @@ export const insertIfNotExists = curry(function<T>(item: T, list: T[]): T[] {
 });
 
 export function isAttachablePoint(
-  GPMLPoint: EdgeGraphicsTypePointType,
   pvjsonPoint: Point | AttachablePoint
 ): pvjsonPoint is AttachablePoint {
-  return isDefinedCXML(GPMLPoint.GraphRef);
+  return pvjsonPoint.hasOwnProperty("attachmentDisplay");
 }
 
 export function isDefinedCXML(x: any) {
-  return x._exists !== false;
+  return typeof x !== "undefined" && x._exists !== false;
 }
 
 export function isPvjsonBurr(entity: PvjsonEntity): entity is PvjsonBurr {

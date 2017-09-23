@@ -1,5 +1,4 @@
 import {
-  clone,
   findIndex,
   flow,
   get,
@@ -16,9 +15,24 @@ import {
   unionLSV
 } from "./gpml-utilities";
 import { decode } from "he";
+import { normalize, radiansToDegrees } from "./spinoffs/Angle";
 import RGBColor = require("rgbcolor");
+import { isDefinedCXML } from "./gpml-utilities";
 
 import { AttachmentDisplay } from "./gpml2pvjson";
+
+// TODO are these ever used? PathVisio-Java
+// does not accept them as inputs in the
+// Rotation input field in the UI.
+// TODO if they are used, are the notes in
+// the XSD correct, or would "Right" actually
+// be 0 radians?
+const GPML_ROTATION_SIDE_TO_RAD = {
+  Top: 0,
+  Right: 0.5 * Math.PI,
+  Bottom: Math.PI,
+  Left: 3 / 2 * Math.PI
+};
 
 function decodeIfNotEmpty(input) {
   return isEmpty(input) ? input : decode(input);
@@ -60,15 +74,11 @@ export const DB = flow(get("DB.content"), decodeIfNotEmpty);
 export const TITLE = flow(get("TITLE.content"), decodeIfNotEmpty);
 export const SOURCE = flow(get("SOURCE.content"), decodeIfNotEmpty);
 export const YEAR = get("YEAR.content");
-//export const AUTHORS = map(flow(get("AUTHORS.content"), decodeIfNotEmpty));
-//*
-export function AUTHORS(gpmlElement) {
-  return gpmlElement.AUTHORS.map(author => decodeIfNotEmpty(author.content));
-}
-export function BiopaxRef(gpmlElement) {
-  return gpmlElement.BiopaxRef.map(generatePublicationXrefId);
-}
-//*/
+export const AUTHORS = flow(
+  get("AUTHORS"),
+  map(flow(get("content"), decodeIfNotEmpty))
+);
+export const BiopaxRef = flow(get("BiopaxRef"), map(generatePublicationXrefId));
 
 export function CenterX(gpmlElement) {
   const { CenterX, Width } = gpmlElement.Graphics;
@@ -133,14 +143,13 @@ export function Width(gpmlElement) {
   return Width + actualLineThickness;
 }
 
-const NON_NUMERIC_GPML_ROTATION_VALUES = {
-  Top: 0,
-  Right: 0.5 * Math.PI,
-  Bottom: Math.PI,
-  Left: 3 / 2 * Math.PI
-};
+export function Rotation(gpmlElement): number {
+  // NOTE: the rotation input field in the PathVisio-Java UI expects degrees,
+  // but GPML expresses rotation in radians. The XSD indicates GPML can also
+  // use directional strings, although I haven't seen one used in actual GPML.
+  // For both the PathVisio-Java UI and GPML, a positive value means clockwise
+  // rotation.
 
-export function Rotation(gpmlElement) {
   // NOTE: GPML can hold a rotation value for State elements in an element
   // named "Attribute" like this:
   // Key="org.pathvisio.core.StateRotation"
@@ -150,17 +159,21 @@ export function Rotation(gpmlElement) {
   const { Graphics } = gpmlElement;
   const Rotation = Graphics.Rotation._exists === false ? 0 : Graphics.Rotation;
 
-  const rotationRadians = NON_NUMERIC_GPML_ROTATION_VALUES.hasOwnProperty(
-    Rotation
-  )
-    ? NON_NUMERIC_GPML_ROTATION_VALUES[Rotation]
-    : parseAsNonNaNNumber(Rotation);
-
-  if (rotationRadians !== 0) {
-    // GPML saves rotation in radians, even though PathVisio-Java displays rotation in degrees.
-    // Convert from radians to degrees:
-    return rotationRadians * 180 / Math.PI;
-  }
+  // NOTE: Output is in degrees, because that's what the SVG transform
+  // attribute accepts. Don't get confused, because we use radians in
+  // the edge processing.
+  //
+  // NOTE: to make it as simple as possible for users to work with pvjson,
+  // we're normalizing these rotation values so they are always positive values
+  // between 0 and 2 * Math.PI, e.g.,
+  // (3/2) * Math.PI, not -1 * Math.PI/2 or (7/3) * Math.PI
+  return radiansToDegrees(
+    normalize(
+      GPML_ROTATION_SIDE_TO_RAD.hasOwnProperty(Rotation)
+        ? GPML_ROTATION_SIDE_TO_RAD[Rotation]
+        : parseAsNonNaNNumber(Rotation)
+    )
+  );
 }
 
 export function LineStyle(gpmlElement) {
@@ -187,6 +200,31 @@ export const Name = flow(get("Name"), decodeIfNotEmpty);
 
 export const TextLabel = flow(get("TextLabel"), decodeIfNotEmpty);
 
+// TODO is this ever used?
+// The only way I see to create underlined text in PathVisio-Java
+// is to create a Label and fill in the Link field.
+// But the resulting GPML does not have a FontDecoration attribute.
+export function getTextDecorationFromGPMLElement(gpmlElement) {
+  const { FontDecoration, FontStrikethru } = gpmlElement.Graphics;
+  let outputChunks = [];
+  const fontDecorationDefined =
+    isDefinedCXML(FontDecoration) && FontDecoration === "Underline";
+  const fontStrikethruDefined =
+    isDefinedCXML(FontStrikethru) && FontStrikethru === "Strikethru";
+  if (fontDecorationDefined || fontStrikethruDefined) {
+    if (fontDecorationDefined) {
+      outputChunks.push("underline");
+    }
+    if (fontStrikethruDefined) {
+      outputChunks.push("line-through");
+    }
+  } else {
+    outputChunks.push("none");
+  }
+  return outputChunks.join(" ");
+}
+export const FontDecoration = getTextDecorationFromGPMLElement;
+export const FontStrikethru = getTextDecorationFromGPMLElement;
 export const FontStyle = flow(get("Graphics.FontStyle"), toLower);
 export const FontWeight = flow(get("Graphics.FontWeight"), toLower);
 export const Valign = flow(get("Graphics.Valign"), kebabCase);
@@ -210,6 +248,15 @@ export function gpmlColorToCssColor(colorValue) {
     }
   }
 }
+
+/*
+import * as GPML2013aValueMappings from "./GPML2013aValueMappings.json";
+function getFromValueMappings(gpmlValue) {
+  return GPML2013aValueMappings[gpmlValue];
+}
+export const Shape = flow(get("Shape"), getFromValueMappings);
+export const ShapeType = flow(get("Graphics.ShapeType"), getFromValueMappings);
+//*/
 
 export const Color = flow(get("Graphics.Color"), gpmlColorToCssColor);
 
@@ -251,14 +298,68 @@ export function Position(gpmlElement): AttachmentDisplay {
   } as AttachmentDisplay;
 }
 
+/**
+ * getPositionAndRelativeOffsetScalarsAlongAxis
+ *
+ * @param relValue {number}
+ * @return {OffsetOrientationAndPositionScalarsAlongAxis}
+ */
+function getPositionAndRelativeOffsetScalarsAlongAxis(
+  relValue: number
+): { relativeOffsetScalar: number; positionScalar: number } {
+  let relativeOffsetScalar;
+  let positionScalar;
+
+  const relativeToUpperLeftCorner = (relValue + 1) / 2;
+  if (relativeToUpperLeftCorner < 0 || relativeToUpperLeftCorner > 1) {
+    if (relativeToUpperLeftCorner < 0) {
+      positionScalar = 0;
+      relativeOffsetScalar = relativeToUpperLeftCorner;
+    } else {
+      positionScalar = 1;
+      relativeOffsetScalar = relativeToUpperLeftCorner - 1;
+    }
+  } else {
+    positionScalar = relativeToUpperLeftCorner;
+    relativeOffsetScalar = 0;
+  }
+
+  if (!isFinite(positionScalar) || !isFinite(relativeOffsetScalar)) {
+    throw new Error(
+      `Expected finite values for positionScalar ${positionScalar} and relativeOffsetScalar ${relativeOffsetScalar}`
+    );
+  }
+
+  return { relativeOffsetScalar, positionScalar };
+}
+
 // We actually handle both RelX and RelY together
 // when we hit RelX and then ignoring when we
 // hit RelY.
 // We return a partial attachmentDisplay, because it's
 // merged with the other items as we come across them.
 export function RelX(gpmlElement): AttachmentDisplay {
-  const { RelX, RelY } = gpmlElement.Graphics;
+  // first is for a State (?), second is for a Point
+  const RelXRelYContainer = isDefinedCXML(gpmlElement.Graphics)
+    ? gpmlElement.Graphics
+    : gpmlElement;
+  const { RelX, RelY } = RelXRelYContainer;
+
+  const {
+    relativeOffsetScalar: relativeOffsetScalarX,
+    positionScalar: positionScalarX
+  } = getPositionAndRelativeOffsetScalarsAlongAxis(RelX);
+
+  const {
+    relativeOffsetScalar: relativeOffsetScalarY,
+    positionScalar: positionScalarY
+  } = getPositionAndRelativeOffsetScalarsAlongAxis(RelY);
+
   return {
-    position: [(RelX + 1) / 2, (RelY + 1) / 2]
-  } as AttachmentDisplay;
+    position: [positionScalarX, positionScalarY],
+    // we can't calculate absolute offset until we get the
+    // referenced element width/height
+    offset: [] as [number, number],
+    relativeOffset: [relativeOffsetScalarX, relativeOffsetScalarY]
+  };
 }

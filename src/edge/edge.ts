@@ -11,6 +11,7 @@ import {
 import { SmartPoint } from "../geom-utils";
 import {
   InteractionType,
+  AttachablePoint,
   Point,
   PvjsonNode,
   PvjsonEdge,
@@ -27,45 +28,29 @@ import { calculateAllPoints } from "./calculateAllPoints";
 export const DEFAULT_STUB_LENGTH = 20;
 
 /**
- * getOffsetOrientationAndPositionScalarsAlongAxis
+ * getOffsetAndOrientationScalarsAlongAxis
  *
  * @param relValue {number}
  * @param axis {string}
  * @param referencedEntity
  * @return {OffsetOrientationAndPositionScalarsAlongAxis}
  */
-function getOffsetOrientationAndPositionScalarsAlongAxis(
-  relValue: number,
+function getOffsetAndOrientationScalarsAlongAxis(
+  positionScalar: number,
+  relativeOffsetScalar: number,
   axis: "x" | "y",
+  // TODO are we correctly handling the case of a group as the referenced
+  // entity? Do we have the group width and height yet to properly calculate
+  // this?
   referencedEntity: PvjsonNode
 ): OffsetOrientationAndPositionScalarsAlongAxis {
+  const offsetScalar =
+    relativeOffsetScalar *
+    (axis === "x" ? referencedEntity.width : referencedEntity.height);
+
   // orientationScalar here refers to the initial direction the edge takes as
   // it moves away from the entity to which it is attached.
-  let offsetScalar;
   let orientationScalar;
-  let positionScalar;
-  let referencedEntityDimension;
-
-  const relativeToUpperLeftCorner = (relValue + 1) / 2;
-  if (relativeToUpperLeftCorner < 0 || relativeToUpperLeftCorner > 1) {
-    if (axis === "x") {
-      referencedEntityDimension = referencedEntity.width;
-    } else {
-      referencedEntityDimension = referencedEntity.height;
-    }
-    if (relativeToUpperLeftCorner < 0) {
-      positionScalar = 0;
-      offsetScalar = relativeToUpperLeftCorner * referencedEntityDimension;
-    } else {
-      positionScalar = 1;
-      offsetScalar =
-        (relativeToUpperLeftCorner - 1) * referencedEntityDimension;
-    }
-  } else {
-    positionScalar = relativeToUpperLeftCorner;
-    offsetScalar = 0;
-  }
-
   if (positionScalar === 0) {
     orientationScalar = -1;
   } else if (positionScalar === 1) {
@@ -116,46 +101,43 @@ export function postprocessPVJSON(
   let index = 0;
 
   const pvjsonEdgeIsAttachedTo = [];
-  if (pvjsonEdge.hasOwnProperty("isAttachedTo")) {
-    throw new Error("why does edge already have attachment?");
-  }
-  const explicitPoints = map(function(point: EdgeGraphicsTypePointType) {
-    const { ArrowHead, GraphRef, RelX, RelY, X, Y } = point;
-    const explicitPoint: Point = {} as Point;
+  const providedPvjsonPoints = map(function(
+    point: AttachablePoint & { marker: string }
+  ) {
+    const { marker, x, y } = point;
 
-    if (isDefinedCXML(ArrowHead)) {
+    if (!!marker) {
       // NOTE: side effects below
       if (index === 0) {
-        pvjsonEdge.markerStart = ArrowHead;
+        pvjsonEdge.markerStart = marker;
       } else if (index === pointCount - 1) {
-        pvjsonEdge.markerEnd = ArrowHead;
+        pvjsonEdge.markerEnd = marker;
       }
     }
 
-    if (isDefinedCXML(X)) {
-      explicitPoint.x = X;
-      explicitPoint.y = Y;
-    }
-
-    // entityReferencedByPoint can be a regular node (DataNode, Shape, Label)
-    // or an Anchor. If connected to an Anchor, the biological meaning is
-    // that the edge is connected to another edge, but in this code, we
-    // implement this by treating the Anchor as a node, as if it were
-    // a "burr" that is always stuck (isAttachedTo) the other edge.
-    const entityReferencedByPoint =
-      referencedEntities &&
-      isDefinedCXML(GraphRef) &&
-      (referencedEntities[GraphRef] as PvjsonNode);
-
-    if (isAttachablePoint(point, explicitPoint)) {
-      const entityIdReferencedByEdge = isGPMLAnchor(entityReferencedByPoint)
-        ? entityReferencedByPoint.isAttachedTo
-        : entityReferencedByPoint.id;
-
+    if (isAttachablePoint(point)) {
       // NOTE: pvjson allows for expressing one edge attached to another edge.
       // When we do this, we say that the POINT attaches to an ANCHOR on the other edge,
       // but the EDGE attaches to the other EDGE, never the anchor.
-      explicitPoint.isAttachedTo = entityReferencedByPoint.id;
+      const { isAttachedTo, attachmentDisplay } = point;
+
+      if (!attachmentDisplay.offset) {
+        throw new Error("point attachmentDisplay missing offset");
+      }
+
+      // entityReferencedByPoint can be a regular node (DataNode, Shape, Label)
+      // or an Anchor. If connected to an Anchor, the biological meaning is
+      // that the edge is connected to another edge, but in this code, we
+      // implement this by treating the Anchor as a node, as if it were
+      // a "burr" that is always stuck (isAttachedTo) the other edge.
+      const entityReferencedByPoint =
+        referencedEntities &&
+        !!isAttachedTo &&
+        (referencedEntities[isAttachedTo] as PvjsonNode);
+
+      const entityIdReferencedByEdge = isGPMLAnchor(entityReferencedByPoint)
+        ? entityReferencedByPoint.isAttachedTo
+        : entityReferencedByPoint.id;
 
       // WARNING: side effect
       pvjsonEdgeIsAttachedTo.push(entityIdReferencedByEdge);
@@ -163,11 +145,8 @@ export function postprocessPVJSON(
       const entityReferencedByEdge =
         referencedEntities[entityIdReferencedByEdge];
 
-      const orientation = (explicitPoint.orientation =
-        explicitPoint.orientation || ([] as Orientation));
-      const attachmentDisplay = (explicitPoint.attachmentDisplay =
-        explicitPoint.attachmentDisplay ||
-        ({ position: [], offset: [] } as AttachmentDisplay));
+      const orientation = (point.orientation =
+        point.orientation || ([] as Orientation));
 
       // attachmentDisplay: { position: [x: number, y: number], offset: [xOffset: number, yOffset: number], orientation: [dx: number, dy: number] }
       //
@@ -217,36 +196,40 @@ export function postprocessPVJSON(
         isPvjsonGroup(entityReferencedByEdge) ||
         isPvjsonBurr(entityReferencedByEdge)
       ) {
+        const { position, relativeOffset } = attachmentDisplay;
         // edge connected to a SingleFreeNode, a Group or a Burr, but NOT another edge or an anchor
         const {
           offsetScalar: offsetScalarX,
-          orientationScalar: orientationScalarX,
-          positionScalar: positionScalarX
-        } = getOffsetOrientationAndPositionScalarsAlongAxis(
-          RelX,
+          orientationScalar: orientationScalarX
+        } = getOffsetAndOrientationScalarsAlongAxis(
+          position[0],
+          relativeOffset[0],
           "x",
           entityReferencedByEdge
         );
-        if (!isFinite(positionScalarX) || !isFinite(orientationScalarX)) {
+        if (!isFinite(offsetScalarX) || !isFinite(orientationScalarX)) {
           throw new Error(
-            `Expected finite values for positionScalarX ${positionScalarX} and orientationScalarX ${orientationScalarX}`
+            `Expected finite values for offsetScalarX ${offsetScalarX} and orientationScalarX ${orientationScalarX}`
           );
         }
         const {
           offsetScalar: offsetScalarY,
-          orientationScalar: orientationScalarY,
-          positionScalar: positionScalarY
-        } = getOffsetOrientationAndPositionScalarsAlongAxis(
-          RelY,
+          orientationScalar: orientationScalarY
+        } = getOffsetAndOrientationScalarsAlongAxis(
+          position[1],
+          relativeOffset[1],
           "y",
           entityReferencedByEdge
         );
-        if (!isFinite(positionScalarY) || !isFinite(orientationScalarY)) {
+        if (!isFinite(offsetScalarY) || !isFinite(orientationScalarY)) {
           throw new Error(
-            `Expected finite values for positionScalarY ${positionScalarY} and orientationScalarY ${orientationScalarY}`
+            `Expected finite values for offsetScalarY ${offsetScalarY} and orientationScalarY ${orientationScalarY}`
           );
         }
 
+        orientation[0] = orientationScalarX;
+        orientation[1] = orientationScalarY;
+        /* TODO what was this below? Can we delete it?
         if (index === 0) {
           orientation[0] = orientationScalarX;
           orientation[1] = orientationScalarY;
@@ -254,33 +237,16 @@ export function postprocessPVJSON(
           orientation[0] = -1 * orientationScalarX;
           orientation[1] = -1 * orientationScalarY;
         }
+				//*/
 
+        // TODO is there a case where we would ever use offset for edges?
         attachmentDisplay.offset[0] = offsetScalarX;
         attachmentDisplay.offset[1] = offsetScalarY;
-        attachmentDisplay.position[0] = positionScalarX;
-        attachmentDisplay.position[1] = positionScalarY;
-
-        /* TODO is there a case where we would ever use this?
-				if (orientationAndPositionScalarsX.hasOwnProperty("offset")) {
-					// TODO in the case of a group as the referenced entity,
-					// we don't have the group width and height yet to properly calculate this
-					attachmentDisplay.offset[0] =
-						orientationAndPositionScalarsX.offsetScalar;
-				}
-				if (orientationAndPositionScalarsY.hasOwnProperty("offset")) {
-					// TODO in the case of a group as the referenced entity,
-					// we don't have the group width and height yet to properly calculate this
-
-					// NOTE: we set the X offset to zero if it doesn't exist so that we don't have null values in the array.
-					attachmentDisplay.offset[0] = attachmentDisplay.offset[0] || 0;
-					attachmentDisplay.offset[1] =
-						orientationAndPositionScalarsY.offsetScalar;
-				}
-				//*/
+        point.attachmentDisplay = omit(["relativeOffset"], attachmentDisplay);
       } else if (isGPMLAnchor(entityReferencedByPoint)) {
         // edge is connected to another edge via an anchor
-        const position = (attachmentDisplay.position =
-          entityReferencedByPoint.attachmentDisplay.position);
+        point.attachmentDisplay.position =
+          entityReferencedByPoint.attachmentDisplay.position;
       } else {
         console.error("entityReferencedByPoint:");
         console.error(entityReferencedByPoint);
@@ -294,7 +260,8 @@ export function postprocessPVJSON(
 
     // NOTE: side effect
     index += 1;
-    return explicitPoint;
+
+    return omit(["marker"], point);
   }, points);
 
   const pvjsonEdgeAttachedToCount = pvjsonEdgeIsAttachedTo.length;
@@ -302,9 +269,9 @@ export function postprocessPVJSON(
     pvjsonEdge.isAttachedTo = pvjsonEdgeIsAttachedTo;
   }
 
-  let pvjsonPoints;
+  let allPvjsonPoints;
   if (["StraightLine", "SegmentedLine"].indexOf(drawAs) > -1) {
-    pvjsonPoints = explicitPoints;
+    allPvjsonPoints = providedPvjsonPoints;
   } else if (["ElbowLine", "CurvedLine"].indexOf(drawAs) > -1) {
     // pvjsonEdge.isAttachedTo refers to what the EDGE is fundamentally attached to.
     // pvjsonEdge.points[0].isAttachedTo refers to what the POINT is attached to.
@@ -320,8 +287,8 @@ export function postprocessPVJSON(
       sourceEntity = referencedEntities[pvjsonEdgeIsAttachedTo[0]];
       targetEntity = referencedEntities[pvjsonEdgeIsAttachedTo[1]];
     } else if (pvjsonEdgeAttachedToCount === 1) {
-      const firstPoint = explicitPoints[0];
-      const lastPoint = explicitPoints[explicitPoints.length - 1];
+      const firstPoint = providedPvjsonPoints[0];
+      const lastPoint = providedPvjsonPoints[providedPvjsonPoints.length - 1];
       if (firstPoint.hasOwnProperty("isAttachedTo")) {
         sourceEntity = referencedEntities[pvjsonEdgeIsAttachedTo[0]];
       } else if (lastPoint.hasOwnProperty("isAttachedTo")) {
@@ -333,14 +300,14 @@ export function postprocessPVJSON(
         );
       }
     }
-    pvjsonPoints = calculateAllPoints(
-      explicitPoints.map(point => new SmartPoint(point)),
+    allPvjsonPoints = calculateAllPoints(
+      providedPvjsonPoints.map(point => new SmartPoint(point)),
       sourceEntity,
       targetEntity
     );
   } else {
     console.warn("Unknown edge drawAs: " + drawAs);
-    pvjsonPoints = explicitPoints;
+    allPvjsonPoints = providedPvjsonPoints;
   }
 
   // TODO how do we distinguish between intermediate (not first or last) points that a user
@@ -350,7 +317,7 @@ export function postprocessPVJSON(
   // GPML currently does not specify implicit intermediate points, but
   // pvjson does.
 
-  pvjsonEdge.points = pvjsonPoints;
+  pvjsonEdge.points = allPvjsonPoints;
 
   // TODO can I get rid of isAttachedToOrVia earlier?
   return omit(["isAttachedToOrVia"], pvjsonEdge);

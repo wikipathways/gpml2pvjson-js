@@ -7,9 +7,12 @@ import {
   concat,
   curry,
   find,
+  flatten,
   fromPairs,
   indexOf,
+  isArray,
   isObject,
+  isString,
   map,
   omit,
   pullAt,
@@ -30,7 +33,7 @@ import {
   PathwayStarter,
   PvjsonEntityMap
 } from "./gpml2pvjson";
-import { unionLSV } from "./gpml-utilities";
+import { isDefinedCXML, unionLSV } from "./gpml-utilities";
 
 import * as iassign from "immutable-assign";
 iassign.setOption({
@@ -61,6 +64,64 @@ const GPML_ELEMENT_NAME_TO_KAAVIO_TYPE = {
 
 const VALUES_TO_SKIP = ["", null, undefined];
 
+export type GPML_VALUE_SIMPLE = string | number;
+export type GPML_VALUE_UP_TO_OBJECT =
+  | GPML_VALUE_SIMPLE
+  | Record<string, GPML_VALUE_SIMPLE>;
+export type GPML_VALUE_UP_TO_SUB_OBJECT =
+  | GPML_VALUE_UP_TO_OBJECT
+  | Record<string, GPML_VALUE_UP_TO_OBJECT>;
+export type GPML_VALUE =
+  | GPML_VALUE_UP_TO_SUB_OBJECT
+  | GPML_VALUE_UP_TO_SUB_OBJECT[];
+
+// TODO update lodash/fp TS defs to use "x is ..."
+function isStringTS(x: any): x is string {
+  return isString(x);
+}
+
+function isArrayTS(x: any): x is any[] {
+  return isArray(x);
+}
+
+// NOTE: isPlainObject does not return true for an instance of a class
+function isRecord(x: any): x is Record<string, any> {
+  return !isArray(x) && isObject(x);
+}
+
+function getPvjsonValue(gpmlElement, gpmlKey: string, gpmlValue: GPML_VALUE) {
+  // NOTE: jsSafeGPMLKey is for attributes like "Data-Source", because
+  // the following would be invalid JS:
+  //   export function Data-Source() {};
+  // TODO what about things like spaces, etc.?
+  const jsSafeGPMLKey = gpmlKey.replace("-", "");
+  let pvjsonValue;
+  if (GPML2013aValueConverters.hasOwnProperty(jsSafeGPMLKey)) {
+    return GPML2013aValueConverters[jsSafeGPMLKey](gpmlElement);
+  } else if (isStringTS(gpmlValue)) {
+    if (GPML2013aValueMappings.hasOwnProperty(gpmlValue)) {
+      return GPML2013aValueMappings[gpmlValue];
+    } else {
+      return gpmlValue;
+    }
+  } else if (isArrayTS(gpmlValue)) {
+    return gpmlValue.map(function(valueItem) {
+      return getPvjsonValue(valueItem, gpmlKey, valueItem);
+    });
+  } else if (isRecord(gpmlValue)) {
+    return fromPairs(
+      toPairs(gpmlValue).reduce(function(acc, [key, value]): [string, any][] {
+        processKV(gpmlValue, [key, value]).forEach(function(x) {
+          acc.push(x);
+        });
+        return acc;
+      }, [])
+    ) as Record<string, any>;
+  } else {
+    return gpmlValue;
+  }
+}
+
 export const processKV = curry(function(
   gpmlElement,
   [gpmlKey, gpmlValue]
@@ -75,7 +136,7 @@ export const processKV = curry(function(
   if (
     gpmlKey[0] === "_" ||
     pvjsonKey === "pvjson:delete" ||
-    (isObject(gpmlValue) && gpmlValue._exists === false)
+    (isObject(gpmlValue) && !isDefinedCXML(gpmlValue))
   ) {
     // NOTE: we don't want to include "private" keys, such as
     // "_exists" or "_namespace".
@@ -111,40 +172,10 @@ export const processKV = curry(function(
         }, {})
     );
   } else {
-    // NOTE: jsSafeGPMLKey is for attributes like "Data-Source", because
-    // this is not valid JS:
-    //   export function Data-Source() {};
-    const jsSafeGPMLKey = gpmlKey.replace("-", "");
-    const pvjsonValue = GPML2013aValueConverters.hasOwnProperty(jsSafeGPMLKey)
-      ? GPML2013aValueConverters[jsSafeGPMLKey](gpmlElement)
-      : gpmlValue;
-    /* TODO for gpmlValues that are arrays, do we want to recursively descend into and process each array element?
-      : isArray(gpmlValue)
-        ? gpmlValue.map(function(valueItem) {
-            if (!isObject(valueItem) || isArray(valueItem)) {
-              return valueItem;
-            } else {
-              return fromPairs(
-                toPairs(valueItem).map(function([key, value]) {
-                  return processKV(valueItem, [key, value]);
-                })
-              );
-            }
-          })
-        : gpmlValue;
-		//*/
+    const pvjsonValue = getPvjsonValue(gpmlElement, gpmlKey, gpmlValue);
     // NOTE: we don't include key/value pairs when the value is missing
     if (VALUES_TO_SKIP.indexOf(pvjsonValue) === -1) {
-      return [
-        [
-          pvjsonKey || camelCase(gpmlKey),
-          GPML2013aValueConverters.hasOwnProperty(jsSafeGPMLKey)
-            ? GPML2013aValueConverters[jsSafeGPMLKey](gpmlElement)
-            : GPML2013aValueMappings.hasOwnProperty(gpmlKey)
-              ? GPML2013aValueMappings[gpmlKey]
-              : gpmlValue
-        ]
-      ];
+      return [[pvjsonKey || camelCase(gpmlKey), pvjsonValue]];
     } else {
       return [];
     }
@@ -273,7 +304,7 @@ export class Processor {
     // Does the schema allow the element to have a GraphId?
     if (!!GraphId) {
       // Does it actually have one?
-      if (GraphId._exists === false) {
+      if (!isDefinedCXML(GraphId)) {
         // NOTE: we are making sure that elements that CAN have a GraphId
         // always DO have a GraphId. GraphIds are optional in GPML for Groups,
         // so we will add one if it's not already specified. But Pathway
@@ -283,13 +314,13 @@ export class Processor {
         graphIdManager.recordExisting(GraphId);
       }
 
-      if (!!GroupRef && GroupRef._exists !== false) {
+      if (isDefinedCXML(GroupRef)) {
         containedGraphIdsByGroupGroupId[GroupRef] =
           containedGraphIdsByGroupGroupId[GroupRef] || [];
         containedGraphIdsByGroupGroupId[GroupRef].push(GraphId);
       }
 
-      if (!!GroupId && GroupId._exists !== false) {
+      if (isDefinedCXML(GroupId)) {
         groupIdToGraphIdStream.write([GroupId, GraphId]);
       }
     } else {
@@ -317,7 +348,7 @@ export class Processor {
       };
 
       /*
-      if (gpmlParentElement.GroupRef._exists !== false) {
+      if (isDefinedCXML(gpmlParentElement.GroupRef)) {
         propertiesToFillIn.GroupRef = gpmlParentElement.GroupRef;
       }
 			//*/
