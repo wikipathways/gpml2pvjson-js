@@ -140,7 +140,7 @@ export class SmartPath {
 
     if (!isUndefined(edge)) {
       const { points, markerStart, markerEnd } = edge;
-      this.path = new edgeDrawers[(edge.drawAs.toLowerCase())](
+      this.path = new edgeDrawers[edge.drawAs](
         smartPoints,
         markerStart,
         markerEnd

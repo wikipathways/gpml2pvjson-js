@@ -428,7 +428,7 @@ export function GPML2013aToPVJSON(
               height: 4,
               width: 4
             });
-          } else if (drawAnchorAs === "ellipse") {
+          } else if (drawAnchorAs === "Ellipse") {
             return defaults(pvjsonAnchor, {
               height: 8,
               width: 8
