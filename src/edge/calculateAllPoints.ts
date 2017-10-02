@@ -144,14 +144,15 @@ export function calculateAllPoints(
     endPoint = firstPoint;
     endEntity = sourceEntity;
   } else {
-    const message = `Either first or last point (or both) should have a valid
-		orientation by now in
-		calculateAllPoints(
-		  ${JSON.stringify(explicitPoints)},
-		  ${JSON.stringify(sourceEntity)},
-		  ${JSON.stringify(targetEntity)}
-		)`;
-    throw new Error(message);
+    throw new Error(
+      `Either first or last point (or both) should have a valid
+			orientation by now in
+			calculateAllPoints(
+				${JSON.stringify(explicitPoints)},
+				${JSON.stringify(sourceEntity)},
+				${JSON.stringify(targetEntity)}
+			)`
+    );
   }
 
   const startOrientation = startPoint.orientation;

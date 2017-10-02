@@ -109,6 +109,22 @@ interface HighlandStatic {
   isStreamRedirect(x: any): boolean;
 
   /**
+	 * Creates a stream that sends a single error then ends.
+	 *
+	 * @id fromError
+	 * @section Utils
+	 * @name _.fromError(err)
+	 * @param error - the error to send
+	 * @returns Stream
+	 * @api public
+	 *
+	 * _.fromError(new Error('Single Error')).toCallback(function (err, result) {
+	 *     // err contains Error('Single Error') object
+	 * }
+	 */
+  fromError(error: Error): Highland.Stream<Error>;
+
+  /**
 	 * Logs values to the console, a simple wrapper around `console.log` that
 	 * it suitable for passing to other functions by reference without having to
 	 * call `bind`.

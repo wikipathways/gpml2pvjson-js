@@ -8,18 +8,25 @@
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "bin": "./bin/gpml2pvjson",
+  "watch": {
+    "assets": "{src}/{**/,}*.json"
+  },
   "scripts": {
-    "build": "npm run compile",
-    "compile": "mkdir -p lib && npm run copyJSON && npm run compile:xsd && npm run compile:es5",
+    "build": "npm run assets && npm run compile",
+    "compile": "mkdir -p lib && npm run assets && npm run compile:xsd && npm run compile:es5",
     "compile:xsd": "rm -rf cache/* xmlns/* && cxsd ../gpml2pvjson-js/node_modules/@wikipathways/gpml/GPML2013a-fuller.xsd",
     "compile:es5": "tsc --project tsconfig.json && echo ok || echo not ok",
-    "copyJSON": "cp src/*.json lib/ && mkdir -p lib/spinoffs && cp src/spinoffs/*.json lib/spinoffs/ && echo ok || echo not ok",
+    "assets": "npm-run-all -p assets:*",
+    "assets:spinoffs": "mkdir -p lib/spinoffs && cp src/spinoffs/*.json lib/spinoffs/",
+    "assets:2013a": "mkdir -p lib/2013a && cp src/2013a/*.json lib/2013a/",
     "prepare": "npm run build",
     "test": "echo \"TODO: These tests are only making sure the converter doesn't throw any errors, but it would be better to compare the actual outputs against validated expected outputs.\" && npm-run-all test:*",
     "test:chunked": "curl --limit-rate 10K \"http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=xml\" | xpath \"*/ns1:data/text()\" | base64 --decode | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 | jq . > /dev/null",
     "test:multiple": "for f in ./test/input/*.gpml{,.xml}; do echo \"Testing converter against $f\" && WPID=`echo \"$f\" | sed \"s/.*_WP/WP/\" | sed \"s/_.*.gpml//\"`; cat \"$f\" | bin/gpml2pvjson --id \"http://identifiers.org/wikipathways/\"$WPID | jq . > /dev/null; done",
     "test:spectrum": "for f in ../gpml2pvjson-js/node_modules/@wikipathways/gpml/gpml-spectrum/**/*.gpml{,.xml}; do echo \"Testing converter against $f\" && WPID=`echo \"$f\" | sed \"s/.*_WP/WP/\" | sed \"s/_.*.gpml//\"`; cat \"$f\" | bin/gpml2pvjson --id \"http://identifiers.org/wikipathways/\"$WPID | jq . > /dev/null; done",
-    "watch": "npm run build && tsc --project tsconfig.json --watch"
+    "watch": "npm run build && npm-run-all -p watch:*",
+    "watch:ts": "tsc --project tsconfig.json --watch",
+    "watch:other": "npm-watch"
   },
   "keywords": [
     "gpml",
@@ -44,7 +51,8 @@
     "rgbcolor": "^1.0.0",
     "source-map-support": "^0.4.17",
     "svg-points": "^6.0.0",
-    "vectory": "^1.2.1"
+    "vectory": "^1.2.1",
+    "verror": "^1.10.0"
   },
   "devDependencies": {
     "@wikipathways/cxsd": "^0.2.4",
@@ -54,13 +62,15 @@
     "chai": "^3.5.0",
     "colors": "~0.6.2",
     "deep-diff": "~0.2.0",
+    "install": "^0.10.1",
     "mocha": "^3.4.2",
+    "npm": "^5.4.2",
     "npm-run-all": "^4.1.1",
+    "npm-watch": "^0.3.0",
     "pretty-data": "~0.40.0",
     "pretty-error": "^1.2.0",
     "sinon": "^2.3.1",
     "typescript": "^2.5.2",
-    "verror": "^1.6.0",
     "webpack": "^2.4.1"
   },
   "repository": {

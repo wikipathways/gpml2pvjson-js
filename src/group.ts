@@ -1,6 +1,7 @@
 import {
   assign,
   curry,
+  fromPairs,
   isArray,
   isPlainObject,
   isFinite,
@@ -124,15 +125,24 @@ export function getGroupDimensions(
       }
     ).runningDimensions;
 
-  if (
-    !isFinite(dimensions.x) ||
-    !isFinite(dimensions.y) ||
-    !isFinite(dimensions.width) ||
-    !isFinite(dimensions.height)
-  ) {
-    console.error(JSON.stringify(containedEntities, null, "  "));
+  const propertiesToCheck = ["x", "y", "width", "height", "zIndex"];
+  const nonFinites = propertiesToCheck
+    .map(function(key) {
+      return [[key], dimensions[key]];
+    })
+    .filter(dims => !isFinite(dims[1]));
+  if (nonFinites.length > 0) {
     throw new Error(
-      `Error calculating group dimensions for group members logged above. Cannot calculate one or more of the following: x, y, width, height, zIndex.`
+      `Got a non-finite value(s):
+			${JSON.stringify(fromPairs(nonFinites), null, "  ")}
+			when calling
+			getGroupDimensions(
+				padding: ${padding},
+				borderWidth: ${borderWidth},
+				containedEntities: ${JSON.stringify(containedEntities, null, "  ")}
+			)
+			
+			`
     );
   }
 

@@ -2,4 +2,4 @@
 /// <reference path="./spinoffs/highland.d.ts" />
 /// <reference path="./spinoffs/json.d.ts" />
 
-export { GPML2013aToPVJSON } from "./GPML2013aToPVJSON";
+export { toPvjson as GPML2013aToPVJSON } from "./2013a/toPvjson";

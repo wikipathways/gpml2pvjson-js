@@ -1,6 +1,7 @@
 import "source-map-support/register";
 // TODO should I get rid of the lib above for production browser build?
 
+import { defaultsDeep as defaultsDeepM } from "lodash";
 import {
   assign,
   camelCase,
@@ -19,8 +20,15 @@ import {
   toPairs,
   toPairsIn
 } from "lodash/fp";
-import { defaultsDeep as defaultsDeepM } from "lodash";
 import * as hl from "highland";
+import * as VError from "verror";
+import * as iassign from "immutable-assign";
+iassign.setOption({
+  // Deep freeze both input and output. Used in development to make sure they don't change.
+  // TODO watch issue and re-enable when addressed: https://github.com/engineforce/ImassignM/issues/11
+  //freeze: true,
+  ignoreIfNoChange: true
+});
 
 import {
   PvjsonSingleFreeNode,
@@ -34,19 +42,7 @@ import {
   PvjsonEntityMap
 } from "./gpml2pvjson";
 import { isDefinedCXML, unionLSV } from "./gpml-utilities";
-
-import * as iassign from "immutable-assign";
-iassign.setOption({
-  // Deep freeze both input and output. Used in development to make sure they don't change.
-  // TODO watch issue and re-enable when addressed: https://github.com/engineforce/ImassignM/issues/11
-  //freeze: true,
-  ignoreIfNoChange: true
-});
-
 import { GraphIdManager } from "./GraphIdManager";
-import * as GPML2013aKeyMappings from "./GPML2013aKeyMappings.json";
-import * as GPML2013aValueMappings from "./GPML2013aValueMappings.json";
-import * as GPML2013aValueConverters from "./GPML2013aValueConverters";
 
 const GPML_ELEMENT_NAME_TO_KAAVIO_TYPE = {
   Anchor: "Burr",
@@ -88,99 +84,6 @@ function isArrayTS(x: any): x is any[] {
 function isRecord(x: any): x is Record<string, any> {
   return !isArray(x) && isObject(x);
 }
-
-function getPvjsonValue(gpmlElement, gpmlKey: string, gpmlValue: GPML_VALUE) {
-  // NOTE: jsSafeGPMLKey is for attributes like "Data-Source", because
-  // the following would be invalid JS:
-  //   export function Data-Source() {};
-  // TODO what about things like spaces, etc.?
-  const jsSafeGPMLKey = gpmlKey.replace("-", "");
-  let pvjsonValue;
-  if (GPML2013aValueConverters.hasOwnProperty(jsSafeGPMLKey)) {
-    return GPML2013aValueConverters[jsSafeGPMLKey](gpmlElement);
-  } else if (isStringTS(gpmlValue)) {
-    if (GPML2013aValueMappings.hasOwnProperty(gpmlValue)) {
-      return GPML2013aValueMappings[gpmlValue];
-    } else {
-      return gpmlValue;
-    }
-  } else if (isArrayTS(gpmlValue)) {
-    return gpmlValue.map(function(valueItem) {
-      return getPvjsonValue(valueItem, gpmlKey, valueItem);
-    });
-  } else if (isRecord(gpmlValue)) {
-    return fromPairs(
-      toPairs(gpmlValue).reduce(function(acc, [key, value]): [string, any][] {
-        processKV(gpmlValue, [key, value]).forEach(function(x) {
-          acc.push(x);
-        });
-        return acc;
-      }, [])
-    ) as Record<string, any>;
-  } else {
-    return gpmlValue;
-  }
-}
-
-export const processKV = curry(function(
-  gpmlElement,
-  [gpmlKey, gpmlValue]
-): [string, any][] {
-  if (VALUES_TO_SKIP.indexOf(gpmlValue) > -1) {
-    return [];
-  }
-  const pvjsonKey = GPML2013aKeyMappings[gpmlKey];
-  // NOTE "pvjson:lift" is for elements like "Graphics", where they
-  // are nested in GPML but are merged into the parent in pvjson.
-
-  if (
-    gpmlKey[0] === "_" ||
-    pvjsonKey === "pvjson:delete" ||
-    (isObject(gpmlValue) && !isDefinedCXML(gpmlValue))
-  ) {
-    // NOTE: we don't want to include "private" keys, such as
-    // "_exists" or "_namespace".
-    return [];
-  } else if (pvjsonKey === "pvjson:lift") {
-    return toPairsIn(gpmlValue).reduce(
-      (acc, x) => concat(acc, processKV(gpmlElement, x)),
-      []
-    );
-  } else if (gpmlKey === "Attribute") {
-    // NOTE: in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute".
-    return toPairs(
-      gpmlValue
-        // NOTE: some attributes have empty values and will cause problems
-        // if we don't use this filter to skip them.
-        .filter(({ Key, Value }) => VALUES_TO_SKIP.indexOf(Value) === -1)
-        .map(function({ Key, Value }) {
-          return processKV(gpmlElement, [Key, Value]);
-        })
-        .reduce(function(acc, [[processedKey, processedValue]]) {
-          // NOTE: this looks more complicated than it needs to be,
-          // but it's to handle the case where there are two or more
-          // sibling Attribute elements that share the same Key.
-          // I don't know of any cases of this in our actual GPML,
-          // but the XSD does not require unique Keys for sibling
-          // Attributes.
-          if (acc.hasOwnProperty(processedKey)) {
-            acc[processedKey] = unionLSV(acc[processedKey], processedValue);
-          } else {
-            acc[processedKey] = processedValue;
-          }
-          return acc;
-        }, {})
-    );
-  } else {
-    const pvjsonValue = getPvjsonValue(gpmlElement, gpmlKey, gpmlValue);
-    // NOTE: we don't include key/value pairs when the value is missing
-    if (VALUES_TO_SKIP.indexOf(pvjsonValue) === -1) {
-      return [[pvjsonKey || camelCase(gpmlKey), pvjsonValue]];
-    } else {
-      return [];
-    }
-  }
-});
 
 export class Processor {
   output: {
@@ -237,8 +140,11 @@ export class Processor {
 
   graphIdToZIndex: Record<string, number> = {};
 
-  constructor() {
-    const that = this;
+  KeyMappings: Record<string, any>;
+  ValueMappings: Record<string, any>;
+  ValueConverters: Record<string, any>;
+
+  constructor(KeyMappings, ValueMappings, ValueConverters) {
     const {
       graphIdToZIndex,
       graphIdsByGraphRef,
@@ -252,6 +158,10 @@ export class Processor {
       promisedPvjsonEntityLatestByGraphId,
       pvjsonEntityLatestStream
     } = this;
+
+    this.KeyMappings = KeyMappings;
+    this.ValueMappings = ValueMappings;
+    this.ValueConverters = ValueConverters;
 
     groupIdToGraphIdStream.each(function([groupId, graphId]) {
       promisedGraphIdByGroupId[groupId] = Promise.resolve(graphId);
@@ -276,8 +186,14 @@ export class Processor {
         graphIdToZIndex[id] = zIndex;
         promisedPvjsonEntityLatestByGraphId[id] = Promise.resolve(pvjsonEntity);
       })
-      .errors(function(err) {
-        throw err;
+      .errors(function(err, push) {
+        push(
+          new VError(
+            err,
+            ` observed in pvjsonEntityLatestStream
+						`
+          )
+        );
       })
       .each(function(pvjsonEntity) {});
 
@@ -422,12 +338,30 @@ export class Processor {
   );
 
   processProperties = curry((gpmlElement: GPMLElement): PvjsonEntity => {
-    return fromPairs(
+    const { processKV } = this;
+    const entity = fromPairs(
       toPairs(gpmlElement).reduce(
         (acc, x) => concat(acc, processKV(gpmlElement, x)),
         []
       )
     );
+    if (entity.lineStyle === "Double") {
+      entity.filters = unionLSV(entity.filters || [], "Double");
+    }
+    /* // TODO Do we want to use this? Right now, we're just using different
+			 // icons for RoundedRectangle, etc.
+		if (
+			entity.hasOwnProperty("drawAs") &&
+			entity.drawAs.indexOf("Rounded") === 0
+		) {
+      entity.filters = unionLSV(entity.filters || [], "Round");
+		}
+		//*/
+
+    if (!!entity.rotation) {
+      entity.textRotation = -1 * entity.rotation;
+    }
+    return entity;
   });
 
   processPropertiesAndType = curry(
@@ -475,4 +409,134 @@ export class Processor {
       }
     );
   };
+
+  getPvjsonValue = (gpmlElement, gpmlKey: string, gpmlValue: GPML_VALUE) => {
+    const { getPvjsonValue, processKV } = this;
+    // NOTE: jsSafeGPMLKey is for attributes like "Data-Source", because
+    // the following would be invalid JS:
+    //   export function Data-Source() {};
+    // TODO what about things like spaces, etc.?
+    const jsSafeGPMLKey = gpmlKey.replace("-", "");
+    let pvjsonValue;
+    try {
+      if (this.ValueConverters.hasOwnProperty(jsSafeGPMLKey)) {
+        return this.ValueConverters[jsSafeGPMLKey](gpmlElement);
+      } else if (isStringTS(gpmlValue)) {
+        if (this.ValueMappings.hasOwnProperty(gpmlValue)) {
+          return this.ValueMappings[gpmlValue];
+        } else {
+          return gpmlValue;
+        }
+      } else if (isArrayTS(gpmlValue)) {
+        return gpmlValue.map(valueItem => {
+          return getPvjsonValue(valueItem, gpmlKey, valueItem);
+        });
+      } else if (isRecord(gpmlValue)) {
+        return fromPairs(
+          toPairs(gpmlValue).reduce((acc, [key, value]): [string, any][] => {
+            processKV(gpmlValue, [key, value]).forEach(function(x) {
+              acc.push(x);
+            });
+            return acc;
+          }, [])
+        ) as Record<string, any>;
+      } else {
+        return gpmlValue;
+      }
+    } catch (err) {
+      throw new VError(
+        err,
+        ` when calling
+				getPvjsonValue(
+					JSON.stringify(gpmlElement, null, ''),
+					JSON.stringify(gpmlKey, null, ''),
+					JSON.stringify(gpmlValue, null, '')
+				)
+				`
+      );
+    }
+  };
+
+  processKV = curry((gpmlElement, [gpmlKey, gpmlValue]): [string, any][] => {
+    const { getPvjsonValue, KeyMappings, processKV } = this;
+
+    if (VALUES_TO_SKIP.indexOf(gpmlValue) > -1) {
+      return [];
+    }
+    const pvjsonKey = KeyMappings[gpmlKey];
+    // NOTE "pvjson:lift" is for elements like "Graphics", where they
+    // are nested in GPML but are merged into the parent in pvjson.
+
+    if (
+      gpmlKey[0] === "_" ||
+      pvjsonKey === "pvjson:delete" ||
+      (isObject(gpmlValue) && !isDefinedCXML(gpmlValue))
+    ) {
+      // NOTE: we don't want to include "private" keys, such as
+      // "_exists" or "_namespace".
+      return [];
+    } else if (pvjsonKey === "pvjson:lift") {
+      try {
+        return toPairsIn(gpmlValue).reduce(
+          (acc, pair) => concat(acc, processKV(gpmlElement, pair)),
+          []
+        );
+      } catch (err) {
+        throw new VError(
+          err,
+          ` when recursively calling processKV && pvjsonKey is "pvjson:lift"
+					`
+        );
+      }
+    } else if (gpmlKey === "Attribute") {
+      try {
+        // NOTE: in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute".
+        return toPairs(
+          gpmlValue
+            // NOTE: some attributes have empty values and will cause problems
+            // if we don't use this filter to skip them.
+            .filter(({ Key, Value }) => VALUES_TO_SKIP.indexOf(Value) === -1)
+            .map(({ Key, Value }) => {
+              return processKV(gpmlElement, [Key, Value]);
+            })
+            .reduce((acc, [[processedKey, processedValue]]) => {
+              // NOTE: this looks more complicated than it needs to be,
+              // but it's to handle the case where there are two or more
+              // sibling Attribute elements that share the same Key.
+              // I don't know of any cases of this in our actual GPML,
+              // but the XSD does not require unique Keys for sibling
+              // Attributes.
+              if (acc.hasOwnProperty(processedKey)) {
+                acc[processedKey] = unionLSV(acc[processedKey], processedValue);
+              } else {
+                acc[processedKey] = processedValue;
+              }
+              return acc;
+            }, {})
+        );
+      } catch (err) {
+        throw new VError(
+          err,
+          ` when recursively calling processKV && gpmlKey is "Attribute"
+					`
+        );
+      }
+    } else {
+      try {
+        const pvjsonValue = getPvjsonValue(gpmlElement, gpmlKey, gpmlValue);
+        // NOTE: we don't include key/value pairs when the value is missing
+        if (VALUES_TO_SKIP.indexOf(pvjsonValue) === -1) {
+          return [[pvjsonKey || camelCase(gpmlKey), pvjsonValue]];
+        } else {
+          return [];
+        }
+      } catch (err) {
+        throw new VError(
+          err,
+          ` when calling processKV
+					`
+        );
+      }
+    }
+  });
 }

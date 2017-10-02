@@ -1,4 +1,4 @@
-import { isFinite, map, omit } from "lodash/fp";
+import { isFinite, isNaN, map, omit } from "lodash/fp";
 import {
   isAttachablePoint,
   isDefinedCXML,
@@ -23,6 +23,7 @@ import {
   GPMLElement
 } from "../gpml2pvjson";
 import { calculateAllPoints } from "./calculateAllPoints";
+import * as VError from "verror";
 
 // a stub is a short path segment that is used for the first and/or last segment(s) of a path
 export const DEFAULT_STUB_LENGTH = 20;
@@ -44,9 +45,28 @@ function getOffsetAndOrientationScalarsAlongAxis(
   // this?
   referencedEntity: PvjsonNode
 ): OffsetOrientationAndPositionScalarsAlongAxis {
-  const offsetScalar =
+  let offsetScalar =
     relativeOffsetScalar *
     (axis === "x" ? referencedEntity.width : referencedEntity.height);
+  // TODO WP536 has a referenced entity that lacks width/height. Why?
+  // The referenced entity was a group.
+  // Is the problem that the group was nested?
+  // Or is it a problem with the order of evaluation of entities (trying to
+  //   parse a dependent entity before its dependencies were parsed)?
+  if (!isFinite(offsetScalar)) {
+    throw new Error(
+      `
+			Got non-finite value ${offsetScalar} for offsetScalar
+			along ${axis} axis for
+			getOffsetAndOrientationScalarsAlongAxis(
+				positionScalar=${positionScalar},
+				relativeOffsetScalar=${relativeOffsetScalar},
+				referencedEntity=
+				${JSON.stringify(referencedEntity, null, "  ")}
+			)
+		`
+    );
+  }
 
   // orientationScalar here refers to the initial direction the edge takes as
   // it moves away from the entity to which it is attached.
@@ -122,7 +142,13 @@ export function postprocessPVJSON(
       const { isAttachedTo, attachmentDisplay } = point;
 
       if (!attachmentDisplay.offset) {
-        throw new Error("point attachmentDisplay missing offset");
+        throw new Error(
+          `attachmentDisplay for a Point has no offset property.
+					postprocessPVJSON(
+						referencedEntities=${JSON.stringify(referencedEntities, null, "  ")},
+						pvjsonEdge=${JSON.stringify(pvjsonEdge, null, "  ")}
+					)`
+        );
       }
 
       // entityReferencedByPoint can be a regular node (DataNode, Shape, Label)
@@ -198,58 +224,72 @@ export function postprocessPVJSON(
       ) {
         const { position, relativeOffset } = attachmentDisplay;
         // edge connected to a SingleFreeNode, a Group or a Burr, but NOT another edge or an anchor
-        const {
-          offsetScalar: offsetScalarX,
-          orientationScalar: orientationScalarX
-        } = getOffsetAndOrientationScalarsAlongAxis(
-          position[0],
-          relativeOffset[0],
-          "x",
-          entityReferencedByEdge
-        );
-        if (!isFinite(offsetScalarX) || !isFinite(orientationScalarX)) {
-          throw new Error(
-            `Expected finite values for offsetScalarX ${offsetScalarX} and orientationScalarX ${orientationScalarX}`
-          );
-        }
-        const {
-          offsetScalar: offsetScalarY,
-          orientationScalar: orientationScalarY
-        } = getOffsetAndOrientationScalarsAlongAxis(
-          position[1],
-          relativeOffset[1],
-          "y",
-          entityReferencedByEdge
-        );
-        if (!isFinite(offsetScalarY) || !isFinite(orientationScalarY)) {
-          throw new Error(
-            `Expected finite values for offsetScalarY ${offsetScalarY} and orientationScalarY ${orientationScalarY}`
-          );
-        }
 
-        if (index === 0) {
-          orientation[0] = orientationScalarX;
-          orientation[1] = orientationScalarY;
-        } else {
-          orientation[0] = -1 * orientationScalarX;
-          orientation[1] = -1 * orientationScalarY;
-        }
+        try {
+          const {
+            offsetScalar: offsetScalarX,
+            orientationScalar: orientationScalarX
+          } = getOffsetAndOrientationScalarsAlongAxis(
+            position[0],
+            relativeOffset[0],
+            "x",
+            entityReferencedByEdge
+          );
+          const {
+            offsetScalar: offsetScalarY,
+            orientationScalar: orientationScalarY
+          } = getOffsetAndOrientationScalarsAlongAxis(
+            position[1],
+            relativeOffset[1],
+            "y",
+            entityReferencedByEdge
+          );
+          if (index === 0) {
+            orientation[0] = orientationScalarX;
+            orientation[1] = orientationScalarY;
+          } else {
+            orientation[0] = -1 * orientationScalarX;
+            orientation[1] = -1 * orientationScalarY;
+          }
 
-        // TODO is there a case where we would ever use offset for edges?
-        attachmentDisplay.offset[0] = offsetScalarX;
-        attachmentDisplay.offset[1] = offsetScalarY;
-        point.attachmentDisplay = omit(["relativeOffset"], attachmentDisplay);
+          // TODO is there a case where we would ever use offset for edges?
+          attachmentDisplay.offset[0] = offsetScalarX;
+          attachmentDisplay.offset[1] = offsetScalarY;
+          point.attachmentDisplay = omit(["relativeOffset"], attachmentDisplay);
+        } catch (err) {
+          throw new VError(
+            err,
+            `
+						Error for:
+						postprocessPVJSON(
+							referencedEntities=${JSON.stringify(referencedEntities, null, "  ")},
+							pvjsonEdge=${JSON.stringify(pvjsonEdge, null, "  ")}
+						)
+					`
+          );
+          /* TODO should we use this?
+					console.warn(`Setting offsetScalar equal to 0.`);
+					offsetScalar = 0;
+					//*/
+        }
       } else if (isGPMLAnchor(entityReferencedByPoint)) {
         // edge is connected to another edge via an anchor
         point.attachmentDisplay.position =
           entityReferencedByPoint.attachmentDisplay.position;
       } else {
-        console.error("entityReferencedByPoint:");
-        console.error(entityReferencedByPoint);
-        console.error("entityReferencedByEdge:");
-        console.error(entityReferencedByEdge);
         throw new Error(
-          "Edge or Point attached to unexpected entity (logged above)."
+          `
+					Edge or Point attached to unexpected entity.
+					Point is attached to:
+					${JSON.stringify(entityReferencedByPoint, null, "  ")}
+					Point is attached to:
+					${JSON.stringify(entityReferencedByEdge, null, "  ")}
+					for:
+					postprocessPVJSON(
+					referencedEntities=${JSON.stringify(referencedEntities, null, "  ")},
+					pvjsonEdge=${JSON.stringify(pvjsonEdge, null, "  ")}
+					)
+				`
         );
       }
     }
@@ -302,8 +342,18 @@ export function postprocessPVJSON(
       targetEntity
     );
   } else {
-    console.warn("Unknown edge drawAs: " + drawAs);
-    allPvjsonPoints = providedPvjsonPoints;
+    throw new Error(
+      `
+			Unknown edge drawer "${drawAs}" for:
+			postprocessPVJSON(
+			referencedEntities=${JSON.stringify(referencedEntities, null, "  ")},
+			pvjsonEdge=${JSON.stringify(pvjsonEdge, null, "  ")}
+			)
+		`
+    );
+
+    // TODO should we use this?
+    // allPvjsonPoints = providedPvjsonPoints;
   }
 
   // TODO how do we distinguish between intermediate (not first or last) points that a user

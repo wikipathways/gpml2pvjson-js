@@ -207,6 +207,7 @@ type PvjsonEntityMergedNumberProperties =
   | "relX"
   | "relY"
   | "rotation"
+  | "textRotation"
   | "width"
   | "x"
   | "y"
@@ -225,6 +226,7 @@ type PvjsonEntityMergedStringArrayProperties =
   | "burrs"
   | "citations"
   | "contains"
+  | "filters"
   | "lineStyle"
   | "sboInteractionType"
   | "participants"
@@ -266,9 +268,11 @@ type PvjsonSingleFreeNodeOptionalKeys =
   | "cellularComponent"
   | "dbId"
   | "dbConventionalName"
+  | "filters"
   | "fontWeight"
   | "isPartOf"
   | "rotation"
+  | "textRotation"
   | "strokeDasharray"
   | "textAlign"
   | "verticalAlign";
@@ -300,6 +304,7 @@ type PvjsonGroupOptionalKeys =
   | "comments"
   | "dbId"
   | "dbConventionalName"
+  | "filters"
   | "strokeDasharray"
   | "textContent";
 export type PvjsonGroup = {
@@ -356,7 +361,9 @@ type PvjsonBurrOptionalKeys =
   | "comments"
   | "dbId"
   | "dbConventionalName"
+  | "filters"
   | "rotation"
+  | "textRotation"
   | "strokeDasharray";
 export type PvjsonBurr = {
   [K in PvjsonBurrRequiredKeys]: PvjsonEntityMerged[K]
@@ -369,7 +376,6 @@ export type PvjsonNode = PvjsonSingleFreeNode | PvjsonGroup | PvjsonBurr;
 
 type PvjsonEdgeRequiredKeys =
   | "id"
-  | "drawAs"
   | "color"
   | "drawAs"
   | "gpmlElementName"
@@ -387,6 +393,7 @@ type PvjsonEdgeOptionalKeys =
   | "conversionDirection"
   | "dbConventionalName"
   | "dbId"
+  | "filters"
   | "isPartOf"
   | "left"
   | "markerEnd"

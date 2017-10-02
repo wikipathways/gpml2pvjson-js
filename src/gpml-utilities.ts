@@ -33,11 +33,6 @@ export {
   unionLSV
 } from "./spinoffs/jsonld-utils";
 
-export function augmentErrorMessage(err: Error, message: string): Error {
-  err.message = (err.message || "") + message;
-  return err;
-}
-
 /*
  * This is needed because PublicationXref rdf:id values and
  * GPML GraphId values are not necessarily mutually exclusive

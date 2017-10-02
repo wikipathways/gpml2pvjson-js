@@ -9,17 +9,18 @@ import {
   map,
   toLower
 } from "lodash/fp";
+import RGBColor = require("rgbcolor");
+import * as VError from "verror";
+import { decode } from "he";
+
 import {
   generatePublicationXrefId,
   transform,
   unionLSV
-} from "./gpml-utilities";
-import { decode } from "he";
-import { normalize, radiansToDegrees } from "./spinoffs/Angle";
-import RGBColor = require("rgbcolor");
-import { isDefinedCXML } from "./gpml-utilities";
-
-import { AttachmentDisplay } from "./gpml2pvjson";
+} from "../gpml-utilities";
+import { normalize, radiansToDegrees } from "../spinoffs/Angle";
+import { isDefinedCXML } from "../gpml-utilities";
+import { AttachmentDisplay } from "../gpml2pvjson";
 
 // TODO are these ever used? PathVisio-Java
 // does not accept them as inputs in the
@@ -236,16 +237,17 @@ export function gpmlColorToCssColor(colorValue) {
     return "transparent";
   } else {
     let color = new RGBColor(colorValue);
-    if (color.ok) {
-      return color.toHex();
-    } else {
-      console.warn(
-        'Could not convert GPML Color or FillColor value of "' +
-          colorValue +
-          '" to a valid CSS color. Using "#c0c0c0" as a fallback.'
+    if (!color.ok) {
+      throw new VError(
+        `
+				Failed to get a valid CSS color for gpmlColorToCssColor(${colorValue})
+				Is there an invalid Color or FillColor in the GPML?
+				`
       );
-      return "#c0c0c0";
+      // TODO should we use this?
+      // return "#c0c0c0";
     }
+    return color.toHex();
   }
 }
 
