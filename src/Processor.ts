@@ -17,7 +17,6 @@ import {
   map,
   omit,
   pullAt,
-  toPairs,
   toPairsIn
 } from "lodash/fp";
 import * as hl from "highland";
@@ -95,7 +94,7 @@ export class Processor {
       // It's always just white.
       backgroundColor: "white",
       borderWidth: 0,
-      color: "white",
+      color: "black",
       contains: [],
       drawAs: "Rectangle",
       gpmlElementName: "Pathway",
@@ -111,8 +110,9 @@ export class Processor {
       width: 0,
       x: 0,
       y: 0,
-      zIndex: -Infinity,
+      zIndex: 0,
       // NOTE: these properties only apply contents of current element. They do not affect children.
+      fontSize: 12,
       fontWeight: "bold",
       textAlign: "left",
       verticalAlign: "top"
@@ -340,7 +340,7 @@ export class Processor {
   processProperties = curry((gpmlElement: GPMLElement): PvjsonEntity => {
     const { processKV } = this;
     const entity = fromPairs(
-      toPairs(gpmlElement).reduce(
+      toPairsIn(gpmlElement).reduce(
         (acc, x) => concat(acc, processKV(gpmlElement, x)),
         []
       )
@@ -433,7 +433,7 @@ export class Processor {
         });
       } else if (isRecord(gpmlValue)) {
         return fromPairs(
-          toPairs(gpmlValue).reduce((acc, [key, value]): [string, any][] => {
+          toPairsIn(gpmlValue).reduce((acc, [key, value]): [string, any][] => {
             processKV(gpmlValue, [key, value]).forEach(function(x) {
               acc.push(x);
             });
@@ -448,9 +448,9 @@ export class Processor {
         err,
         ` when calling
 				getPvjsonValue(
-					JSON.stringify(gpmlElement, null, ''),
-					JSON.stringify(gpmlKey, null, ''),
-					JSON.stringify(gpmlValue, null, '')
+					${JSON.stringify(gpmlElement, null, "")},
+					${JSON.stringify(gpmlKey, null, "")},
+					${JSON.stringify(gpmlValue, null, "")}
 				)
 				`
       );
@@ -491,7 +491,7 @@ export class Processor {
     } else if (gpmlKey === "Attribute") {
       try {
         // NOTE: in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute".
-        return toPairs(
+        return toPairsIn(
           gpmlValue
             // NOTE: some attributes have empty values and will cause problems
             // if we don't use this filter to skip them.

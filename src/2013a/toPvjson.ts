@@ -65,6 +65,7 @@ import {
   arrayify,
   generatePublicationXrefId,
   insertIfNotExists,
+  isDefinedCXML,
   isPvjsonBurr,
   isPvjsonEdge,
   isPvjsonGroup,
@@ -152,6 +153,7 @@ extendDeep(GPML2013a.InteractionType.prototype, GPMLDefaults.Interaction);
 extendDeep(GPML2013a.LabelType.prototype, GPMLDefaults.Label);
 extendDeep(GPML2013a.ShapeType.prototype, GPMLDefaults.Shape);
 extendDeep(GPML2013a.StateType.prototype, GPMLDefaults.State);
+extendDeep(GPML2013a.EdgeGraphicsType.prototype.Anchor, GPMLDefaults.Anchor);
 
 // TODO specify types
 // NOTE: there are some differences between this version and previous version, e.g.:
@@ -346,9 +348,13 @@ export function toPvjson(
     return processor.output;
   });
 
-  const dataNodeStream = cxmlSources["/Pathway/DataNode"].map(
-    processGPMLAndPropertiesAndType("DataNode")
-  );
+  const dataNodeStream = cxmlSources["/Pathway/DataNode"]
+    .map(processGPMLAndPropertiesAndType("DataNode"))
+    .map(function(entity: PvjsonSingleFreeNode) {
+      // TODO fix type def for unionLSV so I don't have to use "as"
+      entity.type = unionLSV(entity.type, entity.wpType) as string[];
+      return entity;
+    });
 
   const stateStream = cxmlSources["/Pathway/State"]
     .map(preprocessGPMLElement)
@@ -360,18 +366,6 @@ export function toPvjson(
       });
     })
     .map(processPropertiesAndType("State"));
-  //  /* NOTE probably going to let the renderer handle this State processing step instead of doing it here
-  //		.flatMap(function(pvjsonState: PvjsonBurr) {
-  //			const referencedElementCenterX = referencedElement.x + referencedElement.width / 2;
-  //			const referencedElementCenterY = referencedElement.y + referencedElement.height / 2;
-  //
-  //			const elementCenterX = referencedElementCenterX +	element['gpml:RelX'] * referencedElement.width / 2;
-  //			const elementCenterY = referencedElementCenterY +	element['gpml:RelY'] * referencedElement.height / 2;
-  //
-  //			element.x = elementCenterX - element.width / 2;
-  //			element.y = elementCenterY - element.height / 2;
-  //		});
-  //		//*/
 
   const shapeStream = cxmlSources["/Pathway/Shape"]
     .map(processGPMLAndPropertiesAndType("Shape"))
@@ -416,44 +410,59 @@ export function toPvjson(
     gpmlGraphicalLineStream.fork()
   ])
     .merge()
+    .filter(function(gpmlEdge: GPMLElement) {
+      return (
+        isDefinedCXML(gpmlEdge.Graphics) &&
+        isDefinedCXML(gpmlEdge.Graphics.Anchor)
+      );
+    })
     .flatMap(function(gpmlEdge: GPMLElement): Highland.Stream<PvjsonBurr> {
       const { GraphId, Graphics } = gpmlEdge;
       const fillInGPMLPropertiesFromEdge = fillInGPMLPropertiesFromParent(
         gpmlEdge
       );
 
-      const gpmlAnchors = Graphics.hasOwnProperty("Anchor") &&
-        Graphics.Anchor &&
-        Graphics.Anchor[0] &&
-        Graphics.Anchor[0]._exists !== false
-        ? Graphics.Anchor.filter(a => a.hasOwnProperty("GraphId"))
-        : [];
+      const gpmlAnchors = Graphics.Anchor;
       return hl(gpmlAnchors)
+        .map(function(gpmlAnchor: GPMLElement) {
+          const anchorShape = gpmlAnchor.Shape;
+          if (anchorShape === "None") {
+            // NOTE: For Anchors with Shape="None", PathVisio-Java displays
+            // the anchor as a 4x4 square when nothing is connected,
+            // but does not display it when something is connected.
+            // TODO: right now, PathVisio-Java writes out GPML such that the
+            // Anchor only has a GraphId when an Edge connects to this Anchor,
+            // but we may not be able to rely on this in the future.
+            if (isDefinedCXML(gpmlAnchor.GraphId)) {
+              assignM(gpmlAnchor.Graphics, {
+                Height: 0,
+                Width: 0
+              });
+            } else {
+              gpmlAnchor.Shape = "Rectangle";
+              assignM(gpmlAnchor.Graphics, {
+                Height: 4,
+                Width: 4
+              });
+            }
+          } else if (anchorShape === "Circle") {
+            assignM(gpmlAnchor.Graphics, {
+              Height: 8,
+              Width: 8
+            });
+          } else {
+            throw new Error(`Anchor Shape "${anchorShape}" is not supported.`);
+          }
+
+          return gpmlAnchor;
+        })
         .map(preprocessGPMLElement)
         .map(function(gpmlAnchor: GPMLElement) {
           const filledInAnchor = fillInGPMLPropertiesFromEdge(gpmlAnchor);
           filledInAnchor.GraphRef = GraphId;
           return filledInAnchor;
         })
-        .map(processPropertiesAndType("Anchor"))
-        .map(function(pvjsonAnchor: PvjsonBurr): PvjsonBurr {
-          const drawAnchorAs = pvjsonAnchor.drawAs;
-          if (drawAnchorAs === "none") {
-            return defaults(pvjsonAnchor, {
-              height: 4,
-              width: 4
-            });
-          } else if (drawAnchorAs === "Ellipse") {
-            return defaults(pvjsonAnchor, {
-              height: 8,
-              width: 8
-            });
-          } else {
-            throw new Error(
-              `Anchor of type "${drawAnchorAs}" is not supported.`
-            );
-          }
-        });
+        .map(processPropertiesAndType("Anchor"));
     });
 
   const groupStream: Highland.Stream<PvjsonGroup> = cxmlSources[
@@ -678,24 +687,30 @@ export function toPvjson(
         });
 
         if (isPvjsonBurr(pvjsonEntity)) {
-          // NOTE: burrs are not added to the property "contained".
-          // Rather, they are added to the property "burrs".
           finalSortedStream = hl(
             getPvjsonEntityLatestByGraphId(isAttachedTo)
           ).map(function(
-            referencedEntity:
-              | PvjsonSingleFreeNode
-              | PvjsonGroup
-              | PvjsonInteraction
+            referencedEntity: PvjsonSingleFreeNode | PvjsonGroup | PvjsonEdge
           ) {
-            /* TODO do we need to do anything here?
-						if (isPvjsonEdge(referencedEntity)) {
-						} else if (isPvjsonNode(referencedEntity)) {
-						}
-						//*/
-
+            if (isPvjsonNode(referencedEntity)) {
+              const { attachmentDisplay } = pvjsonEntity;
+              const [
+                relativeOffsetScalarX,
+                relativeOffsetScalarY
+              ] = attachmentDisplay.relativeOffset;
+              attachmentDisplay.offset = [
+                relativeOffsetScalarX * referencedEntity.width,
+                relativeOffsetScalarY * referencedEntity.height
+              ];
+              pvjsonEntity.attachmentDisplay = omit(
+                ["relativeOffset"],
+                attachmentDisplay
+              );
+            }
             setPvjsonEntity(pvjsonEntity);
 
+            // NOTE: burrs are not added to the property "contained".
+            // Rather, they are added to the property "burrs".
             referencedEntity.burrs = referencedEntity.burrs || [];
             insertEntityIdAndSortByZIndex(referencedEntity.burrs);
             setPvjsonEntity(referencedEntity);

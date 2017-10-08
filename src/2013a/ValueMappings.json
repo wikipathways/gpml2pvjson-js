@@ -1,7 +1,4 @@
 {
-  "Middle": "center",
-  "Left": "start",
-  "Right": "end",
   "GeneProdKegg enzymeuct": "Protein",
   "SimplePhysicalEntity": "Unknown",
   "Modifier": "Metabolite",

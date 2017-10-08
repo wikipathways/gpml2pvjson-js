@@ -58,7 +58,13 @@ export function isAttachablePoint(
 }
 
 export function isDefinedCXML(x: any) {
-  return typeof x !== "undefined" && x._exists !== false;
+  // NOTE: we need the array checks to handle cases like this:
+  // [ XmlType { _exists: false, _extended: true } ]
+  return (
+    typeof x !== "undefined" &&
+    x._exists !== false &&
+    (!isArray(x) || (x.length > 0 && x[0]._exists !== false))
+  );
 }
 
 export function isPvjsonBurr(entity: PvjsonEntity): entity is PvjsonBurr {

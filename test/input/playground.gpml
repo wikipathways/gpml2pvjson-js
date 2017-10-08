@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="New Pathway" Version="20170919">
-  <Graphics BoardWidth="644.0" BoardHeight="429.0" />
-  <Interaction>
-    <Graphics ZOrder="12288" LineThickness="1.0">
-      <Point X="201.0" Y="199.0" />
-      <Point X="377.0" Y="198.99999999999997" ArrowHead="Arrow" />
-    </Graphics>
+<Pathway xmlns="http://pathvisio.org/GPML/2013a" Name="New Pathway" Version="20171005" Organism="Arabidopsis thaliana">
+  <Graphics BoardWidth="480.70422535211264" BoardHeight="679.2957746478874" />
+  <DataNode TextLabel="יייייייייייייייייייייייסס&#xA;קקסס&#xA;תתתתתסס&#xA;ווווווווווסס" GraphId="b2117" Type="GeneProduct">
+    <Graphics CenterX="266.3747278987395" CenterY="493.1391785829484" Width="303.14453409607984" Height="163.7592731964312" ZOrder="-2" FontSize="30" Valign="Middle" Align="Right" />
     <Xref Database="" ID="" />
-  </Interaction>
-  <Shape TextLabel="Compartment" GraphId="b99fe">
-    <Attribute Key="org.pathvisio.DoubleLineProperty" Value="Double" />
-    <Graphics CenterX="121.75" CenterY="193.75" Width="120.5" Height="170.5" ZOrder="16384" FontSize="10" Valign="Middle" ShapeType="Oval" LineThickness="3.0" Color="cccccc" Rotation="0.7853981633974483" />
-  </Shape>
+  </DataNode>
+  <DataNode TextLabel="יייייייייייייייייייייייסס&#xA;קקסס&#xA;תתתתתסס&#xA;ווווווווווסס" GraphId="d162b" Type="GeneProduct">
+    <Graphics CenterX="263.97014774606816" CenterY="115.51342293824416" Width="303.14453409607984" Height="156.3777342761834" ZOrder="32771" FontSize="30" Valign="Middle" Align="Left" />
+    <Xref Database="" ID="" />
+  </DataNode>
+  <DataNode TextLabel="יייייייייייייייייייייייסס&#xA;קקסס&#xA;תתתתתסס&#xA;ווווווווווסס" GraphId="a7e5c" Type="GeneProduct">
+    <Graphics CenterX="263.47396453996146" CenterY="302.9943389687785" Width="303.14453409607984" Height="156.3777342761834" ZOrder="32772" FontSize="30" Valign="Middle" />
+    <Xref Database="" ID="" />
+  </DataNode>
   <InfoBox CenterX="0.0" CenterY="0.0" />
   <Biopax />
 </Pathway>

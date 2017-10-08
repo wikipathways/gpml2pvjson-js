@@ -275,7 +275,8 @@ type PvjsonSingleFreeNodeOptionalKeys =
   | "textRotation"
   | "strokeDasharray"
   | "textAlign"
-  | "verticalAlign";
+  | "verticalAlign"
+  | "wpType";
 export type PvjsonSingleFreeNode = {
   [K in PvjsonSingleFreeNodeRequiredKeys]: PvjsonEntityMerged[K]
 } &
@@ -312,14 +313,18 @@ export type PvjsonGroup = {
 } &
   { [K in PvjsonGroupOptionalKeys]?: PvjsonEntityMerged[K] };
 
-type PathwayStarterRequiredKeys = "fontWeight" | "textAlign" | "verticalAlign";
+type PathwayStarterRequiredKeys =
+  | "fontSize"
+  | "fontWeight"
+  | "textAlign"
+  | "verticalAlign";
 export type PathwayStarter = PvjsonGroup &
   { [K in PathwayStarterRequiredKeys]: PvjsonEntityMerged[K] } & {
     // NOTE: the alignment and text properties only apply contents of current element.
     // They do not affect children.
-    fontWeight: "bold";
-    textAlign: "left";
-    verticalAlign: "top";
+    fontWeight: string;
+    textAlign: string;
+    verticalAlign: string;
     "@context"?: any;
     author?: string;
     dataSource?: string;

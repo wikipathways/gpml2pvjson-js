@@ -6,8 +6,7 @@ import {
   isNaN,
   isString,
   kebabCase,
-  map,
-  toLower
+  map
 } from "lodash/fp";
 import RGBColor = require("rgbcolor");
 import * as VError from "verror";
@@ -121,7 +120,7 @@ export function CenterY(gpmlElement) {
 export function Height(gpmlElement) {
   const { Height, LineThickness } = gpmlElement.Graphics;
   // NOTE: this will be corrected, if needed, when CenterY is evaluated
-  const actualLineThickness = LineThickness._exists === false
+  const actualLineThickness = !isDefinedCXML(LineThickness)
     ? 0
     : findIndex(gpmlElement.Attribute, function({ Key, Value }) {
         return Key === "org.pathvisio.DoubleLineProperty";
@@ -134,7 +133,7 @@ export function Height(gpmlElement) {
 export function Width(gpmlElement) {
   const { Width, LineThickness } = gpmlElement.Graphics;
   // NOTE: this will be corrected, if needed, when CenterY is evaluated
-  const actualLineThickness = LineThickness._exists === false
+  const actualLineThickness = !isDefinedCXML(LineThickness)
     ? 0
     : findIndex(gpmlElement.Attribute, function({ Key, Value }) {
         return Key === "org.pathvisio.DoubleLineProperty";
@@ -158,7 +157,7 @@ export function Rotation(gpmlElement): number {
   // because we don't actually want States to be rotated.
 
   const { Graphics } = gpmlElement;
-  const Rotation = Graphics.Rotation._exists === false ? 0 : Graphics.Rotation;
+  const Rotation = !isDefinedCXML(Graphics.Rotation) ? 0 : Graphics.Rotation;
 
   // NOTE: Output is in degrees, because that's what the SVG transform
   // attribute accepts. Don't get confused, because we use radians in
@@ -224,10 +223,11 @@ export function getTextDecorationFromGPMLElement(gpmlElement) {
   }
   return outputChunks.join(" ");
 }
+export const Align = flow(get("Graphics.Align"), kebabCase);
 export const FontDecoration = getTextDecorationFromGPMLElement;
 export const FontStrikethru = getTextDecorationFromGPMLElement;
-export const FontStyle = flow(get("Graphics.FontStyle"), toLower);
-export const FontWeight = flow(get("Graphics.FontWeight"), toLower);
+export const FontStyle = flow(get("Graphics.FontStyle"), kebabCase);
+export const FontWeight = flow(get("Graphics.FontWeight"), kebabCase);
 export const Valign = flow(get("Graphics.Valign"), kebabCase);
 
 export const Href = flow(get("Href"), decodeIfNotEmpty, encodeURI);
@@ -296,7 +296,9 @@ export function ConnectorType(gpmlElement): string {
 export function Position(gpmlElement): AttachmentDisplay {
   const { Position } = gpmlElement;
   return {
-    position: [Position, 0]
+    position: [Position, 0],
+    // a GPML Anchor never has an offset
+    offset: [0, 0]
   } as AttachmentDisplay;
 }
 

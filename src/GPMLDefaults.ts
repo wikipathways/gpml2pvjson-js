@@ -14,7 +14,9 @@ const FontAttributes = {
 const ShapeStyleAttributes = {
   Color: "Black",
   LineStyle: "Solid",
-  LineThickness: 1
+  LineThickness: 1,
+  // Padding not in the XSD
+  Padding: 3
 };
 
 /* TODO look at using something like this:
@@ -63,8 +65,6 @@ export const DataNode = {
   Type: "Unknown",
   Graphics: defaultsDeepAll([
     {
-      // Padding not in the XSD
-      Padding: 1,
       FillColor: "White",
       ShapeType: "Rectangle"
     },
@@ -87,9 +87,9 @@ export const Group = {
   Style: "None"
 };
 
-const Anchor = {
+export const Anchor = {
+  Shape: "None",
   Graphics: {
-    Shape: "None",
     // this isn't explicitly set in the XSD but maybe should be.
     LineThickness: 0
   }
@@ -106,7 +106,7 @@ export const GPMLEdge = {
       ArrowHead: "Line"
     },
 		//*/
-    Anchor: Anchor,
+    //Anchor: Anchor,
     // these aren't explicitly set in the XSD but maybe should be.
     //FillColor: "Transparent",
     //FillColor: "ffffff",
@@ -132,7 +132,6 @@ export const Shape = {
     {
       FillColor: "Transparent",
       FontSize: 10,
-      Padding: 1,
       Rotation: "Top"
     },
     FontAttributes,
