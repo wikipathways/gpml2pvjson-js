@@ -281,16 +281,8 @@ export function toPvjson(
             stringifyKeyValueForPathway("organism")
           ]).join("\n");
 
-          // TODO where should these contexts be hosted?
-          // Probably at Github.
-          // The ones below are currently outdated.
           const context: (string | Record<string, any>)[] = [
-            "https://wikipathwayscontexts.firebaseio.com/biopax.json",
-            "https://wikipathwayscontexts.firebaseio.com/cellularLocation.json",
-            "https://wikipathwayscontexts.firebaseio.com/display.json",
-            //'https://wikipathwayscontexts.firebaseio.com/interactionType.json',
-            "https://wikipathwayscontexts.firebaseio.com/organism.json",
-            "https://wikipathwayscontexts.firebaseio.com/bridgedb/.json"
+            "https://cdn.rawgit.com/wikipathways/WpVocabularies/7a46a05/contexts/pvjs.jsonld"
           ];
           if (!!mergedPathway.id) {
             context.push({

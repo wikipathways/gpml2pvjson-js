@@ -1,14 +1,18 @@
 import { defaultsDeepAll } from "lodash/fp";
 
 const FontAttributes = {
-  FontName: "Arial",
-  FontStyle: "Normal",
-  FontDecoration: "Normal",
-  FontStrikethru: "Normal",
-  FontWeight: "Normal",
-  FontSize: 12,
   Align: "Center",
-  Valign: "Top"
+  FontDecoration: "Normal",
+  FontName: "Arial",
+  FontSize: 12,
+  FontStrikethru: "Normal",
+  FontStyle: "Normal",
+  FontWeight: "Normal",
+  lineHeight: 1.1,
+  overflow: "hidden",
+  textOverflow: "clip",
+  Valign: "Top",
+  whiteSpace: "pre"
 };
 
 const ShapeStyleAttributes = {

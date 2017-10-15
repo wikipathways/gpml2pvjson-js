@@ -17,6 +17,10 @@ program
   .option(
     "--id [string]",
     'Specify unique ID of this pathway, e.g., "http://identifiers.org/wikipathways/WP4"'
+  )
+  .option(
+    "--pathway-version [string]",
+    'Specify version of this pathway, e.g., "90358"'
   );
 
 // NOTE: this is in addition to the automatically generated help text
@@ -35,7 +39,7 @@ program.on("--help", function() {
 
   console.log("    Download from WikiPathways and convert:");
   console.log(
-    `    $ curl "http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=xml" | xpath "*/ns1:data/text()" | base64 --decode | gpml2pvjson --id http://identifiers.org/wikipathways/WP554`
+    `    $ curl "http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=xml" | xpath "*/ns1:data/text()" | base64 --decode | gpml2pvjson --id http://identifiers.org/wikipathways/WP554 --pathway-version=77712`
   );
 
   console.log("    Get w/ WikiPathways API and convert:");
@@ -47,6 +51,7 @@ program.on("--help", function() {
 program.parse(process.argv);
 
 var id = program.id;
+var pathwayVersion = program.pathwayVersion;
 // NOTE If an id is not provided, the CLI generates a hash of the input to use as the id. See
 // https://bentrask.com/?q=hash://sha256/98493caa8b37eaa26343bbf73f232597a3ccda20498563327a4c3713821df892
 // This is for the CLI only; the library itself does not do this.
@@ -101,6 +106,9 @@ hl(source).map(gpml => hl([gpml])).each(function(gpmlStream) {
     .map(function(pvjson) {
       if (!pvjson.pathway.id) {
         pvjson.pathway.id = `hash://${HASH_NAME}/${hash.digest("hex")}`;
+      }
+      if (!!pathwayVersion) {
+        pvjson.pathway.pathwayVersion = pathwayVersion;
       }
       return pvjson;
     })

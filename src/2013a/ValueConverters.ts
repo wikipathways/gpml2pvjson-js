@@ -276,6 +276,8 @@ export function FillColor(gpmlElement) {
 
 export function LineThickness(gpmlElement) {
   const { LineThickness, ShapeType } = gpmlElement.Graphics;
+  // See note near Height converter regarding LineThickness.
+
   // If it's a GPML Group, DataNode, Shape, Label or State, it needs a
   // ShapeType in order for it to have a LineThickness > 0, but a
   // GPML Interaction or GraphicalLine can have a LineThickness > 0
