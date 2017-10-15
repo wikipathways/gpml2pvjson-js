@@ -1,6 +1,6 @@
 {
   "name": "gpml2pvjson",
-  "version": "2.0.0-beta.24",
+  "version": "2.0.0-beta.25",
   "engines": {
     "node": ">=7.0.0"
   },
@@ -43,6 +43,7 @@
     "he": "~0.4.1",
     "highland": "^2.11.1",
     "immutable-assign": "^1.0.34",
+    "kaavio": "^3.7.5-beta28",
     "lodash": "^4.17.4",
     "ndjson": "^1.5.0",
     "os-fonts": "^0.4.1",

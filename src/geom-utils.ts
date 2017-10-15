@@ -23,7 +23,7 @@ import {
   normalize
 } from "./spinoffs/Angle";
 import { position } from "points";
-import * as edgeDrawers from "./edge/edgeDrawers";
+import * as edgeDrawers from "kaavio/src/drawers/edges";
 import {
   Point,
   PvjsonNode,

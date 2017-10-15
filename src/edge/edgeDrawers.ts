@@ -1,1 +1,0 @@
-../../../kaavio/src/drawers/edges/index.ts
