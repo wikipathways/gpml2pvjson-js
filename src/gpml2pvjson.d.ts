@@ -1,5 +1,7 @@
-/// <reference path="./spinoffs/rgbcolor.d.ts" />
+/// <reference path="./spinoffs/highland.d.ts" />
 /// <reference path="./spinoffs/json.d.ts" />
+/// <reference path="./spinoffs/rgbcolor.d.ts" />
+/// <reference path="./spinoffs/sax.d.ts" />
 
 // TODO look at how this definition file should be written.
 // Is it best practice to essentially make this an ES module?

@@ -26,7 +26,10 @@ import { position } from "points";
 // TODO why doesn't the following work?
 // Also, why doesn't ../node_modules/kaavio/lib/drawers/edges/ exist?
 //import * as edgeDrawers from "kaavio/src/drawers/edges/index";
-import * as edgeDrawers from "../node_modules/kaavio/src/drawers/edges/index";
+//import * as edgeDrawers from "../node_modules/kaavio/src/drawers/edges/index";
+//import * as edgeDrawers from "kaavio/src/drawers/edges/index";
+//import * as edgeDrawers from "kaavio/lib/drawers/edges/index";
+import * as edgeDrawers from "./edge/edgeDrawers";
 import {
   Point,
   PvjsonNode,

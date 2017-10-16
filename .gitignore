@@ -18,3 +18,4 @@ bin/try.js
 src/toPvjson.ts-old
 xmlns/
 bin/usage-examples.sh
+src/edge/edgeDrawers.ts

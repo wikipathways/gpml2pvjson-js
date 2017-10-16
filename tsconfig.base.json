@@ -10,10 +10,6 @@
     "pretty": true
   },
   "files": [
-    "src/spinoffs/highland.d.ts",
-    "src/spinoffs/rgbcolor.d.ts",
-    "src/spinoffs/sax.d.ts",
-    "src/spinoffs/json.d.ts",
     "src/gpml2pvjson.d.ts",
     "src/index.ts"
   ],
