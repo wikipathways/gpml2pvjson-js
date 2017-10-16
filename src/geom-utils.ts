@@ -23,7 +23,10 @@ import {
   normalize
 } from "./spinoffs/Angle";
 import { position } from "points";
-import * as edgeDrawers from "kaavio/src/drawers/edges";
+// TODO why doesn't the following work?
+// Also, why doesn't ../node_modules/kaavio/lib/drawers/edges/ exist?
+//import * as edgeDrawers from "kaavio/src/drawers/edges/index";
+import * as edgeDrawers from "../node_modules/kaavio/src/drawers/edges/index";
 import {
   Point,
   PvjsonNode,
