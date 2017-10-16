@@ -12,7 +12,7 @@ import {
   isPvjsonSingleFreeNode,
   unionLSV
 } from "./gpml-utilities";
-import * as GPML2013aGroupMappingsByStyle from "./GPML2013aGroupMappingsByStyle.json";
+import * as GPML2013aGroupMappingsByStyle from "./2013a/GroupMappingsByStyle.json";
 // Only imported for its type
 import { Processor } from "./Processor";
 import {

@@ -1,6 +1,6 @@
 {
   "name": "gpml2pvjson",
-  "version": "2.0.0-beta.25",
+  "version": "2.0.0-beta.26",
   "engines": {
     "node": ">=7.0.0"
   },
@@ -12,14 +12,14 @@
     "assets": "{src}/{**/,}*.json"
   },
   "scripts": {
+    "assets": "npm-run-all -p assets:*",
+    "assets:spinoffs": "mkdir -p lib/spinoffs && cp src/spinoffs/*.json lib/spinoffs/",
+    "assets:2013a": "mkdir -p lib/2013a && cp src/2013a/*.json lib/2013a/",
     "build": "npm run assets && npm run compile",
     "compile": "mkdir -p lib && npm run assets && npm run compile:xsd && npm run compile:es5",
     "compile:xsd": "rm -rf cache/* xmlns/* && cxsd ../gpml2pvjson-js/node_modules/@wikipathways/gpml/GPML2013a-fuller.xsd",
     "compile:es5": "tsc --project tsconfig.json && echo ok || echo not ok",
-    "assets": "npm-run-all -p assets:*",
-    "assets:spinoffs": "mkdir -p lib/spinoffs && cp src/spinoffs/*.json lib/spinoffs/",
-    "assets:2013a": "mkdir -p lib/2013a && cp src/2013a/*.json lib/2013a/",
-    "prepare": "npm run build",
+    "prepare": "npm run build && npm run test",
     "test": "echo \"TODO: These tests are only making sure the converter doesn't throw any errors, but it would be better to compare the actual outputs against validated expected outputs.\" && npm-run-all test:*",
     "test:chunked": "curl --limit-rate 10K \"http://webservice.wikipathways.org/getPathwayAs?fileType=xml&pwId=WP554&revision=77712&format=xml\" | xpath \"*/ns1:data/text()\" | base64 --decode | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP554 | jq . > /dev/null",
     "test:multiple": "for f in ./test/input/*.gpml{,.xml}; do echo \"Testing converter against $f\" && WPID=`echo \"$f\" | sed \"s/.*_WP/WP/\" | sed \"s/_.*.gpml//\"`; cat \"$f\" | bin/gpml2pvjson --id \"http://identifiers.org/wikipathways/\"$WPID | jq . > /dev/null; done",
