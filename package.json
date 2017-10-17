@@ -1,13 +1,13 @@
 {
   "name": "gpml2pvjson",
-  "version": "2.0.0-beta.29",
-  "engines": {
-    "node": ">=7.0.0"
-  },
+  "version": "3.0.0-0",
   "description": "convert GPML (XML) to pvjson (json)",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "bin": "./bin/gpml2pvjson",
+  "engines": {
+    "node": ">=6.11.4"
+  },
   "files": [
     "lib/",
     "bin/",
@@ -50,14 +50,13 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@typed/hashmap": "^1.0.1",
-    "@types/lodash": "^4.14.77",
     "@wikipathways/cxml": "^0.2.1-3",
     "angles": "^0.2.0",
     "commander": "^2.9.0",
     "he": "~0.4.1",
     "highland": "^2.11.1",
     "immutable-assign": "^1.0.34",
-    "kaavio": "^3.7.5-beta33",
+    "kaavio": "^4.0.0-0",
     "lodash": "^4.17.4",
     "ndjson": "^1.5.0",
     "os-fonts": "^0.4.1",
@@ -70,6 +69,7 @@
     "verror": "^1.10.0"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.77",
     "@wikipathways/cxsd": "^0.2.4",
     "@wikipathways/gpml": "github:ariutta/GPML#9d3e38b",
     "JSONStream": "~0.9.0",
