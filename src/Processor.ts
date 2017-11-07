@@ -96,7 +96,7 @@ export class Processor {
       borderWidth: 0,
       color: "black",
       contains: [],
-      drawAs: "Rectangle",
+      drawAs: "rect",
       gpmlElementName: "Pathway",
       height: 0,
       // it appears type = {id: string} & type = {id?: string} makes id required.
@@ -498,26 +498,6 @@ export class Processor {
 					`
         );
       }
-//    } else if (gpmlKey === "ShapeType") {
-//			// TODO there must be a cleaner way to handle this. Maybe all
-//			// ValueConverters return an object that is merged with the kaavio entity?
-//      try {
-//				const { ShapeType } = gpmlElement.Graphics;
-//				const output: any = [[
-//					pvjsonKey, this.ValueMappings[ShapeType]
-//				]];
-//				if (ShapeType === 'RoundedRectangle') {
-//					output.push(['rx', 15]);
-//					output.push(['ry', 15]);
-//				}
-//				return output;
-//      } catch (err) {
-//        throw new VError(
-//          err,
-//          ` when recursively calling processKV && gpmlKey is "ShapeType"
-//					`
-//        );
-//      }
     } else if (pvjsonKey === "pvjson:each") {
       try {
         // NOTE: in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute".

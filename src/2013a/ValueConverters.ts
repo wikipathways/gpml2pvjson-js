@@ -262,26 +262,6 @@ export function gpmlColorToCssColor(colorValue) {
   }
 }
 
-/*
-import * as GPML2013aValueMappings from "./ValueMappings.json";
-function getFromValueMappings(gpmlValue) {
-  return GPML2013aValueMappings[gpmlValue];
-}
-//export const Shape = flow(get("Shape"), getFromValueMappings);
-//export const ShapeType = flow(get("Graphics.ShapeType"), getFromValueMappings);
-export function ShapeType(gpmlElement): string {
-  const { ShapeType } = gpmlElement.Graphics;
-	const output: any = {
-		drawAs: getFromValueMappings(ShapeType)
-	};
-	if (ShapeType === 'RoundedRectangle') {
-		output.rx = 15;
-		output.ry = 15;
-	}
-  return output;
-}
-//*/
-
 export const Color = flow(get("Graphics.Color"), gpmlColorToCssColor);
 
 export function FillColor(gpmlElement) {
