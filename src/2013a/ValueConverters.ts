@@ -81,54 +81,56 @@ export const AUTHORS = flow(
 );
 export const BiopaxRef = flow(get("BiopaxRef"), map(generatePublicationXrefId));
 
-// Meanings of Width
-// -----------------
-// * DOM box model
-//   - box-sizing: border-box
-//     visible width = width
-//   	   (width means border + padding + width of the content)
-//       (see https://css-tricks.com/international-box-sizing-awareness-day/)
-//   - box-sizing: content-box
-//     visible width = width + border + padding 
-//       (width means width of the content)
-// * PathVisio-Java
-//   - Shapes without double lines
-//     visible width = GPMLWidth
-//     visible height = GPMLHeight
-//     (like box-sizing: border-box)
-//   - Shapes with double lines
-//     visible width = Width + 2 * LineThickness
-//     visible height = Height + 2 * LineThickness
-// * SVG: visible width = width + stroke-width
-// * kaavio/pvjs: same as DOM box model with box-sizing: border-box
+/*
+Meanings of Width
+-----------------
+* DOM box model
+ - box-sizing: border-box
+	 visible width = width
+		 (width means border + padding + width of the content)
+		 (see https://css-tricks.com/international-box-sizing-awareness-day/)
+ - box-sizing: content-box
+	 visible width = width + border + padding 
+		 (width means width of the content)
+* PathVisio-Java
+ - Shapes without double lines
+	 visible width = GPMLWidth
+	 visible height = GPMLHeight
+	 (like box-sizing: border-box)
+ - Shapes with double lines
+	 visible width = Width + 2 * LineThickness
+	 visible height = Height + 2 * LineThickness
+* SVG: visible width = width + stroke-width
+* kaavio/pvjs: same as DOM box model with box-sizing: border-box
 
-// In PathVisio-Java, GPML Width/Height for GPML Shapes is
-// inconsistent when zoomed in vs. when at default zoom level.
-//
-// When zoomed in, GPML Width/Height refers to the distance from
-// center of border to center of border, meaning that shapes that
-// run up to the edge will be cropped.
-//
-// When at default zoom level, GPML Width/Height refers to the distance
-// from outer edge of border to outer edge of border (no cropping).
-//
-// Because of this, LineThickness for Rectangle and RoundedRectangle
-// is also inconsistent.
-// When zoomed in: one half of specified LineThickness.
-// When at default zoom level: full specified LineThickness.
-//
-// For pvjs, we attempt to match the view from PathVisio-Java when zoomed out,
-// but we define width/height as outer border edge to outer border edge, meaning
-// data width/height values will not match GPML Width/Height values.
-//
-// data width = GPML Width + GPML LineThickness
-// data height = GPML Height + GPML LineThickness
-// (one half LineThickness on either side yields a full LineThickness to add
-// to width/height).
-//
-// Also note that for double lines, LineThickness refers to the the border
-// width of each line and the space between each line, meaning the border width
-// for the double line as a whole will be three times the listed LineThickness.
+In PathVisio-Java, GPML Width/Height for GPML Shapes is
+inconsistent when zoomed in vs. when at default zoom level.
+
+When zoomed in, GPML Width/Height refers to the distance from
+center of border to center of border, meaning that shapes that
+run up to the edge will be cropped.
+
+When at default zoom level, GPML Width/Height refers to the distance
+from outer edge of border to outer edge of border (no cropping).
+
+Because of this, LineThickness for Rectangle and RoundedRectangle
+is also inconsistent.
+When zoomed in: one half of specified LineThickness.
+When at default zoom level: full specified LineThickness.
+
+For pvjs, we attempt to match the view from PathVisio-Java when zoomed out,
+but we define width/height as outer border edge to outer border edge, meaning
+data width/height values will not match GPML Width/Height values.
+
+data width = GPML Width + GPML LineThickness
+data height = GPML Height + GPML LineThickness
+(one half LineThickness on either side yields a full LineThickness to add
+to width/height).
+
+Also note that for double lines, LineThickness refers to the the border
+width of each line and the space between each line, meaning the border width
+for the double line as a whole will be three times the listed LineThickness.
+//*/
 const getDimension = curry(function(dimensionName, gpmlElement) {
   const dimension = gpmlElement.Graphics[dimensionName];
   if (findIndex(function({ Key, Value }) {

@@ -60,7 +60,6 @@ import {
   preprocessGPML as preprocessGroupGPML,
   postprocessPVJSON as postprocessGroupPVJSON
 } from "../group";
-import { postprocessPVJSON as postprocessShapePVJSON } from "../Shape";
 import {
   arrayify,
   generatePublicationXrefId,
@@ -361,7 +360,6 @@ export function toPvjson(
 
   const shapeStream = cxmlSources["/Pathway/Shape"]
     .map(processGPMLAndPropertiesAndType("Shape"))
-    .map(postprocessShapePVJSON)
     .map(function(pvjsonEntity: PvjsonSingleFreeNode) {
       const { cellularComponent } = pvjsonEntity;
       // CellularComponent is not a BioPAX term, but "PhysicalEntity" is.
