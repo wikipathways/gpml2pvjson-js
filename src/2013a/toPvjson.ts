@@ -79,6 +79,7 @@ import {
 import * as VOCABULARY_NAME_TO_IRI from "../spinoffs/VOCABULARY_NAME_TO_IRI.json";
 
 import * as GPML2013aKeyMappings from "./KeyMappings.json";
+import * as GPML2013aKeyValueMappings from "./KeyValueConverters";
 import * as GPML2013aValueMappings from "./ValueMappings.json";
 import * as GPML2013aValueConverters from "./ValueConverters";
 
@@ -156,8 +157,6 @@ extendDeep(GPML2013a.StateType.prototype, GPMLDefaults.State);
 extendDeep(GPML2013a.EdgeGraphicsType.prototype.Anchor, GPMLDefaults.Anchor);
 
 // TODO specify types
-// NOTE: there are some differences between this version and previous version, e.g.:
-// 'Double' instead of 'double' for double lines
 export function toPvjson(
   inputStreamWithMessedUpRDFIDs: NodeJS.ReadableStream,
   pathwayIri?: string
@@ -201,6 +200,7 @@ export function toPvjson(
 
   const processor = new Processor(
     GPML2013aKeyMappings,
+		GPML2013aKeyValueMappings,
     GPML2013aValueMappings,
     GPML2013aValueConverters
   );

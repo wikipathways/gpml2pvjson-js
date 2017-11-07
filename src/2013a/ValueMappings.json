@@ -23,6 +23,7 @@
   "mim-transcription-translation": "MimTranscriptionTranslation",
   "Receptor": "none",
   "ReceptorSquare": "none",
+  "Double": "double",
   "Arc": "Arc",
   "Brace": "Brace",
   "Circle": "Ellipse",
@@ -33,9 +34,9 @@
   "Mitochondria": "Mitochondria",
   "Oval": "Ellipse",
   "Pentagon": "Pentagon",
-  "Rectangle": "Rectangle",
-  "RoundedRectangle": "RoundedRectangle",
-  "Triangle": "Triangle",
+  "Rectangle": "rect",
+  "RoundedRectangle": "rect",
+  "Triangle": "PathVisioOffsetTriangle",
   "Sarcoplasmic Reticulum": "SarcoplasmicReticulum",
   "None": "none"
 }

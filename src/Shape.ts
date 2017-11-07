@@ -25,7 +25,7 @@ export function addressPathVisioShapeRenderingBugs(
   let xScale;
   let yScale;
 
-  if (ShapeType === "Triangle") {
+  if (1 > 2 && ShapeType === "Triangle") {
     // NOTE: the numbers below come from visually experimenting with different widths
     // in PathVisio-Java and making linear approximations of the translation
     // scaling required to make x, y, width and height values match what is visually

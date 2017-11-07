@@ -155,6 +155,7 @@ type PvjsonEntityMergedStringProperties =
   | "author"
   | "backgroundColor"
   | "biopaxType"
+  | "borderStyle"
   | "cellularComponent"
   | "color"
   | "controlled"
@@ -200,6 +201,7 @@ type PvjsonEntityMergedStringProperties =
 // we can use something like this:
 // https://github.com/sebmarkbage/art/blob/51ffce8164a555d652843241c2fdda52e186cbbd/parsers/svg/core.js#L170
 type PvjsonEntityMergedNumberProperties =
+  | "borderRadius"
   | "borderWidth"
   | "fillOpacity"
   | "fontSize"
@@ -229,7 +231,6 @@ type PvjsonEntityMergedStringArrayProperties =
   | "citations"
   | "contains"
   | "filters"
-  | "lineStyle"
   | "sboInteractionType"
   | "participants"
   | "type";
@@ -264,6 +265,8 @@ type PvjsonSingleFreeNodeRequiredKeys =
   | "y"
   | "zIndex";
 type PvjsonSingleFreeNodeOptionalKeys =
+  | "borderRadius"
+  | "borderStyle"
   | "burrs"
   | "citations"
   | "comments"
@@ -301,6 +304,7 @@ type PvjsonGroupRequiredKeys =
   | "y"
   | "zIndex";
 type PvjsonGroupOptionalKeys =
+  | "borderStyle"
   | "burrs"
   | "cellularComponent"
   | "citations"

@@ -74,7 +74,7 @@
     "@wikipathways/gpml": "github:ariutta/GPML#9d3e38b",
     "JSONStream": "~0.9.0",
     "babel-preset-env": "^1.6.0",
-    "bridgedb": "^6.0.0-14",
+    "bridgedb": "^6.0.0-17",
     "chai": "^3.5.0",
     "colors": "~0.6.2",
     "deep-diff": "~0.2.0",

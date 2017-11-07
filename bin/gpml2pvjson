@@ -58,7 +58,7 @@ var pathwayVersion = program.pathwayVersion;
 var HASH_NAME = "sha256";
 
 // NOTE: some GPML files use lowercase "utf-8", so we need the ignore case flag to be set.
-var primaryDelimiterBetweenGPMLFiles = /<\?xml version="1.0" encoding="UTF-8"\?>/i;
+var primaryDelimiterBetweenGPMLFiles = /<\?xml\ version=["']1.0["']\ encoding=["']UTF-8["']\?>/i;
 var secondaryDelimiterBetweenGPMLFiles = "</Pathway>";
 
 var source = hl(process.stdin)

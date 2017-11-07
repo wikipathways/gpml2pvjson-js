@@ -1,6 +1,7 @@
 {
   "Align": "textAlign",
   "Anchor": "pvjson:delete",
+  "Attribute": "pvjson:each",
   "ArrowHead": "marker",
   "AUTHORS": "authors",
   "BiopaxRef": "citations",
@@ -16,7 +17,7 @@
   "FontName": "fontFamily",
   "FontDecoration": "textDecoration",
   "FontStrikethru": "textDecoration",
-  "Graphics": "pvjson:lift",
+  "Graphics": "pvjson:merge",
   "GraphId": "id",
   "GraphRef": "isAttachedTo",
   "GroupId": "pvjson:delete",
@@ -25,7 +26,7 @@
   "LineStyle": "strokeDasharray",
   "LineThickness": "borderWidth",
   "org.pathvisio.CellularComponentProperty": "cellularComponent",
-  "org.pathvisio.DoubleLineProperty": "lineStyle",
+  "org.pathvisio.DoubleLineProperty": "borderStyle",
   "org.pathvisio.model.BackpageHead": "backpageHead",
   "Point": "points",
   "Position": "attachmentDisplay",
@@ -40,6 +41,6 @@
   "Type": "wpType",
   "Version": "dataSourceVersion",
   "Valign": "verticalAlign",
-  "Xref": "pvjson:lift",
+  "Xref": "pvjson:merge",
   "ZOrder": "zIndex"
 }

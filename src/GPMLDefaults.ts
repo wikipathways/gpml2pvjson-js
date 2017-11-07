@@ -19,8 +19,9 @@ const ShapeStyleAttributes = {
   Color: "Black",
   LineStyle: "Solid",
   LineThickness: 1,
-  // Padding not in the XSD
-  Padding: 3
+  // the following properties are not in the XSD
+  Padding: 8,
+	BoxSizing: 'border-box'
 };
 
 /* TODO look at using something like this:

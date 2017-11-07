@@ -1,4 +1,5 @@
 import {
+	curry,
   findIndex,
   flow,
   get,
@@ -80,15 +81,26 @@ export const AUTHORS = flow(
 );
 export const BiopaxRef = flow(get("BiopaxRef"), map(generatePublicationXrefId));
 
-export function CenterX(gpmlElement) {
-  const { CenterX, Width } = gpmlElement.Graphics;
-  return CenterX - Width / 2;
-}
-
-export function CenterY(gpmlElement) {
-  const { CenterX, CenterY, Width, Height } = gpmlElement.Graphics;
-  return CenterY - Height / 2;
-}
+// Meanings of Width
+// -----------------
+// * DOM box model
+//   - box-sizing: border-box
+//     visible width = width
+//   	   (width means border + padding + width of the content)
+//       (see https://css-tricks.com/international-box-sizing-awareness-day/)
+//   - box-sizing: content-box
+//     visible width = width + border + padding 
+//       (width means width of the content)
+// * PathVisio-Java
+//   - Shapes without double lines
+//     visible width = GPMLWidth
+//     visible height = GPMLHeight
+//     (like box-sizing: border-box)
+//   - Shapes with double lines
+//     visible width = Width + 2 * LineThickness
+//     visible height = Height + 2 * LineThickness
+// * SVG: visible width = width + stroke-width
+// * kaavio/pvjs: same as DOM box model with box-sizing: border-box
 
 // In PathVisio-Java, GPML Width/Height for GPML Shapes is
 // inconsistent when zoomed in vs. when at default zoom level.
@@ -117,30 +129,27 @@ export function CenterY(gpmlElement) {
 // Also note that for double lines, LineThickness refers to the the border
 // width of each line and the space between each line, meaning the border width
 // for the double line as a whole will be three times the listed LineThickness.
-export function Height(gpmlElement) {
-  const { Height, LineThickness } = gpmlElement.Graphics;
-  // NOTE: this will be corrected, if needed, when CenterY is evaluated
-  const actualLineThickness = !isDefinedCXML(LineThickness)
-    ? 0
-    : findIndex(gpmlElement.Attribute, function({ Key, Value }) {
+const getDimension = curry(function(dimensionName, gpmlElement) {
+  const dimension = gpmlElement.Graphics[dimensionName];
+  if (findIndex(function({ Key, Value }) {
         return Key === "org.pathvisio.DoubleLineProperty";
-      }) > -1
-      ? LineThickness * 2
-      : LineThickness;
-  return Height + actualLineThickness;
+      }, gpmlElement.Attribute) > -1) {
+		return dimension + LineThickness(gpmlElement);
+	} else {
+		return dimension;
+	}
+});
+export const Height = getDimension('Height');
+export const Width = getDimension('Width');
+
+export function CenterX(gpmlElement) {
+  const { CenterX } = gpmlElement.Graphics;
+  return CenterX - Width(gpmlElement) / 2;
 }
 
-export function Width(gpmlElement) {
-  const { Width, LineThickness } = gpmlElement.Graphics;
-  // NOTE: this will be corrected, if needed, when CenterY is evaluated
-  const actualLineThickness = !isDefinedCXML(LineThickness)
-    ? 0
-    : findIndex(gpmlElement.Attribute, function({ Key, Value }) {
-        return Key === "org.pathvisio.DoubleLineProperty";
-      }) > -1
-      ? LineThickness * 2
-      : LineThickness;
-  return Width + actualLineThickness;
+export function CenterY(gpmlElement) {
+  const { CenterY } = gpmlElement.Graphics;
+  return CenterY - Height(gpmlElement) / 2;
 }
 
 export function Rotation(gpmlElement): number {
@@ -252,12 +261,23 @@ export function gpmlColorToCssColor(colorValue) {
 }
 
 /*
-import * as GPML2013aValueMappings from "./GPML2013aValueMappings.json";
+import * as GPML2013aValueMappings from "./ValueMappings.json";
 function getFromValueMappings(gpmlValue) {
   return GPML2013aValueMappings[gpmlValue];
 }
-export const Shape = flow(get("Shape"), getFromValueMappings);
-export const ShapeType = flow(get("Graphics.ShapeType"), getFromValueMappings);
+//export const Shape = flow(get("Shape"), getFromValueMappings);
+//export const ShapeType = flow(get("Graphics.ShapeType"), getFromValueMappings);
+export function ShapeType(gpmlElement): string {
+  const { ShapeType } = gpmlElement.Graphics;
+	const output: any = {
+		drawAs: getFromValueMappings(ShapeType)
+	};
+	if (ShapeType === 'RoundedRectangle') {
+		output.rx = 15;
+		output.ry = 15;
+	}
+  return output;
+}
 //*/
 
 export const Color = flow(get("Graphics.Color"), gpmlColorToCssColor);
@@ -282,10 +302,28 @@ export function LineThickness(gpmlElement) {
   // ShapeType in order for it to have a LineThickness > 0, but a
   // GPML Interaction or GraphicalLine can have a LineThickness > 0
   // without having a ShapeType.
-  return (!!ShapeType && ShapeType.toLowerCase() !== "none") ||
-    gpmlElement.Graphics.hasOwnProperty("Point")
-    ? LineThickness
-    : 0;
+	if (!isDefinedCXML(LineThickness)) {
+		return 0;
+	} else if (isDefinedCXML(ShapeType) && ShapeType.toLowerCase() !== "none") {
+		/*
+		return findIndex(function({ Key, Value }) {
+			return Key === "org.pathvisio.DoubleLineProperty";
+		}, gpmlElement.Attribute) > -1 ? LineThickness * 3 : LineThickness;
+		//*/
+
+		/*
+		return findIndex(function({ Key, Value }) {
+			return Key === "org.pathvisio.DoubleLineProperty";
+		}, gpmlElement.Attribute) > -1 ? LineThickness : LineThickness * 2;
+		//*/
+
+		//return LineThickness * 2;
+		return LineThickness;
+	} else if (gpmlElement.Graphics.hasOwnProperty("Point")) {
+    return LineThickness;
+	} else {
+		return 0;
+	}
 }
 
 export function ConnectorType(gpmlElement): string {

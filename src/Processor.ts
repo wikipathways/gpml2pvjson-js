@@ -141,10 +141,11 @@ export class Processor {
   graphIdToZIndex: Record<string, number> = {};
 
   KeyMappings: Record<string, any>;
+  KeyValueConverters: Record<string, any>;
   ValueMappings: Record<string, any>;
   ValueConverters: Record<string, any>;
 
-  constructor(KeyMappings, ValueMappings, ValueConverters) {
+  constructor(KeyMappings, KeyValueConverters, ValueMappings, ValueConverters) {
     const {
       graphIdToZIndex,
       graphIdsByGraphRef,
@@ -160,6 +161,7 @@ export class Processor {
     } = this;
 
     this.KeyMappings = KeyMappings;
+    this.KeyValueConverters = KeyValueConverters;
     this.ValueMappings = ValueMappings;
     this.ValueConverters = ValueConverters;
 
@@ -345,9 +347,6 @@ export class Processor {
         []
       )
     );
-    if (entity.lineStyle === "Double") {
-      entity.filters = unionLSV(entity.filters || [], "Double");
-    }
     /* // TODO Do we want to use this? Right now, we're just using different
 			 // icons for RoundedRectangle, etc.
 		if (
@@ -410,20 +409,25 @@ export class Processor {
     );
   };
 
-  getPvjsonValue = (gpmlElement, gpmlKey: string, gpmlValue: GPML_VALUE) => {
-    const { getPvjsonValue, processKV } = this;
-    // NOTE: jsSafeGPMLKey is for attributes like "Data-Source", because
+
+  getGPMLKeyAsJSFunctionName = (gpmlKey: string): string => {
+    // NOTE: gpmlKeyAsJSFunctionName is for attributes like "Data-Source", because
     // the following would be invalid JS:
     //   export function Data-Source() {};
     // TODO what about things like spaces, etc.?
-    const jsSafeGPMLKey = gpmlKey.replace("-", "");
+    return gpmlKey.replace("-", "");
+	}
+
+  getPvjsonValue = (gpmlElement, gpmlKey: string, gpmlValue: GPML_VALUE) => {
+    const { getGPMLKeyAsJSFunctionName, getPvjsonValue, processKV, ValueConverters, ValueMappings } = this;
+    const gpmlKeyAsJSFunctionName = getGPMLKeyAsJSFunctionName(gpmlKey);
     let pvjsonValue;
     try {
-      if (this.ValueConverters.hasOwnProperty(jsSafeGPMLKey)) {
-        return this.ValueConverters[jsSafeGPMLKey](gpmlElement);
+      if (ValueConverters.hasOwnProperty(gpmlKeyAsJSFunctionName)) {
+        return ValueConverters[gpmlKeyAsJSFunctionName](gpmlElement);
       } else if (isStringTS(gpmlValue)) {
-        if (this.ValueMappings.hasOwnProperty(gpmlValue)) {
-          return this.ValueMappings[gpmlValue];
+        if (ValueMappings.hasOwnProperty(gpmlValue)) {
+          return ValueMappings[gpmlValue];
         } else {
           return gpmlValue;
         }
@@ -458,13 +462,19 @@ export class Processor {
   };
 
   processKV = curry((gpmlElement, [gpmlKey, gpmlValue]): [string, any][] => {
-    const { getPvjsonValue, KeyMappings, processKV } = this;
+    const { getGPMLKeyAsJSFunctionName, getPvjsonValue, KeyMappings, KeyValueConverters, processKV, ValueMappings } = this;
+    const gpmlKeyAsJSFunctionName = getGPMLKeyAsJSFunctionName(gpmlKey);
 
     if (VALUES_TO_SKIP.indexOf(gpmlValue) > -1) {
       return [];
     }
+
+		if (KeyValueConverters.hasOwnProperty(gpmlKeyAsJSFunctionName)) {
+			return KeyValueConverters[gpmlKeyAsJSFunctionName](gpmlElement, KeyMappings, ValueMappings);
+		}
+
     const pvjsonKey = KeyMappings[gpmlKey];
-    // NOTE "pvjson:lift" is for elements like "Graphics", where they
+    // NOTE "pvjson:merge" is for elements like "Graphics", where they
     // are nested in GPML but are merged into the parent in pvjson.
 
     if (
@@ -475,7 +485,7 @@ export class Processor {
       // NOTE: we don't want to include "private" keys, such as
       // "_exists" or "_namespace".
       return [];
-    } else if (pvjsonKey === "pvjson:lift") {
+    } else if (pvjsonKey === "pvjson:merge") {
       try {
         return toPairsIn(gpmlValue).reduce(
           (acc, pair) => concat(acc, processKV(gpmlElement, pair)),
@@ -484,11 +494,31 @@ export class Processor {
       } catch (err) {
         throw new VError(
           err,
-          ` when recursively calling processKV && pvjsonKey is "pvjson:lift"
+          ` when recursively calling processKV && pvjsonKey is "pvjson:merge"
 					`
         );
       }
-    } else if (gpmlKey === "Attribute") {
+//    } else if (gpmlKey === "ShapeType") {
+//			// TODO there must be a cleaner way to handle this. Maybe all
+//			// ValueConverters return an object that is merged with the kaavio entity?
+//      try {
+//				const { ShapeType } = gpmlElement.Graphics;
+//				const output: any = [[
+//					pvjsonKey, this.ValueMappings[ShapeType]
+//				]];
+//				if (ShapeType === 'RoundedRectangle') {
+//					output.push(['rx', 15]);
+//					output.push(['ry', 15]);
+//				}
+//				return output;
+//      } catch (err) {
+//        throw new VError(
+//          err,
+//          ` when recursively calling processKV && gpmlKey is "ShapeType"
+//					`
+//        );
+//      }
+    } else if (pvjsonKey === "pvjson:each") {
       try {
         // NOTE: in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute".
         return toPairsIn(
@@ -517,10 +547,43 @@ export class Processor {
       } catch (err) {
         throw new VError(
           err,
-          ` when recursively calling processKV && gpmlKey is "Attribute"
+          ` when recursively calling processKV && gpmlKey is ${gpmlKey}
 					`
         );
       }
+//    } else if (gpmlKey === "Attribute") {
+//      try {
+//        // NOTE: in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute".
+//        return toPairsIn(
+//          gpmlValue
+//            // NOTE: some attributes have empty values and will cause problems
+//            // if we don't use this filter to skip them.
+//            .filter(({ Key, Value }) => VALUES_TO_SKIP.indexOf(Value) === -1)
+//            .map(({ Key, Value }) => {
+//              return processKV(gpmlElement, [Key, Value]);
+//            })
+//            .reduce((acc, [[processedKey, processedValue]]) => {
+//              // NOTE: this looks more complicated than it needs to be,
+//              // but it's to handle the case where there are two or more
+//              // sibling Attribute elements that share the same Key.
+//              // I don't know of any cases of this in our actual GPML,
+//              // but the XSD does not require unique Keys for sibling
+//              // Attributes.
+//              if (acc.hasOwnProperty(processedKey)) {
+//                acc[processedKey] = unionLSV(acc[processedKey], processedValue);
+//              } else {
+//                acc[processedKey] = processedValue;
+//              }
+//              return acc;
+//            }, {})
+//        );
+//      } catch (err) {
+//        throw new VError(
+//          err,
+//          ` when recursively calling processKV && gpmlKey is "Attribute"
+//					`
+//        );
+//      }
     } else {
       try {
         const pvjsonValue = getPvjsonValue(gpmlElement, gpmlKey, gpmlValue);
