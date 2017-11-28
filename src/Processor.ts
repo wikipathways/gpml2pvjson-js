@@ -399,17 +399,22 @@ export class Processor {
     );
   };
 
-
   getGPMLKeyAsJSFunctionName = (gpmlKey: string): string => {
     // NOTE: gpmlKeyAsJSFunctionName is for attributes like "Data-Source", because
     // the following would be invalid JS:
     //   export function Data-Source() {};
     // TODO what about things like spaces, etc.?
     return gpmlKey.replace("-", "");
-	}
+  };
 
   getPvjsonValue = (gpmlElement, gpmlKey: string, gpmlValue: GPML_VALUE) => {
-    const { getGPMLKeyAsJSFunctionName, getPvjsonValue, processKV, ValueConverters, ValueMappings } = this;
+    const {
+      getGPMLKeyAsJSFunctionName,
+      getPvjsonValue,
+      processKV,
+      ValueConverters,
+      ValueMappings
+    } = this;
     const gpmlKeyAsJSFunctionName = getGPMLKeyAsJSFunctionName(gpmlKey);
     let pvjsonValue;
     try {
@@ -452,74 +457,85 @@ export class Processor {
   };
 
   processKV = curry((gpmlElement, [gpmlKey, gpmlValue]): [string, any][] => {
-		try {
-			const { getGPMLKeyAsJSFunctionName, getPvjsonValue, KeyMappings, KeyValueConverters, processKV, ValueMappings } = this;
-			const gpmlKeyAsJSFunctionName = getGPMLKeyAsJSFunctionName(gpmlKey);
+    try {
+      const {
+        getGPMLKeyAsJSFunctionName,
+        getPvjsonValue,
+        KeyMappings,
+        KeyValueConverters,
+        processKV,
+        ValueMappings
+      } = this;
+      const gpmlKeyAsJSFunctionName = getGPMLKeyAsJSFunctionName(gpmlKey);
 
-			if (VALUES_TO_SKIP.indexOf(gpmlValue) > -1) {
-				return [];
-			}
+      if (VALUES_TO_SKIP.indexOf(gpmlValue) > -1) {
+        return [];
+      }
 
-			if (KeyValueConverters.hasOwnProperty(gpmlKeyAsJSFunctionName)) {
-				return KeyValueConverters[gpmlKeyAsJSFunctionName](gpmlElement, KeyMappings, ValueMappings);
-			}
+      if (KeyValueConverters.hasOwnProperty(gpmlKeyAsJSFunctionName)) {
+        return KeyValueConverters[gpmlKeyAsJSFunctionName](
+          gpmlElement,
+          KeyMappings,
+          ValueMappings
+        );
+      }
 
-			const pvjsonKey = KeyMappings[gpmlKey];
-			// NOTE "pvjson:merge" is for elements like "Graphics", where they
-			// are nested in GPML but are merged into the parent in pvjson.
+      const pvjsonKey = KeyMappings[gpmlKey];
+      // NOTE "pvjson:merge" is for elements like "Graphics", where they
+      // are nested in GPML but are merged into the parent in pvjson.
 
-			if (
-				gpmlKey[0] === "_" ||
-				pvjsonKey === "pvjson:delete" ||
-				(isObject(gpmlValue) && !isDefinedCXML(gpmlValue))
-			) {
-				// NOTE: we don't want to include "private" keys, such as
-				// "_exists" or "_namespace".
-				return [];
-			} else if (pvjsonKey === "pvjson:merge") {
-				return toPairsIn(gpmlValue).reduce(
-					(acc, pair) => concat(acc, processKV(gpmlElement, pair)),
-					[]
-				);
-			} else if (pvjsonKey === "pvjson:each") {
-				// NOTE: Example of what uses this is GPML Attribute.
-				// (in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute")
-				return toPairsIn(
-					gpmlValue
-						// NOTE: some attributes have empty values and will cause problems
-						// if we don't use this filter to skip them.
-						.filter(({ Key, Value }) => VALUES_TO_SKIP.indexOf(Value) === -1)
-						.map(({ Key, Value }) => {
-							return processKV(gpmlElement, [Key, Value]);
-						})
-						.reduce((acc, [[processedKey, processedValue]]) => {
-							// NOTE: this looks more complicated than it needs to be,
-							// but it's to handle the case where there are two or more
-							// sibling Attribute elements that share the same Key.
-							// I don't know of any cases of this in our actual GPML,
-							// but the XSD does not require unique Keys for sibling
-							// Attributes.
-							if (acc.hasOwnProperty(processedKey)) {
-								acc[processedKey] = unionLSV(acc[processedKey], processedValue);
-							} else {
-								acc[processedKey] = processedValue;
-							}
-							return acc;
-						}, {})
-				);
-			} else {
-				const pvjsonValue = getPvjsonValue(gpmlElement, gpmlKey, gpmlValue);
-				// NOTE: we don't include key/value pairs when the value is missing
-				if (VALUES_TO_SKIP.indexOf(pvjsonValue) === -1) {
-					return [[pvjsonKey || camelCase(gpmlKey), pvjsonValue]];
-				} else {
-					return [];
-				}
-			}
-		} catch (err) {
-			throw new VError(
-				err,
-				` when calling processor.processKV(
+      if (
+        gpmlKey[0] === "_" ||
+        pvjsonKey === "pvjson:delete" ||
+        (isObject(gpmlValue) && !isDefinedCXML(gpmlValue))
+      ) {
+        // NOTE: we don't want to include "private" keys, such as
+        // "_exists" or "_namespace".
+        return [];
+      } else if (pvjsonKey === "pvjson:merge") {
+        return toPairsIn(gpmlValue).reduce(
+          (acc, pair) => concat(acc, processKV(gpmlElement, pair)),
+          []
+        );
+      } else if (pvjsonKey === "pvjson:each") {
+        // NOTE: Example of what uses this is GPML Attribute.
+        // (in GPML, 'Attribute' is an XML *ELEMENT* named "Attribute")
+        return toPairsIn(
+          gpmlValue
+            // NOTE: some attributes have empty values and will cause problems
+            // if we don't use this filter to skip them.
+            .filter(({ Key, Value }) => VALUES_TO_SKIP.indexOf(Value) === -1)
+            .map(({ Key, Value }) => {
+              return processKV(gpmlElement, [Key, Value]);
+            })
+            .reduce((acc, [[processedKey, processedValue]]) => {
+              // NOTE: this looks more complicated than it needs to be,
+              // but it's to handle the case where there are two or more
+              // sibling Attribute elements that share the same Key.
+              // I don't know of any cases of this in our actual GPML,
+              // but the XSD does not require unique Keys for sibling
+              // Attributes.
+              if (acc.hasOwnProperty(processedKey)) {
+                acc[processedKey] = unionLSV(acc[processedKey], processedValue);
+              } else {
+                acc[processedKey] = processedValue;
+              }
+              return acc;
+            }, {})
+        );
+      } else {
+        const pvjsonValue = getPvjsonValue(gpmlElement, gpmlKey, gpmlValue);
+        // NOTE: we don't include key/value pairs when the value is missing
+        if (VALUES_TO_SKIP.indexOf(pvjsonValue) === -1) {
+          return [[pvjsonKey || camelCase(gpmlKey), pvjsonValue]];
+        } else {
+          return [];
+        }
+      }
+    } catch (err) {
+      throw new VError(
+        err,
+        ` when calling processor.processKV(
 					gpmlElement: ${JSON.stringify(gpmlElement, null, "  ")},
 					[
 						gpmlKey: ${gpmlKey},
@@ -527,7 +543,7 @@ export class Processor {
 					]
 				)
 				`
-			);
-		}
+      );
+    }
   });
 }
