@@ -1,5 +1,5 @@
 import {
-	curry,
+  curry,
   findIndex,
   flow,
   get,
@@ -140,16 +140,18 @@ See issue https://github.com/PathVisio/pathvisio/issues/59
 //*/
 const getDimension = curry(function(dimensionName, gpmlElement) {
   const dimension = gpmlElement.Graphics[dimensionName];
-  if (findIndex(function({ Key, Value }) {
-        return Key === "org.pathvisio.DoubleLineProperty";
-      }, gpmlElement.Attribute) > -1) {
-		return dimension + LineThickness(gpmlElement);
-	} else {
-		return dimension;
-	}
+  if (
+    findIndex(function({ Key, Value }) {
+      return Key === "org.pathvisio.DoubleLineProperty";
+    }, gpmlElement.Attribute) > -1
+  ) {
+    return dimension + LineThickness(gpmlElement);
+  } else {
+    return dimension;
+  }
 });
-export const Height = getDimension('Height');
-export const Width = getDimension('Width');
+export const Height = getDimension("Height");
+export const Width = getDimension("Width");
 
 export function CenterX(gpmlElement) {
   const { CenterX } = gpmlElement.Graphics;
@@ -251,8 +253,9 @@ export const Valign = flow(get("Graphics.Valign"), kebabCase);
 export const Href = flow(get("Href"), decodeIfNotEmpty, encodeURI);
 
 export function gpmlColorToCssColor(colorValue) {
-  if (colorValue.toLowerCase() === "transparent") {
-    return "transparent";
+  const colorValueLowerCased = colorValue.toLowerCase();
+  if (["transparent", "none"].indexOf(colorValueLowerCased) > -1) {
+    return colorValueLowerCased;
   } else {
     let color = new RGBColor(colorValue);
     if (!color.ok) {
@@ -291,28 +294,28 @@ export function LineThickness(gpmlElement) {
   // ShapeType in order for it to have a LineThickness > 0, but a
   // GPML Interaction or GraphicalLine can have a LineThickness > 0
   // without having a ShapeType.
-	if (!isDefinedCXML(LineThickness)) {
-		return 0;
-	} else if (isDefinedCXML(ShapeType) && ShapeType.toLowerCase() !== "none") {
-		/*
+  if (!isDefinedCXML(LineThickness)) {
+    return 0;
+  } else if (isDefinedCXML(ShapeType) && ShapeType.toLowerCase() !== "none") {
+    /*
 		return findIndex(function({ Key, Value }) {
 			return Key === "org.pathvisio.DoubleLineProperty";
 		}, gpmlElement.Attribute) > -1 ? LineThickness * 3 : LineThickness;
 		//*/
 
-		/*
+    /*
 		return findIndex(function({ Key, Value }) {
 			return Key === "org.pathvisio.DoubleLineProperty";
 		}, gpmlElement.Attribute) > -1 ? LineThickness : LineThickness * 2;
 		//*/
 
-		//return LineThickness * 2;
-		return LineThickness;
-	} else if (gpmlElement.Graphics.hasOwnProperty("Point")) {
+    //return LineThickness * 2;
     return LineThickness;
-	} else {
-		return 0;
-	}
+  } else if (gpmlElement.Graphics.hasOwnProperty("Point")) {
+    return LineThickness;
+  } else {
+    return 0;
+  }
 }
 
 export function ConnectorType(gpmlElement): string {

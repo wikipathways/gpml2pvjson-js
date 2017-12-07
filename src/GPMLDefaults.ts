@@ -110,10 +110,8 @@ export const GPMLEdge = {
       ArrowHead: "Line"
     },
 		//*/
-    //Anchor: Anchor,
     // these aren't explicitly set in the XSD but maybe should be.
-    //FillColor: "Transparent",
-    //FillColor: "ffffff",
+    FillColor: "None",
     LineThickness: 1
   }
 };
