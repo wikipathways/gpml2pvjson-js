@@ -28,7 +28,7 @@
   "Complex": {
     "Graphics": {
       "Padding": 11,
-      "ShapeType": "Complex",
+      "ShapeType": "Octagon",
       "LineStyle": "Solid",
       "LineThickness": 1,
       "FillColor": "B4B464"
