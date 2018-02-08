@@ -1,0 +1,140 @@
+{
+  "Arrow": {
+    "bp": {
+      "name": "Interaction"
+    },
+    "sbo": [
+      "SBO:0000167",
+      "SBO:0000393",
+      "SBO:0000394"
+    ],
+    "wp": "DirectedInteraction"
+  },
+  "TBar": {
+    "bp": {
+      "name": "Control",
+      "controlType": "INHIBITION"
+    },
+    "sbo": [
+      "SBO:0000169"
+    ],
+    "wp": "Inhibition"
+  },
+  "MIMGap": {
+    "bp": {
+      "name": "Interaction"
+    }
+  },
+  "MIMBranchingRight": {
+    "bp": {
+      "name": "Interaction"
+    }
+  },
+  "MIMBranchingLeft": {
+    "bp": {
+      "name": "Interaction"
+    }
+  },
+  "MIMInhibition": {
+    "bp": {
+      "name": "Control",
+      "controlType": "INHIBITION"
+    },
+    "sbo": [
+      "SBO:0000169"
+    ],
+    "wp": "Inhibition"
+  },
+  "MIMConversion": {
+    "bp": {
+      "name": "Conversion"
+    },
+    "sbo": [
+      "SBO:0000182"
+    ],
+    "wp": "Conversion"
+  },
+  "MIMNecessaryStimulation": {
+    "bp": {
+      "name": "Control",
+      "controlType": "ACTIVATION"
+    },
+    "sbo": [
+      "SBO:0000171"
+    ],
+    "wp": "Stimulation"
+  },
+  "MIMBinding": {
+    "bp": {
+      "name": "MolecularInteraction"
+    },
+    "sbo": [
+      "SBO:0000177"
+    ],
+    "wp": "Binding"
+  },
+  "MIMStimulation": {
+    "bp": {
+      "name": "Control",
+      "controlType": "ACTIVATION"
+    },
+    "sbo": [
+      "SBO:0000170"
+    ],
+    "wp": "Stimulation"
+  },
+  "MIMModification": {
+    "bp": {
+      "name": "BiochemicalReaction"
+    },
+    "sbo": [
+      "SBO:0000210"
+    ],
+    "wp": "DirectedInteraction"
+  },
+  "MIMCatalysis": {
+    "bp": {
+      "name": "Catalysis"
+    },
+    "sbo": [
+      "SBO:0000172"
+    ],
+    "wp": "Catalysis"
+  },
+  "MIMCleavage": {
+    "bp": {
+      "name": "Degradation"
+    },
+    "sbo": [
+      "SBO:0000178"
+    ],
+    "wp": "DirectedInteraction"
+  },
+  "MIMCovalentBond": {
+    "bp": {
+      "name": "BiochemicalReaction"
+    },
+    "sbo": [
+      "SBO:0000210"
+    ],
+    "wp": "DirectedInteraction"
+  },
+  "MIMTranscriptionTranslation": {
+    "bp": {
+      "name": "GeneticInteraction"
+    },
+    "sbo": [
+      "SBO:0000183",
+      "SBO:0000184"
+    ]
+  },
+  "none": {
+    "bp": {
+      "name": "Interaction"
+    },
+    "sbo": [
+      "SBO:0000374"
+    ],
+    "wp": "TranscriptionTranslation"
+  }
+}

@@ -1,4 +1,4 @@
-import { isFinite, isNaN, map, omit } from "lodash/fp";
+import { isFinite, isNaN, map, omit, toPairs } from "lodash/fp";
 import {
   isAttachablePoint,
   isDefinedCXML,
@@ -24,6 +24,7 @@ import {
 } from "../gpml2pvjson";
 import { calculateAllPoints } from "./calculateAllPoints";
 import * as VError from "verror";
+import * as MarkerMappings from "./MarkerMappings.json";
 
 // a stub is a short path segment that is used for the first and/or last segment(s) of a path
 export const DEFAULT_STUB_LENGTH = 20;
@@ -132,6 +133,14 @@ export function postprocessPVJSON(
         pvjsonEdge.markerStart = marker;
       } else if (index === pointCount - 1) {
         pvjsonEdge.markerEnd = marker;
+      }
+      if (MarkerMappings.hasOwnProperty(marker)) {
+        pvjsonEdge.type = toPairs(MarkerMappings[marker]).reduce(function(
+          acc,
+          [namespace, moreTypes]
+        ) {
+          return unionLSV(acc, moreTypes);
+        }, pvjsonEdge.type);
       }
     }
 
