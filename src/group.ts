@@ -27,7 +27,7 @@ import {
 
 export function getGroupDimensions(
   padding: number,
-  borderWidth: number,
+  strokeWidth: number,
   containedEntities: PvjsonEntity[]
 ): NodeDimensions {
   if (containedEntities.length === 0) {
@@ -41,8 +41,8 @@ export function getGroupDimensions(
     };
   } else if (!isFinite(padding)) {
     throw new Error("Invalid padding value: ${padding}");
-  } else if (!isFinite(borderWidth)) {
-    throw new Error("Invalid borderWidth value: ${borderWidth}");
+  } else if (!isFinite(strokeWidth)) {
+    throw new Error("Invalid strokeWidth value: ${strokeWidth}");
   }
   const dimensions = containedEntities
     .filter(entity => isPvjsonSingleFreeNode(entity) || isPvjsonEdge(entity))
@@ -97,12 +97,12 @@ export function getGroupDimensions(
           );
         }
 
-        runningDimensions.x = topLeftCorner.x - padding - borderWidth;
-        runningDimensions.y = topLeftCorner.y - padding - borderWidth;
+        runningDimensions.x = topLeftCorner.x - padding - strokeWidth;
+        runningDimensions.y = topLeftCorner.y - padding - strokeWidth;
         runningDimensions.width =
-          bottomRightCorner.x - topLeftCorner.x + 2 * (padding + borderWidth);
+          bottomRightCorner.x - topLeftCorner.x + 2 * (padding + strokeWidth);
         runningDimensions.height =
-          bottomRightCorner.y - topLeftCorner.y + 2 * (padding + borderWidth);
+          bottomRightCorner.y - topLeftCorner.y + 2 * (padding + strokeWidth);
 
         return { runningDimensions, topLeftCorner, bottomRightCorner };
       },
@@ -138,7 +138,7 @@ export function getGroupDimensions(
 			when calling
 			getGroupDimensions(
 				padding: ${padding},
-				borderWidth: ${borderWidth},
+				strokeWidth: ${strokeWidth},
 				containedEntities: ${JSON.stringify(containedEntities, null, "  ")}
 			)
 			
@@ -185,7 +185,7 @@ export function postprocessPVJSON(
 ): PvjsonGroup {
   return assign(
     group,
-    getGroupDimensions(group.padding, group.borderWidth, containedEntities)
+    getGroupDimensions(group.padding, group.strokeWidth, containedEntities)
   );
 }
 

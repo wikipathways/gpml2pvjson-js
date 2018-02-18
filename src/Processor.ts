@@ -90,11 +90,11 @@ export class Processor {
     entityMap: PvjsonEntityMap;
   } = {
     pathway: {
-      // NOTE: GPML does not contain a way to express background color.
+      // NOTE: GPML does not contain a way to express fill (background color).
       // It's always just white.
-      backgroundColor: "white",
-      borderWidth: 0,
-      color: "black",
+      fill: "white",
+      strokeWidth: 0,
+      stroke: "black",
       contains: [],
       drawAs: "rect",
       gpmlElementName: "Pathway",

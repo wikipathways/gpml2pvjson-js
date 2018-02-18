@@ -88,23 +88,23 @@ Meanings of Width
 In PathVisio-Java, GPML Width/Height for GPML Shapes is
 inconsistent when zoomed in vs. when at default zoom level.
 
-When zoomed in, GPML Width/Height refers to the distance from center of border
-one one edge to center of border on the opposite edge, meaning that shapes that
+When zoomed in, GPML Width/Height refers to the distance from center of stroke (border)
+one one edge to center of stroke (border) on the opposite edge, meaning that shapes that
 run up to the edge are cropped.
 
-When at default zoom level, GPML Width/Height refers to the distance
-from outer edge of border to outer edge of border (no cropping).
+When at default zoom level, GPML Width/Height refers to the distance from outer edge of
+stroke (border) to outer edge of stroke (border) with no cropping.
 
 Because of this, LineThickness is also inconsistent.
 When zoomed in: approx. one half of specified LineThickness.
 When at default zoom level: approx. full specified LineThickness.
 
-For double lines, LineThickness refers to the the border
-width of each line and the space between each line, meaning the border width
+For double lines, LineThickness refers to the the stroke (border) width of each line and
+the space between each line, meaning the stroke (border) width
 for the double line as a whole will be three times the listed LineThickness.
 
-For pvjs, we define GPML Width/Height to be from outer edge of border on one
-side to outer edge of border on the opposite site, meaning visible width/height
+For pvjs, we define GPML Width/Height to be from outer edge of stroke (border) on one
+side to outer edge of stroke (border) on the opposite site, meaning visible width/height
 may not exactly match between pvjs and PathVisio.
 See issue https://github.com/PathVisio/pathvisio/issues/59
 

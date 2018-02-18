@@ -153,11 +153,11 @@ export interface Comment {
 
 type PvjsonEntityMergedStringProperties =
   | "author"
-  | "backgroundColor"
+  | "fill"
   | "biopaxType"
-  | "borderStyle"
+  | "strokeStyle"
   | "cellularComponent"
-  | "color"
+  | "stroke"
   | "controlled"
   | "controller"
   | "controlType"
@@ -201,8 +201,9 @@ type PvjsonEntityMergedStringProperties =
 // we can use something like this:
 // https://github.com/sebmarkbage/art/blob/51ffce8164a555d652843241c2fdda52e186cbbd/parsers/svg/core.js#L170
 type PvjsonEntityMergedNumberProperties =
-  | "borderRadius"
-  | "borderWidth"
+  | "rx"
+  | "ry"
+  | "strokeWidth"
   | "fillOpacity"
   | "fontSize"
   | "height"
@@ -250,9 +251,9 @@ type PvjsonEntityMerged = PvjsonEntityMergedWithStringProperties &
 
 // Includes GPML DataNode, Shape and Label
 type PvjsonSingleFreeNodeRequiredKeys =
-  | "backgroundColor"
-  | "borderWidth"
-  | "color"
+  | "fill"
+  | "strokeWidth"
+  | "stroke"
   | "drawAs"
   | "height"
   | "id"
@@ -265,8 +266,8 @@ type PvjsonSingleFreeNodeRequiredKeys =
   | "y"
   | "zIndex";
 type PvjsonSingleFreeNodeOptionalKeys =
-  | "borderRadius"
-  | "borderStyle"
+  | "strokeRadius"
+  | "strokeStyle"
   | "burrs"
   | "citations"
   | "comments"
@@ -288,9 +289,9 @@ export type PvjsonSingleFreeNode = {
   { [K in PvjsonSingleFreeNodeOptionalKeys]?: PvjsonEntityMerged[K] };
 
 type PvjsonGroupRequiredKeys =
-  | "backgroundColor"
-  | "borderWidth"
-  | "color"
+  | "fill"
+  | "strokeWidth"
+  | "stroke"
   | "contains"
   | "drawAs"
   | "height"
@@ -304,7 +305,7 @@ type PvjsonGroupRequiredKeys =
   | "y"
   | "zIndex";
 type PvjsonGroupOptionalKeys =
-  | "borderStyle"
+  | "strokeStyle"
   | "burrs"
   | "cellularComponent"
   | "citations"
@@ -353,9 +354,9 @@ export interface Pathway extends PathwayStarter {
 // e.g., GPML States and Anchors
 type PvjsonBurrRequiredKeys =
   | "attachmentDisplay"
-  | "backgroundColor"
-  | "borderWidth"
-  | "color"
+  | "fill"
+  | "strokeWidth"
+  | "stroke"
   | "drawAs"
   | "height"
   | "id"
@@ -387,7 +388,7 @@ export type PvjsonNode = PvjsonSingleFreeNode | PvjsonGroup | PvjsonBurr;
 
 type PvjsonEdgeRequiredKeys =
   | "id"
-  | "color"
+  | "stroke"
   | "drawAs"
   | "gpmlElementName"
   | "kaavioType"
