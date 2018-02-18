@@ -9,7 +9,7 @@ var ndjson = require("ndjson");
 var program = require("commander");
 var VError = require("verror");
 
-var gpml2pvjson = require("../lib/2013a/toPvjson").toPvjson;
+var gpml2pvjson = require("../es5/2013a/toPvjson").toPvjson;
 
 program
   .version(npmPackage.version)

@@ -1,4 +1,6 @@
-lib/
+es5/
+esnext/
+dist/
 test/output
 test/pathways-completed.json
 data-input

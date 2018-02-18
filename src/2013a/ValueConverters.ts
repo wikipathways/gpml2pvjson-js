@@ -9,7 +9,7 @@ import {
   kebabCase,
   map
 } from "lodash/fp";
-import RGBColor = require("rgbcolor");
+const RGBColor = require("rgbcolor");
 import * as VError from "verror";
 import { decode } from "he";
 
