@@ -38,7 +38,7 @@ import {
   GPMLElement,
   Pathway,
   PathwayStarter,
-  PvjsonEntityMap
+  PvjsonEntitiesById
 } from "./gpml2pvjson";
 import { isDefinedCXML, unionLSV } from "./gpml-utilities";
 import { GraphIdManager } from "./GraphIdManager";
@@ -87,7 +87,7 @@ function isRecord(x: any): x is Record<string, any> {
 export class Processor {
   output: {
     pathway: Pathway | PathwayStarter;
-    entityMap: PvjsonEntityMap;
+    entitiesById: PvjsonEntitiesById;
   } = {
     pathway: {
       // NOTE: GPML does not contain a way to express fill (background color).
@@ -117,7 +117,7 @@ export class Processor {
       textAlign: "left",
       verticalAlign: "top"
     },
-    entityMap: {}
+    entitiesById: {}
   };
 
   graphIdManager: GraphIdManager = new GraphIdManager();
@@ -390,11 +390,11 @@ export class Processor {
     this.output = iassign(
       this.output,
       function(o) {
-        return o.entityMap;
+        return o.entitiesById;
       },
-      function(entityMap) {
-        entityMap[pvjsonEntity.id] = pvjsonEntity;
-        return entityMap;
+      function(entitiesById) {
+        entitiesById[pvjsonEntity.id] = pvjsonEntity;
+        return entitiesById;
       }
     );
   };

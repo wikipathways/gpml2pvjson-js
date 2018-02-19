@@ -9,6 +9,7 @@
   "BoardWidth": "width",
   "CenterX": "x",
   "CenterY": "y",
+  "Color": "stroke",
   "Comment": "comments",
   "ConnectorType": "drawAs",
   "DB": "dbConventionalName",

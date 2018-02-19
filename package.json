@@ -1,6 +1,6 @@
 {
   "name": "gpml2pvjson",
-  "version": "3.0.0-9",
+  "version": "3.0.1",
   "description": "convert GPML (XML) to pvjson (json)",
   "main": "es5/gpml2pvjson.js",
   "jsnext:main": "esnext/index.js",
@@ -35,9 +35,9 @@
     "expected:chunked": "curl \"https://cdn.rawgit.com/wikipathways/pvjs/e47ff1f6/test/input-data/troublesome-pathways/WP1818_73650.gpml\" | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP1818 --pathway-version 73650 | tee \"test/expected/chunked.json\" | shasum -p -a 1 > \"test/expected/chunked.json.sha1sum\"",
     "expected:protocol": "npm run deleteUnconvertables; for f in node_modules/@wikipathways/gpml/test/**/*.gpml{,.xml}; do echo \"Converting $f to JSON and generating checksum...\"; filename=`echo \"$f\" | sed \"s/.*\\///\" | sed 's/\\.xml$//' | sed 's/\\.gpml$//'`; cat \"$f\" | bin/gpml2pvjson | tee \"test/expected/$filename.json\" | shasum -p -a 1 > \"test/expected/$filename.json.sha1sum\" || break; done",
     "prepare": "npm run build && npm run test && npm run expected",
-    "test": "npm-run-all test:*",
+    "test": "npm-run-all -p test:*",
     "test:browser": "echo \"TODO: get browser tests working.\"",
-    "test:checksums": "npm-run-all test:checksums:*",
+    "test:checksums": "npm-run-all -p test:checksums:*",
     "test:checksums:chunked": "echo 'Testing converter against WP1818 rev. 73650 from GPML file stored online (intentionally throttling downloading speed in order to ensure response is chunked).' && curl --limit-rate 10K \"https://cdn.rawgit.com/wikipathways/pvjs/e47ff1f6/test/input-data/troublesome-pathways/WP1818_73650.gpml\" | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP1818 --pathway-version 73650 | shasum -p -a 1 > \"test/expected/chunked.json.sha1sum\"",
     "test:checksums:protocol": "npm run deleteUnconvertables; for f in node_modules/@wikipathways/gpml/test/**/*.gpml{,.xml}; do echo \"Testing converter against $f\"; filename=`echo \"$f\" | sed \"s/.*\\///\" | sed s/.xml$// | sed s/.gpml$//`; cat \"$f\" | bin/gpml2pvjson | shasum -p -a 1 -c \"test/expected/$filename.json.sha1sum\" || break; done",
     "watch": "npm run build && npm-run-all -p watch:*",
@@ -52,7 +52,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@typed/hashmap": "^1.0.1",
-    "@wikipathways/cxml": "^0.2.1-4",
+    "@wikipathways/cxml": "^0.2.1",
     "angles": "^0.2.0",
     "commander": "^2.14.1",
     "he": "~0.4.1",

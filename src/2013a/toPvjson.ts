@@ -42,7 +42,7 @@ import {
   GPMLElement,
   Pathway,
   PathwayStarter,
-  PvjsonEntityMap,
+  PvjsonEntitiesById,
   PvjsonPublicationXref,
   PvjsonInteraction
 } from "../gpml2pvjson";
@@ -199,7 +199,7 @@ export function toPvjson(
 
   const processor = new Processor(
     GPML2013aKeyMappings,
-		GPML2013aKeyValueMappings,
+    GPML2013aKeyValueMappings,
     GPML2013aValueMappings,
     GPML2013aValueConverters
   );
@@ -491,7 +491,7 @@ export function toPvjson(
           )
             .map(
               (isAttachedToOrViaId: string) =>
-                processor.output.entityMap[isAttachedToOrViaId].gpmlElementName
+                processor.output.entitiesById[isAttachedToOrViaId].gpmlElementName
             )
             .filter(
               // Entity is attached to neither a group nor an edge.
@@ -529,7 +529,7 @@ export function toPvjson(
           // is processable when group does not contain an entity that is not processable
           return (
             arrayify(pvjsonEntity["contains"])
-              .map(isAttachedToId => processor.output.entityMap[isAttachedToId])
+              .map(isAttachedToId => processor.output.entitiesById[isAttachedToId])
               .filter(
                 candidateEntity => sortedIds.indexOf(candidateEntity.id) > -1
               ).length > 0
@@ -569,7 +569,7 @@ export function toPvjson(
         return (
           /*
           dependencies
-            .map((id: string) => processor.output.entityMap[id])
+            .map((id: string) => processor.output.entitiesById[id])
             .indexOf(undefined) === -1 &&
 					//*/
           intersection(dependencies, sortedIds).length === dependencies.length
@@ -626,7 +626,9 @@ export function toPvjson(
         .map(function(acc: SortUnsortedAcc) {
           const { sortedIds, unsorted } = acc;
           return sortedIds
-            .map((id: string): PvjsonEntity => processor.output.entityMap[id])
+            .map(
+              (id: string): PvjsonEntity => processor.output.entitiesById[id]
+            )
             .concat(unsorted);
         })
         .sequence()
@@ -651,7 +653,7 @@ export function toPvjson(
     ): Highland.Stream<
       | {
         pathway: Pathway | PathwayStarter;
-        entityMap: PvjsonEntityMap;
+        entitiesById: PvjsonEntitiesById;
       }
       | Error
     > {
@@ -710,7 +712,7 @@ export function toPvjson(
         } else if (isPvjsonEdge(pvjsonEntity)) {
           try {
             const pvjsonEdge = postprocessEdgePVJSON(
-              processor.output.entityMap as {
+              processor.output.entitiesById as {
                 [key: string]: PvjsonNode | PvjsonEdge;
               },
               pvjsonEntity
@@ -774,7 +776,7 @@ export function toPvjson(
           try {
             finalSortedStream = hl(
               pvjsonEntity.contains.map(
-                containedId => processor.output.entityMap[containedId]
+                containedId => processor.output.entitiesById[containedId]
               )
             )
               .filter(groupedEntity => groupedEntity.kaavioType !== "Group")
@@ -914,11 +916,11 @@ export function toPvjson(
       // TODO should these go through the processor instead?
 
       processor.output = iassign(processor.output, function(o) {
-        const { pathway, entityMap } = o;
+        const { pathway, entitiesById } = o;
 
         openControlledVocabularies.forEach(function(openControlledVocabulary) {
           const { id } = openControlledVocabulary;
-          entityMap[id] = openControlledVocabulary;
+          entitiesById[id] = openControlledVocabulary;
           if (openControlledVocabulary.ontology === "Pathway Ontology") {
             pathway.type.push(id);
           }
@@ -960,13 +962,13 @@ export function toPvjson(
       processor.output = iassign(
         processor.output,
         function(o) {
-          return o.entityMap;
+          return o.entitiesById;
         },
-        function(entityMap) {
+        function(entitiesById) {
           publicationXrefs.forEach(function(publicationXref) {
-            entityMap[publicationXref.id] = publicationXref;
+            entitiesById[publicationXref.id] = publicationXref;
           });
-          return entityMap;
+          return entitiesById;
         }
       );
       return processor.output;
@@ -999,7 +1001,7 @@ export function toPvjson(
   //  ensure we don't have any regression errors.
   /*
   getGroupedZIndexedEntities(zIndexedEntities) {
-    const { entityMap } = this.props;
+    const { entitiesById } = this.props;
     return zIndexedEntities
       .filter(entity => !entity.isPartOf)
       .reduce(function(acc, entity) {
@@ -1007,7 +1009,7 @@ export function toPvjson(
         if (kaavioType === "Group") {
           // TODO: refactor this so that contains is actually a map of the contained elements. Not just an array of their IDs
           entity.contains = entity.contains
-            .map(id => entityMap[id])
+            .map(id => entitiesById[id])
             .sort(function(a, b) {
               const zIndexA = a.zIndex;
               const zIndexB = b.zIndex;
@@ -1022,7 +1024,7 @@ export function toPvjson(
             .map(entity => entity.id);
         } else if (entity.hasOwnProperty("burrs")) {
           entity.burrs = entity.burrs
-            .map(id => entityMap[id])
+            .map(id => entitiesById[id])
             .sort(function(a, b) {
               const zIndexA = a.zIndex;
               const zIndexB = b.zIndex;

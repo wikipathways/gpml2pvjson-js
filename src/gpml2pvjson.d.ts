@@ -266,7 +266,8 @@ type PvjsonSingleFreeNodeRequiredKeys =
   | "y"
   | "zIndex";
 type PvjsonSingleFreeNodeOptionalKeys =
-  | "strokeRadius"
+  | "rx"
+  | "ry"
   | "strokeStyle"
   | "burrs"
   | "citations"
@@ -471,7 +472,7 @@ export type PvjsonEntity =
   | PvjsonEdge
   | PvjsonPublicationXref;
 
-export type PvjsonEntityMap = {
+export type PvjsonEntitiesById = {
   // TODO this could likely be improved
   [key: string]: PvjsonEntity;
 };
