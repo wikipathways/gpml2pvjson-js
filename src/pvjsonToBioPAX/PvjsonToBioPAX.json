@@ -1,6 +1,6 @@
 {
-  "dbId": "id",
-  "dbConventionalName": "db",
+  "xrefIdentifier": "id",
+  "xrefDataSource": "db",
   "title": "title",
   "source": "source",
   "year": "year",

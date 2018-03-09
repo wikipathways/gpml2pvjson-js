@@ -163,8 +163,8 @@ type PvjsonEntityMergedStringProperties =
   | "controlType"
   | "conversionDirection"
   | "dataSource"
-  | "dbId" // xref identifier, e.g., 1234 for Entrez Gene 1234
-  | "dbConventionalName" // e.g., Entrez Gene
+  | "xrefIdentifier" // xref identifier, e.g., 1234 for Entrez Gene 1234
+  | "xrefDataSource" // e.g., Entrez Gene
   | "displayName"
   | "drawAs"
   | "email"
@@ -273,8 +273,8 @@ type PvjsonSingleFreeNodeOptionalKeys =
   | "citations"
   | "comments"
   | "cellularComponent"
-  | "dbId"
-  | "dbConventionalName"
+  | "xrefIdentifier"
+  | "xrefDataSource"
   | "filters"
   | "fontWeight"
   | "isPartOf"
@@ -311,8 +311,8 @@ type PvjsonGroupOptionalKeys =
   | "cellularComponent"
   | "citations"
   | "comments"
-  | "dbId"
-  | "dbConventionalName"
+  | "xrefIdentifier"
+  | "xrefDataSource"
   | "filters"
   | "strokeDasharray"
   | "textContent";
@@ -372,8 +372,8 @@ type PvjsonBurrRequiredKeys =
 type PvjsonBurrOptionalKeys =
   | "citations"
   | "comments"
-  | "dbId"
-  | "dbConventionalName"
+  | "xrefIdentifier"
+  | "xrefDataSource"
   | "filters"
   | "rotation"
   | "textRotation"
@@ -404,8 +404,8 @@ type PvjsonEdgeOptionalKeys =
   | "controller"
   | "controlType"
   | "conversionDirection"
-  | "dbConventionalName"
-  | "dbId"
+  | "xrefDataSource"
+  | "xrefIdentifier"
   | "filters"
   | "isPartOf"
   | "left"
@@ -459,7 +459,7 @@ type PvjsonPublicationXrefRequiredKeys =
   | "textContent"
   | "type"
   | "year";
-type PvjsonPublicationXrefOptionalKeys = "dbId" | "dbConventionalName";
+type PvjsonPublicationXrefOptionalKeys = "xrefIdentifier" | "xrefDataSource";
 export type PvjsonPublicationXref = {
   [K in PvjsonPublicationXrefRequiredKeys]: PvjsonEntityMerged[K]
 } &

@@ -23,9 +23,13 @@ export function parseBioPAXElements(acc: any, el: SimpleElement) {
 
           const key = BIOPAX_TO_PVJSON[tagName];
           if (
-            ["dbId", "dbConventionalName", "title", "source", "year"].indexOf(
-              key
-            ) > -1
+            [
+              "xrefIdentifier",
+              "xrefDataSource",
+              "title",
+              "source",
+              "year"
+            ].indexOf(key) > -1
           ) {
             publicationXrefAcc[key] = textContentDecoded;
           } else {
@@ -64,7 +68,7 @@ export function parseBioPAXElements(acc: any, el: SimpleElement) {
     ) as {
       id: string;
       term: string;
-      dbId: string;
+      xrefIdentifier: string;
       ontology: string;
       type: string[];
     };
@@ -73,14 +77,15 @@ export function parseBioPAXElements(acc: any, el: SimpleElement) {
     let vocabularyIRI = VOCABULARY_NAME_TO_IRI[vocabularyName];
     if (!vocabularyIRI) {
       console.warn(
-        `Unknown openControlledVocabulary name "${vocabularyName}" with dbId "${openControlledVocabulary.dbId}"`
+        `Unknown openControlledVocabulary name "${vocabularyName}" with xrefIdentifier "${openControlledVocabulary.xrefIdentifier}"`
       );
       vocabularyIRI = `http://www.ebi.ac.uk/miriam/main/search?query=${vocabularyName.replace(
         /\ /,
         "+"
       )}#`;
     }
-    openControlledVocabulary.id = vocabularyIRI + openControlledVocabulary.dbId;
+    openControlledVocabulary.id =
+      vocabularyIRI + openControlledVocabulary.xrefIdentifier;
     acc.OpenControlledVocabulary.push(openControlledVocabulary);
   } else {
     console.warn(`Unknown BioPAX element: ${tagName}`);

@@ -896,7 +896,7 @@ export function toPvjson(
           new Error(
             `
 						Encountered unexpected name "${vocabularyName}" for openControlledVocabulary,
-						with dbId "${openControlledVocabulary.dbId}"
+						with xrefIdentifier "${openControlledVocabulary.xrefIdentifier}"
 						`
           )
         );
@@ -908,7 +908,7 @@ export function toPvjson(
 				//*/
       }
       openControlledVocabulary.id =
-        vocabularyIRI + openControlledVocabulary.dbId;
+        vocabularyIRI + openControlledVocabulary.xrefIdentifier;
       return openControlledVocabulary;
     })
     .collect()
