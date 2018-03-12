@@ -372,6 +372,12 @@ export class Processor {
         gpmlElementName,
         kaavioType
       ) as string[];
+      if (processed.xrefDataSource && processed.xrefIdentifier) {
+        processed.type = unionLSV(
+          processed.type,
+          `${processed.xrefDataSource}:${processed.xrefIdentifier}`
+        ) as string[];
+      }
       if (!!kaavioType) {
         processed.kaavioType = kaavioType;
       }

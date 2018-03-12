@@ -735,12 +735,12 @@ export function toPvjson(
           return hl.fromError(
             new VError(
               `
-							Unexpected entity type.
-							Only Edge or Burr should return true for
-							isPvjsonEdgeOrBurr(
-								${JSON.stringify(pvjsonEntity, null, "  ")}
-							)
-						`
+		Unexpected entity type.
+		Only Edge or Burr should return true for
+		isPvjsonEdgeOrBurr(
+			${JSON.stringify(pvjsonEntity, null, "  ")}
+		)
+		`
             )
           );
         }
@@ -754,9 +754,9 @@ export function toPvjson(
             return hl.fromError(
               new Error(
                 `
-								Encountered empty Group:
-								${JSON.stringify(pvjsonEntity, null, "  ")}
-								`
+		Encountered empty Group:
+		${JSON.stringify(pvjsonEntity, null, "  ")}
+		`
               )
             );
           }
@@ -764,9 +764,9 @@ export function toPvjson(
             return hl.fromError(
               new Error(
                 `
-								Encountered nested Group:
-								${JSON.stringify(pvjsonEntity, null, "  ")}
-								`
+		Encountered nested Group:
+		${JSON.stringify(pvjsonEntity, null, "  ")}
+		`
               )
             );
           }
@@ -817,11 +817,11 @@ export function toPvjson(
                     return hl.fromError(
                       new Error(
                         `
-												Encountered unexpected entity
-												${JSON.stringify(groupedEntity, null, "  ")}
-												in Group
-												${JSON.stringify(pvjsonGroup, null, "  ")}
-												`
+			Encountered unexpected entity
+			${JSON.stringify(groupedEntity, null, "  ")}
+			in Group
+			${JSON.stringify(pvjsonGroup, null, "  ")}
+			`
                       )
                     );
                   }
@@ -895,9 +895,9 @@ export function toPvjson(
         return hl.fromError(
           new Error(
             `
-						Encountered unexpected name "${vocabularyName}" for openControlledVocabulary,
-						with xrefIdentifier "${openControlledVocabulary.xrefIdentifier}"
-						`
+		Encountered unexpected name "${vocabularyName}" for openControlledVocabulary,
+		with xrefIdentifier "${openControlledVocabulary.xrefIdentifier}"
+		`
           )
         );
         /* TODO should we use this?
