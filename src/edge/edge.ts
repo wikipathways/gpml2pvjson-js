@@ -123,8 +123,8 @@ export function postprocessPVJSON(
 
   const pvjsonEdgeIsAttachedTo = [];
   const providedPvjsonPoints = map(function(
-    point: AttachablePoint & { marker: string }
-  ) {
+    point: AttachablePoint & { marker: string; length: number; } & any
+  ): Point {
     const { marker, x, y } = point;
 
     if (!!marker) {
@@ -137,9 +137,9 @@ export function postprocessPVJSON(
       if (MarkerMappings.hasOwnProperty(marker)) {
         pvjsonEdge.type = toPairs(MarkerMappings[marker]).reduce(function(
           acc,
-          [namespace, moreTypes]
-        ) {
-          return unionLSV(acc, moreTypes);
+          [namespace, moreTypes]: [string, string[]]
+        ): string[] {
+          return unionLSV(acc, moreTypes) as string[];
         }, pvjsonEdge.type);
       }
     }
@@ -181,7 +181,7 @@ export function postprocessPVJSON(
         referencedEntities[entityIdReferencedByEdge];
 
       const orientation = (point.orientation =
-        point.orientation || ([] as Orientation));
+        ((point.orientation || []) as Orientation));
 
       // attachmentDisplay: { position: [x: number, y: number], offset: [xOffset: number, yOffset: number], orientation: [dx: number, dy: number] }
       //

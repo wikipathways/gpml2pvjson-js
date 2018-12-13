@@ -308,7 +308,7 @@ export function toPvjson(
               "@context": context
             },
             mergedPathway
-          );
+          ) as Pathway;
         }
       );
       return processor.output;
@@ -331,7 +331,7 @@ export function toPvjson(
       },
       function(pathway) {
         const comments = pathway.comments || [];
-        comments.push(processProperties(Comment));
+        comments.push(processProperties(Comment) as any);
         pathway.comments = comments;
         return pathway;
       }
@@ -341,7 +341,7 @@ export function toPvjson(
 
   const dataNodeStream = cxmlSources["/Pathway/DataNode"]
     .map(processGPMLAndPropertiesAndType("DataNode"))
-    .map(function(entity: PvjsonSingleFreeNode) {
+    .map(function(entity: PvjsonSingleFreeNode & any) {
       // TODO fix type def for unionLSV so I don't have to use "as"
       entity.type = unionLSV(entity.type, entity.wpType) as string[];
       return entity;
@@ -360,7 +360,7 @@ export function toPvjson(
 
   const shapeStream = cxmlSources["/Pathway/Shape"]
     .map(processGPMLAndPropertiesAndType("Shape"))
-    .map(function(pvjsonEntity: PvjsonSingleFreeNode) {
+    .map(function(pvjsonEntity: PvjsonSingleFreeNode & any) {
       const { cellularComponent } = pvjsonEntity;
       // CellularComponent is not a BioPAX term, but "PhysicalEntity" is.
       if (!!cellularComponent) {
@@ -452,7 +452,7 @@ export function toPvjson(
           filledInAnchor.GraphRef = GraphId;
           return filledInAnchor;
         })
-        .map(processPropertiesAndType("Anchor"));
+        .map(processPropertiesAndType("Anchor")) as Highland.Stream<PvjsonBurr>;
     });
 
   const groupStream: Highland.Stream<PvjsonGroup> = cxmlSources[
@@ -462,7 +462,7 @@ export function toPvjson(
     // PathVisio shouldn't do this, but it sometimes makes empty Groups.
     // We filter them out here.
     .filter((Group: GPMLElement) => !!Group.Contains)
-    .map(processGPMLAndPropertiesAndType("Group"));
+    .map(processGPMLAndPropertiesAndType("Group")) as Highland.Stream<PvjsonGroup>;
 
   const EDGES = ["Interaction", "GraphicalLine"];
   const NODES = ["DataNode", "Shape", "Label", "State", "Group"];
@@ -561,9 +561,9 @@ export function toPvjson(
         pvjsonEntity
       ) {
         const dependencies = unionLSV(
-          pvjsonEntity.contains,
+          pvjsonEntity["contains"],
           pvjsonEntity["isAttachedToOrVia"],
-          pvjsonEntity.isAttachedTo
+          pvjsonEntity["isAttachedTo"]
         );
 
         return (
@@ -850,7 +850,7 @@ export function toPvjson(
                   },
                   function(contains) {
                     return insertEntityIdAndSortByZIndex(
-                      difference(contains, groupedEntitiesFinal.map(x => x.id)),
+                      difference(contains, groupedEntitiesFinal.map(x => x["id"])),
                       id
                     );
                   }
@@ -936,7 +936,7 @@ export function toPvjson(
   )
     .map(processPropertiesAndType("PublicationXref"))
     .collect()
-    .map(function(publicationXrefs: PvjsonPublicationXref[]) {
+    .map(function(publicationXrefs: PvjsonPublicationXref[] & any) {
       publicationXrefs
         // TODO I believe we sort by date, but check that is true and
         // not by the order they appear in the GPML
@@ -954,7 +954,7 @@ export function toPvjson(
         .forEach(function(publicationXref, i) {
           publicationXref.textContent = String(i + 1);
         });
-      return publicationXrefs;
+      return publicationXrefs as PvjsonPublicationXref[];
     })
     .map(function(publicationXrefs: PvjsonPublicationXref[]) {
       // TODO should these go through the processor instead?

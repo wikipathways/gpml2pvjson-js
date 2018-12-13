@@ -74,7 +74,12 @@ export const $ID = flow(get("$ID"), generatePublicationXrefId);
 export const DB = flow(get("DB.content"), decodeIfNotEmpty);
 export const TITLE = flow(get("TITLE.content"), decodeIfNotEmpty);
 export const SOURCE = flow(get("SOURCE.content"), decodeIfNotEmpty);
-export const YEAR = get("YEAR.content");
+// TODO: why doesn't TypeScript like the following?
+//export const YEAR = get("YEAR.content");
+export const YEAR = function(x) {
+	return x.YEAR.content;
+	//return get("YEAR.content");
+};
 export const AUTHORS = flow(
   get("AUTHORS"),
   map(flow(get("content"), decodeIfNotEmpty))
@@ -395,7 +400,7 @@ export function RelX(gpmlElement): AttachmentDisplay {
     position: [positionScalarX, positionScalarY],
     // we can't calculate absolute offset until we get the
     // referenced element width/height
-    offset: [] as [number, number],
+    offset: ([] as number[]) as [number, number],
     relativeOffset: [relativeOffsetScalarX, relativeOffsetScalarY]
   };
 }

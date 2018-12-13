@@ -74,7 +74,7 @@ export const EMANATION_ANGLE_TO_START_SIDE_MAPPINGS = toPairs(
 
 export const START_SEGMENT_DETAILS_MAPS: StartSegmentDetailsMap[] = toPairs(
   START_SIDE_TO_ORIENTATION_MAP
-).map(function([startSide, orientation]) {
+).map(function([startSide, orientation]: [Side, [number, number]]) {
   const [orientationX, orientationY] = orientation;
   return {
     sideAttachedTo: startSide,
@@ -209,8 +209,8 @@ export function crossProduct(u: [number, number], v: [number, number]): number {
   return u[0] * v[1] - v[0] * u[1];
 }
 
-export function flipOrientation(orientation: Orientation) {
-  return orientation.map(orientationScalar => -1 * orientationScalar);
+export function flipOrientation(orientation: Orientation): Orientation {
+  return orientation.map(orientationScalar => -1 * orientationScalar) as Orientation;
 }
 
 export function flipSide(side: Side): Side {

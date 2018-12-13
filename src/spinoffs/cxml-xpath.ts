@@ -75,7 +75,7 @@ export class CXMLXPath<T extends GenericCXML, K extends keyof T> {
   }
 
   parse<SelectorToCXMLType, Selector extends keyof SelectorToCXMLType>(
-    selectorToCXML: SelectorToCXMLType
+    selectorToCXML: SelectorToCXMLType & object
   ) {
     const inputStream = this._inputStream;
     const parser = this._parser;
