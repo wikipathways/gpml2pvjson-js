@@ -23,5 +23,5 @@ if [ -f "$check_file_in" ]; then
 
   shasum "$UNIV_OPT" -a 1 -c "$check_file_out" < /dev/stdin
 else
-  shasum "$UNIV_OPT" -a 1 < /dev/stdin
+  shasum "$UNIV_OPT" -a 1 | sed 's/\ .-/ ?-/' < /dev/stdin
 fi
