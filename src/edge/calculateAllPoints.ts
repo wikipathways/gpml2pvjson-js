@@ -11,7 +11,13 @@ import {
   SmartVector
 } from "../geom-utils";
 import { normalize, distance, shortestDirection } from "../spinoffs/Angle";
-import { Orientation, Point, PvjsonNode, PvjsonEdge, AttachablePoint } from "../gpml2pvjson";
+import {
+  Orientation,
+  Point,
+  PvjsonNode,
+  PvjsonEdge,
+  AttachablePoint
+} from "../gpml2pvjson";
 import { DEFAULT_STUB_LENGTH } from "./edge";
 import {
   getOrientationOfHyperedgeStartPoint,
@@ -36,9 +42,8 @@ function getActiveOrientationIndexAndDimension(orientation: [number, number]) {
     orientation
   );
   const activeOrientationDimension = INDEX_TO_DIMENSION[activeOrientationIndex];
-  const otherOrientationDimension = activeOrientationDimension === "x"
-    ? "y"
-    : "x";
+  const otherOrientationDimension =
+    activeOrientationDimension === "x" ? "y" : "x";
   return {
     activeOrientationIndex,
     activeOrientationDimension,
@@ -88,11 +93,11 @@ export function calculateAllPoints(
       // attached to a SingleFreeNode, a Group or a GPML State, it would already
       // have a valid orientation calculated by this point, so the point must
       // be either attached to nothing or else attached to an edge.
-      firstPoint.orientation = (getOrientationOfHyperedgeStartPoint(
+      firstPoint.orientation = getOrientationOfHyperedgeStartPoint(
         <PvjsonEdge>sourceEntity,
         firstPoint,
         lastPoint
-      ) as Orientation);
+      ) as Orientation;
     } else {
       firstPoint.orientation = [-1, 0];
     }
@@ -107,11 +112,11 @@ export function calculateAllPoints(
       // attached to a SingleFreeNode, a Group or a GPML State, it would already
       // have a valid orientation calculated by this point, so the point must
       // be either attached to nothing or else attached to an edge.
-      lastPoint.orientation = (getOrientationOfHyperedgeEndPoint(
+      lastPoint.orientation = getOrientationOfHyperedgeEndPoint(
         <PvjsonEdge>targetEntity,
         lastPoint,
         firstPoint
-      ) as Orientation);
+      ) as Orientation;
     } else {
       const { x: x0, y: y0 } = firstPoint;
       const { x: x1, y: y1 } = lastPoint;
@@ -300,7 +305,7 @@ export function calculateAllPoints(
           endOrientation[activeOrientationIndex] * DEFAULT_STUB_LENGTH;
         pvjsonPoints[3][otherOrientationDimension] =
           startPoint[otherOrientationDimension] +
-          3 * otherOrientationDimensionDisplacement / 4;
+          (3 * otherOrientationDimensionDisplacement) / 4;
       } else {
         //                        *---
         //                           |

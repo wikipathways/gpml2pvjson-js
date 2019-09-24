@@ -339,7 +339,8 @@ export class Processor {
     }
   );
 
-  processProperties = curry((gpmlElement: GPMLElement): PvjsonEntity & Comment => {
+  processProperties = curry((gpmlElement: GPMLElement): PvjsonEntity &
+    Comment => {
     const { processKV } = this;
     const entity = fromPairs(
       toPairsIn(gpmlElement).reduce(
@@ -350,11 +351,14 @@ export class Processor {
     if (!!entity.rotation) {
       entity.textRotation = -1 * (entity.rotation as number);
     }
-    return (entity as PvjsonEntity & Comment);
+    return entity as PvjsonEntity & Comment;
   });
 
   processPropertiesAndType = curry(
-    (gpmlElementName: string, gpmlElement: GPMLElement): PvjsonEntity & Comment => {
+    (
+      gpmlElementName: string,
+      gpmlElement: GPMLElement
+    ): PvjsonEntity & Comment => {
       const pvjsonEntity = this.processType(
         gpmlElementName,
         this.processProperties(gpmlElement)

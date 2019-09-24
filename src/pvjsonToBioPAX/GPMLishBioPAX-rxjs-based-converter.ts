@@ -11,41 +11,39 @@ import * as VOCABULARY_NAME_TO_IRI from "./vocabulary-name-to-iri.json";
 export function parseBioPAXElements(acc: any, el: SimpleElement) {
   const { tagName, children, attributes } = el;
   if (tagName === "bp:PublicationXref") {
-    acc.PublicationXref.push(
-      reduce(
-        children,
-        function(publicationXrefAcc, child) {
-          const { tagName, textContent } = child;
+    acc.PublicationXref.push(reduce(
+      children,
+      function(publicationXrefAcc, child) {
+        const { tagName, textContent } = child;
 
-          // using He.decode here, because some GPML at some point didn't use UTF-8
-          // for things like author names.
-          const textContentDecoded = He.decode(textContent);
+        // using He.decode here, because some GPML at some point didn't use UTF-8
+        // for things like author names.
+        const textContentDecoded = He.decode(textContent);
 
-          const key = BIOPAX_TO_PVJSON[tagName];
-          if (
-            [
-              "xrefIdentifier",
-              "xrefDataSource",
-              "title",
-              "source",
-              "year"
-            ].indexOf(key) > -1
-          ) {
-            publicationXrefAcc[key] = textContentDecoded;
-          } else {
-            publicationXrefAcc[key].push(textContentDecoded);
-          }
-          return publicationXrefAcc;
-        },
-        {
-          id: generatePublicationXrefId(el.attributes["rdf:id"]),
-          displayName: String(acc.PublicationXref.length + 1),
-          type: ["PublicationXref"],
-          gpmlElementName: "BiopaxRef",
-          author: []
+        const key = BIOPAX_TO_PVJSON[tagName];
+        if (
+          [
+            "xrefIdentifier",
+            "xrefDataSource",
+            "title",
+            "source",
+            "year"
+          ].indexOf(key) > -1
+        ) {
+          publicationXrefAcc[key] = textContentDecoded;
+        } else {
+          publicationXrefAcc[key].push(textContentDecoded);
         }
-      ) as PublicationXref
-    );
+        return publicationXrefAcc;
+      },
+      {
+        id: generatePublicationXrefId(el.attributes["rdf:id"]),
+        displayName: String(acc.PublicationXref.length + 1),
+        type: ["PublicationXref"],
+        gpmlElementName: "BiopaxRef",
+        author: []
+      }
+    ) as PublicationXref);
   } else if (tagName === "bp:openControlledVocabulary") {
     let openControlledVocabulary = reduce(
       children,

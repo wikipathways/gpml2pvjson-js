@@ -11,7 +11,7 @@
  * typescript
  * maintained (open issues unresolved for a long time?)
  * node and browser
-*/
+ */
 
 import { assign as assignM } from "lodash";
 import { fromPairs, isFinite, isUndefined, last, toPairs } from "lodash/fp";
@@ -58,9 +58,10 @@ export const START_SIDE_TO_ORIENTATION_MAP = {
 };
 
 export const START_SIDE_TO_EMANATION_ANGLE_MAPPINGS = fromPairs(
-  toPairs(START_SIDE_TO_ORIENTATION_MAP).map(function(
-    [startSide, orientation]
-  ) {
+  toPairs(START_SIDE_TO_ORIENTATION_MAP).map(function([
+    startSide,
+    orientation
+  ]) {
     return [startSide, fromSlope([0, 0], orientation)];
   })
 );
@@ -160,17 +161,17 @@ export class SmartPath {
       accuracy
     );
     /* the points library returns the angle from north, in degrees, increasing CW, so
-		 * this has an angle of 0 deg.:
-		 * 
-		 *       ^
-		 *       |
-		 *       |
-		 *       |
-		 * 
-		 * and this has an angle of 90 deg.:
-		 *
-		 *    ------->
-		 */
+     * this has an angle of 0 deg.:
+     *
+     *       ^
+     *       |
+     *       |
+     *       |
+     *
+     * and this has an angle of 90 deg.:
+     *
+     *    ------->
+     */
     return {
       x,
       y,
@@ -210,7 +211,9 @@ export function crossProduct(u: [number, number], v: [number, number]): number {
 }
 
 export function flipOrientation(orientation: Orientation): Orientation {
-  return orientation.map(orientationScalar => -1 * orientationScalar) as Orientation;
+  return orientation.map(
+    orientationScalar => -1 * orientationScalar
+  ) as Orientation;
 }
 
 export function flipSide(side: Side): Side {
@@ -255,7 +258,7 @@ export function reverseAngle(angle) {
 export function getAngleAtPoint(edge: PvjsonEdge, positionX: number): number {
   const { id, points, markerStart, markerEnd } = edge;
 
-  const referencedPath = new edgeDrawers[(edge.drawAs.toLowerCase())](
+  const referencedPath = new edgeDrawers[edge.drawAs.toLowerCase()](
     points,
     markerStart,
     markerEnd
@@ -278,9 +281,10 @@ export function getAngleFromPointToPoint({ x: x0, y: y0 }, { x: x1, y: y1 }) {
   return Math.atan2(y1 - y0, x1 - x0);
 }
 
-export function getStartSideByOrientation(
-  [orientationX, orientationY]: Orientation
-): Side {
+export function getStartSideByOrientation([
+  orientationX,
+  orientationY
+]: Orientation): Side {
   if (Math.abs(orientationX) > Math.abs(orientationY)) {
     if (orientationX > 0) {
       return "right"; //East
@@ -458,9 +462,11 @@ export function rotate(
   ];
 }
 
-export function scale(
-  [xScale, yScale]: [number, number]
-): [[number, 0, 0], [0, number, 0], [0, 0, 1]] {
+export function scale([xScale, yScale]: [number, number]): [
+  [number, 0, 0],
+  [0, number, 0],
+  [0, 0, 1]
+] {
   if (!isFinite(xScale) || !isFinite(yScale)) {
     throw new Error(
       `Invalid input: rotate([${xScale}, ${yScale}]). Requires array of two finite numbers.`
@@ -469,9 +475,11 @@ export function scale(
   return [[xScale, 0, 0], [0, yScale, 0], [0, 0, 1]];
 }
 
-export function translate(
-  [xTranslation, yTranslation]: [number, number]
-): [[1, 0, number], [0, 1, number], [0, 0, 1]] {
+export function translate([xTranslation, yTranslation]: [number, number]): [
+  [1, 0, number],
+  [0, 1, number],
+  [0, 0, 1]
+] {
   if (!isFinite(xTranslation) || !isFinite(yTranslation)) {
     throw new Error(
       `Invalid input: translate([${xTranslation}, ${yTranslation}]). Requires array of two finite numbers.`
@@ -504,9 +512,9 @@ export function getTransformationMatrix(transformationSequence) {
 
 export function multiplyMatrixByVector(transformationMatrix, vector) {
   var x =
-    vector[0][0] * transformationMatrix[0][0] +
-    vector[1][0] * transformationMatrix[0][1] +
-    vector[2][0] * transformationMatrix[0][2],
+      vector[0][0] * transformationMatrix[0][0] +
+      vector[1][0] * transformationMatrix[0][1] +
+      vector[2][0] * transformationMatrix[0][2],
     y =
       vector[0][0] * transformationMatrix[1][0] +
       vector[1][0] * transformationMatrix[1][1] +
@@ -549,7 +557,7 @@ export function multiplyMatrixByVector(transformationMatrix, vector) {
  *                   .
  *                    p2
  *
- * 
+ *
  * Example of False
  *
  *  p1
@@ -595,8 +603,8 @@ export function transform({
   transformationSequence?: any[];
 }): PvjsonNode {
   const { x, y, width, height } = element;
-  (transformOrigin = transformOrigin || "50% 50%"), (transformationSequence =
-    transformationSequence || []);
+  (transformOrigin = transformOrigin || "50% 50%"),
+    (transformationSequence = transformationSequence || []);
 
   var transformOriginKeywordMappings = {
     left: "0%",

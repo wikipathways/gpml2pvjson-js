@@ -82,7 +82,7 @@ export class CXMLXPath<T extends GenericCXML, K extends keyof T> {
     const schema = this._schema;
 
     type StreamMapBySelector = {
-      [P in keyof SelectorToCXMLType]: Highland.Stream<SelectorToCXMLType[P]>
+      [P in keyof SelectorToCXMLType]: Highland.Stream<SelectorToCXMLType[P]>;
     };
 
     const result = toPairs(selectorToCXML).reduce(
@@ -130,13 +130,17 @@ export class CXMLXPath<T extends GenericCXML, K extends keyof T> {
             commonNestedElementsToSelector(runningSelectorNestedElements) !==
             commonNestedElementsToSelector(selectorNestedElements)
           );
-        }, runningSelectors);
+        },
+        runningSelectors);
 
         selectorsToEnd.forEach(function(runningSelector) {
           const runningStream = output[runningSelector];
-          outputStream.observe().head().each(function(x) {
-            runningStream.end();
-          });
+          outputStream
+            .observe()
+            .head()
+            .each(function(x) {
+              runningStream.end();
+            });
         });
         // NOTE: redefining this variable
         runningSelectors = stillRunningSelectors.concat([selector]);

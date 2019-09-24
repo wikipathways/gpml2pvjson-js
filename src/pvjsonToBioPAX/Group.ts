@@ -1,15 +1,16 @@
 /// <reference path="../gpml2pvjson.d.ts" />
-/// <reference path="../json.d.ts" />
+/// <reference path="../spinoffs/json.d.ts" />
 
 import { isPvjsonEdge, unionLSV } from "../gpml-utilities";
+import { PvjsonEntity, PvjsonNode } from "../gpml2pvjson";
 
 // TODO this isn't worth much. It also overlaps in purpose with the
 // process function below.
-export GPML2013aGroupStyleToBioPAX = {
-	None: 'Pathway',
-	Group: 'Pathway',
-	Complex: 'Complex',
-	Pathway: 'Pathway'
+export const GPML2013aGroupStyleToBioPAX = {
+  None: "Pathway",
+  Group: "Pathway",
+  Complex: "Complex",
+  Pathway: "Pathway"
 };
 
 export function process(

@@ -219,11 +219,11 @@ type PvjsonEntityMergedNumberProperties =
   | "zIndex";
 
 type PvjsonEntityMergedWithStringProperties = {
-  [K in PvjsonEntityMergedStringProperties]?: string
+  [K in PvjsonEntityMergedStringProperties]?: string;
 };
 
 type PvjsonEntityMergedWithNumberProperties = {
-  [K in PvjsonEntityMergedNumberProperties]?: number
+  [K in PvjsonEntityMergedNumberProperties]?: number;
 };
 
 type PvjsonEntityMergedStringArrayProperties =
@@ -237,7 +237,7 @@ type PvjsonEntityMergedStringArrayProperties =
   | "type";
 
 type PvjsonEntityMergedWithStringArrayProperties = {
-  [K in PvjsonEntityMergedStringArrayProperties]?: string[]
+  [K in PvjsonEntityMergedStringArrayProperties]?: string[];
 };
 
 type PvjsonEntityMerged = PvjsonEntityMergedWithStringProperties &
@@ -285,7 +285,7 @@ type PvjsonSingleFreeNodeOptionalKeys =
   | "verticalAlign"
   | "wpType";
 export type PvjsonSingleFreeNode = {
-  [K in PvjsonSingleFreeNodeRequiredKeys]: PvjsonEntityMerged[K]
+  [K in PvjsonSingleFreeNodeRequiredKeys]: PvjsonEntityMerged[K];
 } &
   { [K in PvjsonSingleFreeNodeOptionalKeys]?: PvjsonEntityMerged[K] };
 
@@ -317,7 +317,7 @@ type PvjsonGroupOptionalKeys =
   | "strokeDasharray"
   | "textContent";
 export type PvjsonGroup = {
-  [K in PvjsonGroupRequiredKeys]: PvjsonEntityMerged[K]
+  [K in PvjsonGroupRequiredKeys]: PvjsonEntityMerged[K];
 } &
   { [K in PvjsonGroupOptionalKeys]?: PvjsonEntityMerged[K] };
 
@@ -379,7 +379,7 @@ type PvjsonBurrOptionalKeys =
   | "textRotation"
   | "strokeDasharray";
 export type PvjsonBurr = {
-  [K in PvjsonBurrRequiredKeys]: PvjsonEntityMerged[K]
+  [K in PvjsonBurrRequiredKeys]: PvjsonEntityMerged[K];
 } &
   { [K in PvjsonBurrOptionalKeys]?: PvjsonEntityMerged[K] } & {
     isAttachedTo: string;
@@ -417,7 +417,7 @@ type PvjsonEdgeOptionalKeys =
   | "strokeDasharray"
   | "wpInteractionType";
 export type PvjsonEdge = {
-  [K in PvjsonEdgeRequiredKeys]: PvjsonEntityMerged[K]
+  [K in PvjsonEdgeRequiredKeys]: PvjsonEntityMerged[K];
 } &
   { [K in PvjsonEdgeOptionalKeys]?: PvjsonEntityMerged[K] } & {
     //explicitPoints?: any;
@@ -461,7 +461,7 @@ type PvjsonPublicationXrefRequiredKeys =
   | "year";
 type PvjsonPublicationXrefOptionalKeys = "xrefIdentifier" | "xrefDataSource";
 export type PvjsonPublicationXref = {
-  [K in PvjsonPublicationXrefRequiredKeys]: PvjsonEntityMerged[K]
+  [K in PvjsonPublicationXrefRequiredKeys]: PvjsonEntityMerged[K];
 } &
   { [K in PvjsonPublicationXrefOptionalKeys]?: PvjsonEntityMerged[K] } & {};
 

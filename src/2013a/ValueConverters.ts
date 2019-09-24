@@ -32,7 +32,7 @@ const GPML_ROTATION_SIDE_TO_RAD = {
   Top: 0,
   Right: 0.5 * Math.PI,
   Bottom: Math.PI,
-  Left: 3 / 2 * Math.PI
+  Left: (3 / 2) * Math.PI
 };
 
 function decodeIfNotEmpty(input) {
@@ -70,21 +70,41 @@ export function ID(gpmlElement) {
 // to use "rdf:ID". We corrected that error before processing,
 // but CXML turns "rdf:ID" into "ID", and since we already have
 // a property "ID" on the element, CXML uses "$ID".
-export const $ID = flow(get("$ID"), generatePublicationXrefId);
-export const DB = flow(get("DB.content"), decodeIfNotEmpty);
-export const TITLE = flow(get("TITLE.content"), decodeIfNotEmpty);
-export const SOURCE = flow(get("SOURCE.content"), decodeIfNotEmpty);
+export const $ID = flow(
+  get("$ID"),
+  generatePublicationXrefId
+);
+export const DB = flow(
+  get("DB.content"),
+  decodeIfNotEmpty
+);
+export const TITLE = flow(
+  get("TITLE.content"),
+  decodeIfNotEmpty
+);
+export const SOURCE = flow(
+  get("SOURCE.content"),
+  decodeIfNotEmpty
+);
 // TODO: why doesn't TypeScript like the following?
 //export const YEAR = get("YEAR.content");
 export const YEAR = function(x) {
-	return x.YEAR.content;
-	//return get("YEAR.content");
+  return x.YEAR.content;
+  //return get("YEAR.content");
 };
 export const AUTHORS = flow(
   get("AUTHORS"),
-  map(flow(get("content"), decodeIfNotEmpty))
+  map(
+    flow(
+      get("content"),
+      decodeIfNotEmpty
+    )
+  )
 );
-export const BiopaxRef = flow(get("BiopaxRef"), map(generatePublicationXrefId));
+export const BiopaxRef = flow(
+  get("BiopaxRef"),
+  map(generatePublicationXrefId)
+);
 
 /*
 Meanings of Width
@@ -217,13 +237,31 @@ export function LineStyle(gpmlElement) {
   }
 }
 
-export const Author = flow(get("Author"), decodeIfNotEmpty);
-export const DataSource = flow(get("Data-Source"), decodeIfNotEmpty);
-export const Email = flow(get("Email"), decodeIfNotEmpty);
-export const Maintainer = flow(get("Maintainer"), decodeIfNotEmpty);
-export const Name = flow(get("Name"), decodeIfNotEmpty);
+export const Author = flow(
+  get("Author"),
+  decodeIfNotEmpty
+);
+export const DataSource = flow(
+  get("Data-Source"),
+  decodeIfNotEmpty
+);
+export const Email = flow(
+  get("Email"),
+  decodeIfNotEmpty
+);
+export const Maintainer = flow(
+  get("Maintainer"),
+  decodeIfNotEmpty
+);
+export const Name = flow(
+  get("Name"),
+  decodeIfNotEmpty
+);
 
-export const TextLabel = flow(get("TextLabel"), decodeIfNotEmpty);
+export const TextLabel = flow(
+  get("TextLabel"),
+  decodeIfNotEmpty
+);
 
 // TODO is this ever used?
 // The only way I see to create underlined text in PathVisio-Java
@@ -248,14 +286,30 @@ export function getTextDecorationFromGPMLElement(gpmlElement) {
   }
   return outputChunks.join(" ");
 }
-export const Align = flow(get("Graphics.Align"), kebabCase);
+export const Align = flow(
+  get("Graphics.Align"),
+  kebabCase
+);
 export const FontDecoration = getTextDecorationFromGPMLElement;
 export const FontStrikethru = getTextDecorationFromGPMLElement;
-export const FontStyle = flow(get("Graphics.FontStyle"), kebabCase);
-export const FontWeight = flow(get("Graphics.FontWeight"), kebabCase);
-export const Valign = flow(get("Graphics.Valign"), kebabCase);
+export const FontStyle = flow(
+  get("Graphics.FontStyle"),
+  kebabCase
+);
+export const FontWeight = flow(
+  get("Graphics.FontWeight"),
+  kebabCase
+);
+export const Valign = flow(
+  get("Graphics.Valign"),
+  kebabCase
+);
 
-export const Href = flow(get("Href"), decodeIfNotEmpty, encodeURI);
+export const Href = flow(
+  get("Href"),
+  decodeIfNotEmpty,
+  encodeURI
+);
 
 export function gpmlColorToCssColor(colorValue) {
   const colorValueLowerCased = colorValue.toLowerCase();
@@ -277,7 +331,10 @@ export function gpmlColorToCssColor(colorValue) {
   }
 }
 
-export const Color = flow(get("Graphics.Color"), gpmlColorToCssColor);
+export const Color = flow(
+  get("Graphics.Color"),
+  gpmlColorToCssColor
+);
 
 export function FillColor(gpmlElement) {
   const { FillColor, ShapeType } = gpmlElement.Graphics;

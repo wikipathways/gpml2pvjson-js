@@ -52,21 +52,21 @@ export function getOrientationOfHyperedgeStartPoint(
     startSegmentDetailsMap
   ) {
     /*
-		 *   referenced edge 
-		 *         /
-		 *        /
-		 *       /.
-		 *      /  angle (rad)
-		 *     /    .
-		 *    /--------------
-		 *   /       ^      |           --------------
-		 *  /        |      |           |            |
-		 *           |      ------------|            |
-		 *           |                  |            |
-		 *      firstSegment            --------------
-		 *   (of current edge)
-		 *
-		 */
+     *   referenced edge
+     *         /
+     *        /
+     *       /.
+     *      /  angle (rad)
+     *     /    .
+     *    /--------------
+     *   /       ^      |           --------------
+     *  /        |      |           |            |
+     *           |      ------------|            |
+     *           |                  |            |
+     *      firstSegment            --------------
+     *   (of current edge)
+     *
+     */
 
     const { orientation } = startSegmentDetailsMap;
     const [orientationX, orientationY] = orientation;

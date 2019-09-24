@@ -49,7 +49,10 @@ interface SAXOpenTag<ATTR_NAMES_AND_TYPES> {
   ns?: string;
   isSelfClosing: boolean;
   attributes: {
-    [K in keyof ATTR_NAMES_AND_TYPES]?: SAXAttribute<K, ATTR_NAMES_AND_TYPES[K]>
+    [K in keyof ATTR_NAMES_AND_TYPES]?: SAXAttribute<
+      K,
+      ATTR_NAMES_AND_TYPES[K]
+    >;
   };
 }
 
@@ -79,13 +82,12 @@ declare class SAXParser<ATTR_NAMES_AND_TYPES> {
 }
 
 // TODO is this the right way to indicate an instance of class SAXStream?
-interface SAXStreamInstance<ATTR_NAMES_AND_TYPES> extends SAXStream<
-  ATTR_NAMES_AND_TYPES
-> {
+interface SAXStreamInstance<ATTR_NAMES_AND_TYPES>
+  extends SAXStream<ATTR_NAMES_AND_TYPES> {
   _parser: {
     error: any;
     resume: Function;
-    "onopentag"?: Function;
+    onopentag?: Function;
   };
 }
 

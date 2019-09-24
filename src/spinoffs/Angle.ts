@@ -209,18 +209,18 @@ export function quadrant(x, y, k, shift) {
   if (isUndefined(shift)) shift = 0; // Rotate the coordinate system by shift° (positiv = counter-clockwise)
 
   /* shift = PI / k, k = 4:
-		 *   I) 45-135
-		 *  II) 135-225
-		 * III) 225-315
-		 *  IV) 315-360
-		 */
+   *   I) 45-135
+   *  II) 135-225
+   * III) 225-315
+   *  IV) 315-360
+   */
 
   /* shift = 0, k = 4:
-		 *   I) 0-90
-		 *  II) 90-180
-		 * III) 180-270
-		 *  IV) 270-360
-		 */
+   *   I) 0-90
+   *  II) 90-180
+   * III) 180-270
+   *  IV) 270-360
+   */
 
   var phi = (Math.atan2(y, x) + TAU) / TAU;
 

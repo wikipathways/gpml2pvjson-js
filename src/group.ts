@@ -156,9 +156,10 @@ export const preprocessGPML = curry(function(
 ): GPMLElement {
   // NOTE: The class "Group" is the only class that uses the "Style" property.
   // There are defaults for each Style, so we apply them here.
-  toPairs(GPML2013aGroupMappingsByStyle[Group.Style]).forEach(function(
-    [mappingKey, mappingValue]
-  ) {
+  toPairs(GPML2013aGroupMappingsByStyle[Group.Style]).forEach(function([
+    mappingKey,
+    mappingValue
+  ]) {
     const oldValue = Group[mappingKey];
     let newValue;
     if (isPlainObject(mappingValue)) {
