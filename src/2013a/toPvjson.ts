@@ -97,7 +97,7 @@ interface SortUnsortedAcc {
   unsorted: (PvjsonNode | PvjsonEdge)[];
 }
 interface ReferencedEntitiesMap {
-  [key: string]: (PvjsonNode | PvjsonEdge);
+  [key: string]: PvjsonNode | PvjsonEdge;
 }
 
 export const RECURSION_LIMIT = 1000;
@@ -462,14 +462,16 @@ export function toPvjson(
     // PathVisio shouldn't do this, but it sometimes makes empty Groups.
     // We filter them out here.
     .filter((Group: GPMLElement) => !!Group.Contains)
-    .map(processGPMLAndPropertiesAndType("Group")) as Highland.Stream<PvjsonGroup>;
+    .map(processGPMLAndPropertiesAndType("Group")) as Highland.Stream<
+    PvjsonGroup
+  >;
 
   const EDGES = ["Interaction", "GraphicalLine"];
   const NODES = ["DataNode", "Shape", "Label", "State", "Group"];
 
   function postprocessAll(
     s
-  ): Highland.Stream<(PvjsonSingleFreeNode | PvjsonEdge)> {
+  ): Highland.Stream<PvjsonSingleFreeNode | PvjsonEdge> {
     /*
     // We are sorting the elements by the order in which we must do their
     // post-processing, e.g., if one edge is attached to another edge via
@@ -574,7 +576,8 @@ export function toPvjson(
 					//*/
           intersection(dependencies, sortedIds).length === dependencies.length
         );
-      }, unsorted);
+      },
+      unsorted);
 
       sortedOnThisIteration
         /*
@@ -637,11 +640,9 @@ export function toPvjson(
 
   const pvjsonEntityStream = hl([
     hl([dataNodeStream, stateStream, shapeStream, labelStream]).merge(),
-    hl(
-      [edgeStream, anchorStream] as Highland.Stream<
-        (PvjsonNode | PvjsonEntity)
-      >[]
-    ).merge(),
+    hl([edgeStream, anchorStream] as Highland.Stream<
+      PvjsonNode | PvjsonEntity
+    >[]).merge(),
     groupStream
   ])
     .sequence()
@@ -652,9 +653,9 @@ export function toPvjson(
       pvjsonEntity: PvjsonNode | PvjsonEdge
     ): Highland.Stream<
       | {
-        pathway: Pathway | PathwayStarter;
-        entitiesById: PvjsonEntitiesById;
-      }
+          pathway: Pathway | PathwayStarter;
+          entitiesById: PvjsonEntitiesById;
+        }
       | Error
     > {
       const { id, zIndex } = pvjsonEntity;
@@ -850,7 +851,10 @@ export function toPvjson(
                   },
                   function(contains) {
                     return insertEntityIdAndSortByZIndex(
-                      difference(contains, groupedEntitiesFinal.map(x => x["id"])),
+                      difference(
+                        contains,
+                        groupedEntitiesFinal.map(x => x["id"])
+                      ),
                       id
                     );
                   }
@@ -880,9 +884,12 @@ export function toPvjson(
       return finalSortedStream;
     });
 
-  pvjsonEntityStream.observe().last().doto(function() {
-    processor.pvjsonEntityLatestStream.end();
-  });
+  pvjsonEntityStream
+    .observe()
+    .last()
+    .doto(function() {
+      processor.pvjsonEntityLatestStream.end();
+    });
 
   const openControlledVocabularyStream = hl(
     cxmlSources["/Pathway/Biopax/bp:openControlledVocabulary"]

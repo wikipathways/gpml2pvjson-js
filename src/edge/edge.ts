@@ -92,9 +92,9 @@ function getOffsetAndOrientationScalarsAlongAxis(
 export function preprocessGPML(
   Edge: InteractionType | GraphicalLineType
 ): GPMLElement {
-  const isAttachedToOrVia = Edge.Graphics.Point
-    .filter(p => p.GraphRef && isDefinedCXML(p.GraphRef))
-    .map(p => p.GraphRef);
+  const isAttachedToOrVia = Edge.Graphics.Point.filter(
+    p => p.GraphRef && isDefinedCXML(p.GraphRef)
+  ).map(p => p.GraphRef);
 
   if (isAttachedToOrVia.length > 0) {
     // In pvjson, an edge attaches directly to another entity (Node, Edge, Group),
@@ -113,7 +113,7 @@ export function preprocessGPML(
  * @return {pvjsonEdge}
  */
 export function postprocessPVJSON(
-  referencedEntities: { [key: string]: (PvjsonNode | PvjsonEdge) },
+  referencedEntities: { [key: string]: PvjsonNode | PvjsonEdge },
   pvjsonEdge: PvjsonEdge
 ): PvjsonEdge {
   const { points, drawAs } = pvjsonEdge;
@@ -123,7 +123,7 @@ export function postprocessPVJSON(
 
   const pvjsonEdgeIsAttachedTo = [];
   const providedPvjsonPoints = map(function(
-    point: AttachablePoint & { marker: string; length: number; } & any
+    point: AttachablePoint & { marker: string; length: number } & any
   ): Point {
     const { marker, x, y } = point;
 
@@ -140,7 +140,8 @@ export function postprocessPVJSON(
           [namespace, moreTypes]: [string, string[]]
         ): string[] {
           return unionLSV(acc, moreTypes) as string[];
-        }, pvjsonEdge.type);
+        },
+        pvjsonEdge.type);
       }
     }
 
@@ -180,8 +181,8 @@ export function postprocessPVJSON(
       const entityReferencedByEdge =
         referencedEntities[entityIdReferencedByEdge];
 
-      const orientation = (point.orientation =
-        ((point.orientation || []) as Orientation));
+      const orientation = (point.orientation = (point.orientation ||
+        []) as Orientation);
 
       // attachmentDisplay: { position: [x: number, y: number], offset: [xOffset: number, yOffset: number], orientation: [dx: number, dy: number] }
       //
@@ -306,8 +307,9 @@ export function postprocessPVJSON(
     // NOTE: side effect
     index += 1;
 
-    return omit(["marker"], point);
-  }, points);
+    return omit(["marker"], point) as { x: number; y: number };
+  },
+  points);
 
   const pvjsonEdgeAttachedToCount = pvjsonEdgeIsAttachedTo.length;
   if (pvjsonEdgeAttachedToCount > 0) {
@@ -340,7 +342,9 @@ export function postprocessPVJSON(
         targetEntity = referencedEntities[pvjsonEdgeIsAttachedTo[0]];
       } else {
         throw new Error(
-          `edge "${pvjsonEdge.id}" is said to be attached to "${pvjsonEdge.isAttachedTo.join()}",
+          `edge "${
+            pvjsonEdge.id
+          }" is said to be attached to "${pvjsonEdge.isAttachedTo.join()}",
 					but neither first nor last points have "isAttachedTo" property`
         );
       }
@@ -375,7 +379,7 @@ export function postprocessPVJSON(
   pvjsonEdge.points = allPvjsonPoints;
 
   // TODO can I get rid of isAttachedToOrVia earlier?
-  return omit(["isAttachedToOrVia"], pvjsonEdge);
+  return omit(["isAttachedToOrVia"], pvjsonEdge) as PvjsonEdge;
 }
 
 //function recursivelyGetReferencedElements(acc, gpmlElement: GPMLElement) {
