@@ -1,6 +1,6 @@
 {
   "name": "gpml2pvjson",
-  "version": "4.1.10",
+  "version": "4.1.11",
   "description": "convert GPML (XML) to pvjson (json)",
   "main": "es5/gpml2pvjson.js",
   "jsnext:main": "esnext/index.js",
