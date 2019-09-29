@@ -59,7 +59,7 @@
     "he": "^1.2.0",
     "highland": "^2.13.5",
     "immutable-assign": "^1.0.36",
-    "kaavio": "4.0.12",
+    "kaavio": "4.0.13",
     "lodash": "^4.17.15",
     "ndjson": "^1.5.0",
     "point-at-length": "^1.1.0",
