@@ -55,11 +55,11 @@
   "dependencies": {
     "@wikipathways/cxml": "0.2.13",
     "angles": "^0.2.4",
-    "commander": "^2.20.0",
+    "commander": "^2.20.1",
     "he": "^1.2.0",
     "highland": "^2.13.5",
     "immutable-assign": "^1.0.36",
-    "kaavio": "4.0.10",
+    "kaavio": "4.0.12",
     "lodash": "^4.17.15",
     "ndjson": "^1.5.0",
     "point-at-length": "^1.1.0",
@@ -86,7 +86,8 @@
     "pretty-error": "^1.2.0",
     "sinon": "^7.5.0",
     "typescript": "^3.6.3",
-    "webpack": "^4.41.0"
+    "webpack": "^4.41.0",
+    "webpack-cli": "^3.3.9"
   },
   "repository": {
     "type": "git",
