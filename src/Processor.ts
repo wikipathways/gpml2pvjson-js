@@ -351,7 +351,9 @@ export class Processor {
     if (!!entity.rotation) {
       entity.textRotation = -1 * (entity.rotation as number);
     }
-    return entity as PvjsonEntity & Comment;
+    // TODO: why doesn't the following work?
+    //return entity as PvjsonEntity & Comment;
+    return entity as (PvjsonEntity & Comment) | any;
   });
 
   processPropertiesAndType = curry(
