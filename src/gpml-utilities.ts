@@ -6,7 +6,7 @@ import {
   isFinite,
   keys,
   map,
-  union
+  union,
 } from "lodash";
 import { curry, sortBy } from "lodash/fp";
 import { intersectsLSV } from "./spinoffs/jsonld-utils";
@@ -19,19 +19,12 @@ import {
   PvjsonGroup,
   PvjsonEntity,
   AttachablePoint,
-  EdgeGraphicsTypePointType
+  EdgeGraphicsTypePointType,
 } from "./gpml2pvjson";
 
 export * from "./geom-utils";
 
-// TODO this line conflicts with the section below it
 export * from "./spinoffs/jsonld-utils";
-export {
-  arrayify,
-  getValuesLSV,
-  intersectsLSV,
-  unionLSV
-} from "./spinoffs/jsonld-utils";
 
 /*
  * This is needed because PublicationXref rdf:id values and
@@ -44,7 +37,7 @@ export function generatePublicationXrefId(originalId: string) {
   return "publicationXref" + originalId;
 }
 
-export const insertIfNotExists = curry(function<T>(item: T, list: T[]): T[] {
+export const insertIfNotExists = curry(function <T>(item: T, list: T[]): T[] {
   if (list.indexOf(item) === -1) {
     list.push(item);
   }
@@ -109,11 +102,11 @@ export function isGPMLAnchor(entity: PvjsonEntity): entity is PvjsonBurr {
   return entity.gpmlElementName === "Anchor";
 }
 
-export const sortByMap = curry(function(
+export const sortByMap = curry(function (
   mapToSortBy: Record<string, number>,
   listToSort: string[]
 ): string[] {
-  return sortBy(function(listItem) {
+  return sortBy(function (listItem) {
     return mapToSortBy[listItem];
   }, listToSort);
 });
@@ -122,5 +115,5 @@ export const supportedNamespaces = [
   "http://pathvisio.org/GPML/2013a",
   "http://genmapp.org/GPML/2010a",
   "http://genmapp.org/GPML/2008a",
-  "http://genmapp.org/GPML/2007"
+  "http://genmapp.org/GPML/2007",
 ];
