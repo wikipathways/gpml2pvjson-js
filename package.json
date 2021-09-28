@@ -40,8 +40,8 @@
     "test": "npm-run-all -p test:*",
     "test:browser": "echo \"TODO: get browser tests working.\"",
     "test:checksums": "npm-run-all -p test:checksums:*",
-    "test:checksums:chunked": "echo 'Testing converter against WP1818 rev. 73650 from GPML file stored online (intentionally throttling downloading speed in order to ensure response is chunked).' && curl \"https://raw.githubusercontent.com/wikipathways/pvjs/cd7b01c4452f754797d99c2be7450dd1809a0286/test/input-data/troublesome-pathways/WP1818_73650.gpml\" | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP1818 --pathway-version 73650 | bin/sha1sumup -c \"test/expected/chunked.json.sha1sum\"",
-    "test:checksums:protocol": "gpml_dir=$(node -p 'path.dirname(require.resolve(\"@wikipathways/gpml/package.json\"))') && for f in \"$gpml_dir\"/test/**/*.gpml{,.xml}; do echo \"Testing converter against $f\" && filename=`echo \"$f\" | sed \"s/.*\\///\" | sed s/.xml$// | sed s/.gpml$//` && cat \"$f\" | bin/gpml2pvjson | bin/sha1sumup -c \"test/expected/$filename.json.sha1sum\" || break; done && npm run clean",
+    "test:checksums:chunked": "echo 'Testing converter against WP1818 rev. 73650 from GPML file stored online (intentionally throttling downloading speed in order to ensure response is chunked).' && curl \"https://raw.githubusercontent.com/wikipathways/pvjs/cd7b01c4452f754797d99c2be7450dd1809a0286/test/input-data/troublesome-pathways/WP1818_73650.gpml\" | bin/gpml2pvjson --id http://identifiers.org/wikipathways/WP1818 --pathway-version 73650 | bin/sha1sumup -c \"test/expected/chunked.json.sha1sum\" || echo 'test:checksums:chunked failed' 1>&2",
+    "test:checksums:protocol": "gpml_dir=$(node -p 'path.dirname(require.resolve(\"@wikipathways/gpml/package.json\"))') && bash test/test.sh \"$gpml_dir\";",
     "watch": "npm run build && npm-run-all -p watch:*",
     "watch:ts": "tsc --project tsconfig.json --watch",
     "watch:other": "npm-watch"
