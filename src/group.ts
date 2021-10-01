@@ -12,7 +12,7 @@ import {
   isPvjsonSingleFreeNode,
   unionLSV
 } from "./gpml-utilities";
-import * as GPML2013aGroupMappingsByStyle from "./2013a/GroupMappingsByStyle.json";
+import * as GPML2021GroupMappingsByType from "./2021/GroupMappingsByType.json";
 // Only imported for its type
 import { Processor } from "./Processor";
 import {
@@ -40,9 +40,9 @@ export function getGroupDimensions(
       zIndex: 0
     };
   } else if (!isFinite(padding)) {
-    throw new Error("Invalid padding value: ${padding}");
+    throw new Error(`Invalid padding value: ${padding}`);
   } else if (!isFinite(strokeWidth)) {
-    throw new Error("Invalid strokeWidth value: ${strokeWidth}");
+    throw new Error(`Invalid strokeWidth value: ${strokeWidth}`);
   }
   const dimensions = containedEntities
     .filter(entity => isPvjsonSingleFreeNode(entity) || isPvjsonEdge(entity))
@@ -154,9 +154,8 @@ export const preprocessGPML = curry(function(
   processor: Processor,
   Group: GPMLElement
 ): GPMLElement {
-  // NOTE: The class "Group" is the only class that uses the "Style" property.
-  // There are defaults for each Style, so we apply them here.
-  toPairs(GPML2013aGroupMappingsByStyle[Group.Style]).forEach(function([
+  // There are defaults for each Group.type, so we apply them here.
+  toPairs(GPML2021GroupMappingsByType[Group.type]).forEach(function([
     mappingKey,
     mappingValue
   ]) {
@@ -176,7 +175,7 @@ export const preprocessGPML = curry(function(
     }
     Group[mappingKey] = newValue;
   });
-  Group.Contains = processor.containedGraphIdsByGroupGroupId[Group.GroupId];
+  Group.Contains = processor.elementIdsByGroupRef[Group.elementId];
   return Group;
 });
 
@@ -189,54 +188,3 @@ export function postprocessPVJSON(
     getGroupDimensions(group.padding, group.strokeWidth, containedEntities)
   );
 }
-
-//// TODO do we need any of this old code that was in post-process.ts?
-//  // Kludge to get the zIndex for Groups
-//  const zIndexForGroups =
-//    -1 +
-//    EDGES.concat(["DataNode", "Label"])
-//      .reduce(function(acc, gpmlElementName) {
-//        data[gpmlElementName].forEach(function(el) {
-//          acc.push(el);
-//        });
-//        return acc;
-//      }, [])
-//      .reduce(getFromElementMapByIdIfExists, [])
-//      .map(element => element.zIndex)
-//      .reduce(function(acc, zIndex) {
-//        return Math.min(acc, zIndex);
-//      }, Infinity);
-//
-//  // specify contained elements in groups
-//  data.Group
-//    .reduce(getFromElementMapByIdIfExists, [])
-//    .map(function(element) {
-//      element.zIndex = zIndexForGroups;
-//
-//      // NOTE: pvjson doesn't use GroupId. It just uses GraphId as the id for an element.
-//      // That means:
-//      //   GPML GroupId is replaced in pvjson by just id (from GraphId), and
-//      //   GPML GroupRef is replaced in pvjson by element.isPartOf and group.contains (from GraphRef)
-//      // We need to map from GroupId/GroupRef to id/contains/isPartOf here.
-//      // element.id refers to the value of the GraphId of the Group
-//      const groupGraphId = element.id;
-//      const containedIds = (element.contains =
-//        data.containedIdsByGroupId[data.GraphIdToGroupId[groupGraphId]] || []);
-//
-//      if (containedIds.length > 0) {
-//        // NOTE side effects
-//        containedIds
-//          .reduce(getFromElementMapByIdIfExists, [])
-//          .map(function(contained) {
-//            contained.isPartOf = groupGraphId;
-//            return contained;
-//          })
-//          .forEach(upsertDataMapEntry.bind(undefined, elementMap));
-//      } else {
-//        // NOTE: side effect
-//        delete elementMap[groupGraphId];
-//      }
-//
-//      return element;
-//    })
-//    .forEach(upsertDataMapEntry.bind(undefined, elementMap));

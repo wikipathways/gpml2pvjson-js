@@ -9,6 +9,8 @@ if [ ! -d "$1" ]; then
   exit 1
 fi
 
+bail="$2"
+
 output_dir="./actual"
 mkdir -p "$output_dir"
 
@@ -16,7 +18,7 @@ bin_dir="$SCRIPT_DIR"/../bin
 
 any_failed=0
 
-for f in "$gpml_dir"/test/**/*.gpml{,.xml}; do
+for f in "$gpml_dir"/*.gpml{,.xml}; do
   echo "Testing converter against $f"
   filename=`echo "$f" | sed "s/.*\\///" | sed s/.xml$// | sed s/.gpml$//`
   "$bin_dir"/gpml2pvjson < "$f" > "$output_dir/$filename.json";
@@ -45,11 +47,16 @@ for f in "$gpml_dir"/test/**/*.gpml{,.xml}; do
     echo "npm run expected" 1>&2
 
     echo "" 1>&2
+
+    if [ "$bail" == "--bail" ]; then
+      break
+    fi
   fi
 done
 
 if [ "$any_failed" -eq 0 ]; then
-  # if none failed, output directory will be the same as expected
+  # if none of the conversions failed, then the output directory will
+  # be identical to the expected directory.
   rm -rf "$output_dir"
 else
   exit 1

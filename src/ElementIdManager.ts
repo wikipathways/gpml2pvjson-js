@@ -3,7 +3,7 @@ import "source-map-support/register";
 
 /* pvjson: "id" is a required property.
  * GPML2013a: GraphId is sometimes optional, e.g., for Groups or Anchors.
- * GPML2017: supposed to make GraphId required.
+ * GPML2021: elementId is required.
  *
  * When converting GPML2013a, we fill in any missing GraphIds so that any
  * element that MAY have a GraphId DOES have one.
@@ -28,7 +28,7 @@ import "source-map-support/register";
  *
  *   GraphId = "pvjsgeneratedid" + IncrementingValue
  */
-export class GraphIdManager {
+export class ElementIdManager {
   incrementingValueAsInt: number;
   namespace: string = "pvjsgeneratedid";
   constructor() {
@@ -41,13 +41,13 @@ export class GraphIdManager {
     return this.namespace + this.incrementingValueAsInt.toString(16);
   }
 
-  recordExisting(graphIdAsHex) {
+  recordExisting(elementIdAsHex) {
     const { incrementingValueAsInt } = this;
-    const graphIdAsInt = parseInt(graphIdAsHex, 16);
-    // NOTE: this graphIdAsInt does not refer to exactly the same thing as PathVisio's
+    const elementIdAsInt = parseInt(elementIdAsHex, 16);
+    // NOTE: this elementIdAsInt does not refer to exactly the same thing as PathVisio's
     // IncrementingValue, because it's the sum of RandomValue and IncrementingValue.
-    if (graphIdAsInt > incrementingValueAsInt) {
-      this.incrementingValueAsInt = graphIdAsInt;
+    if (elementIdAsInt > incrementingValueAsInt) {
+      this.incrementingValueAsInt = elementIdAsInt;
     }
   }
 }

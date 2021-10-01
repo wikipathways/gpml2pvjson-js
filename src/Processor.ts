@@ -41,7 +41,7 @@ import {
   PvjsonEntitiesById
 } from "./gpml2pvjson";
 import { isDefinedCXML, unionLSV } from "./gpml-utilities";
-import { GraphIdManager } from "./GraphIdManager";
+import { ElementIdManager } from "./ElementIdManager";
 
 const GPML_ELEMENT_NAME_TO_KAAVIO_TYPE = {
   Anchor: "Burr",
@@ -120,14 +120,15 @@ export class Processor {
     entitiesById: {}
   };
 
-  graphIdManager: GraphIdManager = new GraphIdManager();
+  elementIdManager: ElementIdManager = new ElementIdManager();
 
-  graphIdsByGraphRef: Record<string, string[]> = {};
-  containedGraphIdsByGroupGraphId: Record<string, string[]> = {};
-  containedGraphIdsByGroupGroupId: Record<string, string[]> = {};
+  // {"elementId": ["elementAttachedToElementID", ...]}
+  elementIdsByElementRef: Record<string, string[]> = {};
+  // {"elementId": ["elementContainedByElementID", ...]}
+  elementIdsByGroupRef: Record<string, string[]> = {};
 
-  promisedGraphIdByGroupId: Record<string, Promise<string>> = {};
-  groupIdToGraphIdStream: Highland.Stream<[string, string]> = hl();
+  //promisedGraphIdByGroupId: Record<string, Promise<string>> = {};
+  //groupIdToGraphIdStream: Highland.Stream<[string, string]> = hl();
 
   promisedGPMLElementByGraphId: Record<string, Promise<GPMLElement>> = {};
   gpmlElementStream: Highland.Stream<GPMLElement> = hl();
@@ -138,7 +139,7 @@ export class Processor {
   > = {};
   pvjsonEntityLatestStream: Highland.Stream<PvjsonEntity> = hl();
 
-  graphIdToZIndex: Record<string, number> = {};
+  elementIdToZIndex: Record<string, number> = {};
 
   KeyMappings: Record<string, any>;
   KeyValueConverters: Record<string, any>;
@@ -147,14 +148,14 @@ export class Processor {
 
   constructor(KeyMappings, KeyValueConverters, ValueMappings, ValueConverters) {
     const {
-      graphIdToZIndex,
-      graphIdsByGraphRef,
+      elementIdToZIndex,
+      elementIdsByElementRef,
 
       promisedGPMLElementByGraphId,
       gpmlElementStream,
 
-      promisedGraphIdByGroupId,
-      groupIdToGraphIdStream,
+      //promisedGraphIdByGroupId,
+      //groupIdToGraphIdStream,
 
       promisedPvjsonEntityLatestByGraphId,
       pvjsonEntityLatestStream
@@ -165,9 +166,11 @@ export class Processor {
     this.ValueMappings = ValueMappings;
     this.ValueConverters = ValueConverters;
 
+    /*
     groupIdToGraphIdStream.each(function([groupId, graphId]) {
       promisedGraphIdByGroupId[groupId] = Promise.resolve(graphId);
     });
+    //*/
 
     gpmlElementStream.each(function(gpmlElement) {
       promisedGPMLElementByGraphId[gpmlElement.GraphId] = Promise.resolve(
@@ -185,7 +188,7 @@ export class Processor {
       ) {
         const { id, zIndex } = pvjsonEntity;
 
-        graphIdToZIndex[id] = zIndex;
+        elementIdToZIndex[id] = zIndex;
         promisedPvjsonEntityLatestByGraphId[id] = Promise.resolve(pvjsonEntity);
       })
       .errors(function(err, push) {
@@ -198,51 +201,44 @@ export class Processor {
         );
       })
       .each(function(pvjsonEntity) {});
-
-    /*
-		TODO do we need this?
-    endStream.each(function(x) {
-      groupIdToGraphIdStream.end();
-      gpmlElementStream.end();
-      pvjsonEntityLatestStream.end();
-    });
-		//*/
   }
 
-  private ensureGraphIdExists = (gpmlElement: GPMLElement): GPMLElement => {
+  private ensureElementIdExists = (gpmlElement: GPMLElement): GPMLElement => {
     const {
-      containedGraphIdsByGroupGroupId,
-      graphIdManager,
-      groupIdToGraphIdStream
+      elementIdsByGroupRef,
+      elementIdManager,
+      //groupIdToGraphIdStream
     } = this;
-    const { GroupId, GroupRef } = gpmlElement;
-    let { GraphId } = gpmlElement;
+    const { groupRef } = gpmlElement;
+    let { elementId } = gpmlElement;
 
     // TODO does this work for all elements? Are there any that we give an id that don't have one in GPML?
-    // Does the schema allow the element to have a GraphId?
-    if (!!GraphId) {
+    // Does the schema allow the element to have a elementId?
+    if (!!elementId) {
       // Does it actually have one?
-      if (!isDefinedCXML(GraphId)) {
-        // NOTE: we are making sure that elements that CAN have a GraphId
-        // always DO have a GraphId. GraphIds are optional in GPML for Groups,
+      if (!isDefinedCXML(elementId)) {
+        // NOTE: we are making sure that elements that CAN have a elementId
+        // always DO have a elementId. elementIds are optional in GPML for Groups,
         // so we will add one if it's not already specified. But Pathway
-        // elements never have GraphIds, so we don't add one for them.
-        GraphId = gpmlElement.GraphId = graphIdManager.generateAndRecord();
+        // elements never have elementIds, so we don't add one for them.
+        elementId = gpmlElement.elementId = elementIdManager.generateAndRecord();
       } else {
-        graphIdManager.recordExisting(GraphId);
+        elementIdManager.recordExisting(elementId);
       }
 
-      if (isDefinedCXML(GroupRef)) {
-        containedGraphIdsByGroupGroupId[GroupRef] =
-          containedGraphIdsByGroupGroupId[GroupRef] || [];
-        containedGraphIdsByGroupGroupId[GroupRef].push(GraphId);
+      if (isDefinedCXML(groupRef)) {
+        elementIdsByGroupRef[groupRef] =
+          elementIdsByGroupRef[groupRef] || [];
+        elementIdsByGroupRef[groupRef].push(elementId);
       }
 
-      if (isDefinedCXML(GroupId)) {
-        groupIdToGraphIdStream.write([GroupId, GraphId]);
+      /*
+      if (isDefinedCXML(gpmlElement.GroupId)) {
+        groupIdToGraphIdStream.write([gpmlElement.GroupId, elementId]);
       }
+      //*/
     } else {
-      throw new Error("GraphId missing.");
+      throw new Error("elementId missing.");
     }
 
     return gpmlElement;
@@ -255,27 +251,21 @@ export class Processor {
     ): GPMLElement => {
       const { Graphics } = gpmlParentElement;
 
-      // NOTE: this makes some assumptions about the distribution of ZOrder values in GPML
+      // NOTE: this makes some assumptions about the distribution of zOrder values in GPML
       // TODO This is what we used to do. Do we still need to do this? Or can we just sort them
       // based on whether they are burrs of each other?
       //element.zIndex = element.hasOwnProperty('zIndex') ? element.zIndex : referencedElement.zIndex + 1 / elementCount;
       const propertiesToFillIn: Record<string, any> = {
         Graphics: {
-          ZOrder: Graphics.ZOrder
+          zOrder: Graphics.zOrder
         }
       };
-
-      /* TODO can we delete this?
-      if (isDefinedCXML(gpmlParentElement.GroupRef)) {
-        propertiesToFillIn.GroupRef = gpmlParentElement.GroupRef;
-      }
-			//*/
 
       return defaultsDeepM(gpmlChildElement, propertiesToFillIn);
     }
   );
 
-  getPvjsonEntityLatestByGraphId = graphId => {
+  getPvjsonEntityLatestByElementId = graphId => {
     let promisedPvjsonEntity = this.promisedPvjsonEntityLatestByGraphId[
       graphId
     ];
@@ -297,7 +287,7 @@ export class Processor {
     }
   };
 
-  getGPMLElementByGraphId = GraphId => {
+  getGPMLElementByElementId = GraphId => {
     let promisedGPMLElement = this.promisedGPMLElementByGraphId[GraphId];
     if (promisedGPMLElement) {
       return promisedGPMLElement;
@@ -318,8 +308,8 @@ export class Processor {
   };
 
   preprocessGPMLElement = (gpmlElement: GPMLElement): GPMLElement => {
-    const { ensureGraphIdExists, gpmlElementStream } = this;
-    const processedGPMLElement = ensureGraphIdExists(gpmlElement);
+    const { ensureElementIdExists, gpmlElementStream } = this;
+    const processedGPMLElement = ensureElementIdExists(gpmlElement);
     // NOTE: side effect
     gpmlElementStream.write(processedGPMLElement);
     return processedGPMLElement;
@@ -393,10 +383,10 @@ export class Processor {
   );
 
   setPvjsonEntity = pvjsonEntity => {
-    const { graphIdToZIndex, promisedPvjsonEntityLatestByGraphId } = this;
+    const { elementIdToZIndex, promisedPvjsonEntityLatestByGraphId } = this;
     const { id, zIndex } = pvjsonEntity;
 
-    graphIdToZIndex[id] = zIndex;
+    elementIdToZIndex[id] = zIndex;
     promisedPvjsonEntityLatestByGraphId[id] = Promise.resolve(pvjsonEntity);
 
     this.output = iassign(

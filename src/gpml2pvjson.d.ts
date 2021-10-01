@@ -13,42 +13,49 @@
 // Anyway, I think it's OK for now in terms of what gets published for this
 // library, because the TS compiler extracts all the types into d.ts files.
 
-export * from "../xmlns/pathvisio.org/GPML/2013a";
+import * as GPML2021 from "../xmlns/pathvisio.org/GPML/2021";
+export * from "../xmlns/pathvisio.org/GPML/2021";
+export type GraphicalLineType = typeof GPML2021.document.GraphicalLines.GraphicalLine[0];
+export type InteractionType = typeof GPML2021.document.Interactions.Interaction[0];
 
 /* GPML */
 
 type GPMLAttributeNames =
   | "xmlns"
-  | "GroupId"
-  | "GraphId"
-  | "GraphRef"
-  | "GroupRef"
-  | "Name"
-  | "TextLabel"
-  | "Type"
-  | "CellularComponent"
-  | "Rotation"
-  | "LineStyle"
-  | "Shape"
-  | "ShapeType"
+  | "elementId"
+  | "boardHeight"
+  | "boardWidth"
+  | "elementRef"
+  | "groupRef"
+  | "title"
+  | "textLabel"
+  | "type"
+  // is there anything for this in GPML2021?
+  //| "CellularComponent"
+  | "rotation"
+  | "borderStyle"
+  | "lineStyle"
+  | "shapeType"
   | "Attribute"
-  | "FillColor"
-  | "Color"
-  | "LineThickness"
-  | "Width"
-  | "Height"
-  | "RelX"
-  | "RelY"
-  | "CenterX"
-  | "CenterY"
-  | "ConnectorType"
+  | "borderColor"
+  | "lineColor"
+  | "textColor"
+  | "fillColor"
+  | "borderWidth"
+  | "lineWidth"
+  | "width"
+  | "height"
+  | "relX"
+  | "relY"
+  | "centerX"
+  | "centerY"
+  | "connectorType"
   | "Point"
-  | "Organism"
-  | "Database"
-  | "ID"
-  | "Data-Source"
-  | "ZOrder"
-  | "Version";
+  | "organism"
+  | "dataSource"
+  | "identifier"
+  | "zOrder"
+  | "version";
 
 type GPMLClassNames =
   | "PublicationXref"
@@ -172,7 +179,6 @@ type PvjsonEntityMergedStringProperties =
   | "fontFamily"
   | "fontStyle"
   | "fontWeight"
-  //| "gpml:GroupRef"
   | "gpmlElementName"
   | "href"
   | "id" // @id

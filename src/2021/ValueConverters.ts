@@ -24,7 +24,7 @@ import { AttachmentDisplay } from "../gpml2pvjson";
 
 // TODO are these ever used? PathVisio-Java
 // does not accept them as inputs in the
-// Rotation input field in the UI.
+// rotation input field in the UI.
 // TODO if they are used, are the notes in
 // the XSD correct, or would "Right" actually
 // be 0 radians?
@@ -58,66 +58,26 @@ function parseAsNonNaNNumber(i: number | string): number {
 
 // TODO backpageHead could be further processed to yield displayName and standardName
 
-export function ID(gpmlElement) {
-  if (gpmlElement.hasOwnProperty("ID")) {
-    const { ID } = gpmlElement;
-    return isString(ID) ? ID : ID.content;
-  } else {
-    return gpmlElement.Xref.ID;
-  }
+export function identifier(gpmlElement) {
+  return gpmlElement.hasOwnProperty("identifier") ? gpmlElement.identifier : gpmlElement.Xref.identifier;
 }
-// GPML2013-ish incorrectly used "rdf:id" where it was intented
-// to use "rdf:ID". We corrected that error before processing,
-// but CXML turns "rdf:ID" into "ID", and since we already have
-// a property "ID" on the element, CXML uses "$ID".
-export const $ID = flow(
-  get("$ID"),
-  generatePublicationXrefId
-);
-export const DB = flow(
-  get("DB.content"),
+export const dataSource = flow(
+  get("dataSource"),
   decodeIfNotEmpty
-);
-export const TITLE = flow(
-  get("TITLE.content"),
-  decodeIfNotEmpty
-);
-export const SOURCE = flow(
-  get("SOURCE.content"),
-  decodeIfNotEmpty
-);
-// TODO: why doesn't TypeScript like the following?
-//export const YEAR = get("YEAR.content");
-export const YEAR = function(x) {
-  return x.YEAR.content;
-  //return get("YEAR.content");
-};
-export const AUTHORS = flow(
-  get("AUTHORS"),
-  map(
-    flow(
-      get("content"),
-      decodeIfNotEmpty
-    )
-  )
-);
-export const BiopaxRef = flow(
-  get("BiopaxRef"),
-  map(generatePublicationXrefId)
 );
 
 /*
-Meanings of Width
+Meanings of width
 -----------------
 
-In PathVisio-Java, GPML Width/Height for GPML Shapes is
+In PathVisio-Java, GPML width/height for GPML Shapes is
 inconsistent when zoomed in vs. when at default zoom level.
 
-When zoomed in, GPML Width/Height refers to the distance from center of stroke (border)
+When zoomed in, GPML width/height refers to the distance from center of stroke (border)
 one one edge to center of stroke (border) on the opposite edge, meaning that shapes that
 run up to the edge are cropped.
 
-When at default zoom level, GPML Width/Height refers to the distance from outer edge of
+When at default zoom level, GPML width/height refers to the distance from outer edge of
 stroke (border) to outer edge of stroke (border) with no cropping.
 
 Because of this, LineThickness is also inconsistent.
@@ -128,7 +88,7 @@ For double lines, LineThickness refers to the the stroke (border) width of each 
 the space between each line, meaning the stroke (border) width
 for the double line as a whole will be three times the listed LineThickness.
 
-For pvjs, we define GPML Width/Height to be from outer edge of stroke (border) on one
+For pvjs, we define GPML width/height to be from outer edge of stroke (border) on one
 side to outer edge of stroke (border) on the opposite site, meaning visible width/height
 may not exactly match between pvjs and PathVisio.
 See issue https://github.com/PathVisio/pathvisio/issues/59
@@ -143,52 +103,52 @@ See issue https://github.com/PathVisio/pathvisio/issues/59
 		 (width means width of the content)
 * PathVisio-Java
  - Zoomed in
-	 - LineStyle NOT Double
+	 - borderStyle NOT Double
 		 visible width ≈ GPMLWidth
 		 visible height ≈ GPMLHeight
 		 (matches box-sizing: border-box)
-	 - LineStyle Double
-		 visible width ≈ Width + 1.5 * LineThickness
-		 visible height ≈ Height + 1.5 * LineThickness
+	 - borderStyle Double
+		 visible width ≈ width + 1.5 * LineThickness
+		 visible height ≈ height + 1.5 * LineThickness
  - Zoomed out
-	 - LineStyle NOT Double
+	 - borderStyle NOT Double
 		 visible width ≈ GPMLWidth + LineThickness
 		 visible height ≈ GPMLHeight + LineThickness
 		 (matches box-sizing: border-box)
 		 (one half LineThickness on either side yields a full LineThickness to add
 			to width/height).
-	 - LineStyle Double
-		 visible width = Width + 3 * LineThickness
-		 visible height = Height + 3 * LineThickness
+	 - borderStyle Double
+		 visible width = width + 3 * LineThickness
+		 visible height = height + 3 * LineThickness
 * SVG: visible width = width + stroke-width
 * kaavio/pvjs: same as DOM box model with box-sizing: border-box
 //*/
 const getDimension = curry(function(dimensionName, gpmlElement) {
   const dimension = gpmlElement.Graphics[dimensionName];
   if (
-    findIndex(function({ Key, Value }) {
-      return Key === "org.pathvisio.DoubleLineProperty";
-    }, gpmlElement.Attribute) > -1
+    gpmlElement.Graphics.borderStyle == "Double"
   ) {
-    return dimension + LineThickness(gpmlElement);
+    return dimension + borderWidth(gpmlElement);
+  } else if (
+    gpmlElement.Graphics.lineStyle == "Double"
+  ) {
+    return dimension + lineWidth(gpmlElement);
   } else {
     return dimension;
   }
 });
-export const Height = getDimension("Height");
-export const Width = getDimension("Width");
+export const height = getDimension("height");
+export const width = getDimension("width");
 
-export function CenterX(gpmlElement) {
-  const { CenterX } = gpmlElement.Graphics;
-  return CenterX - Width(gpmlElement) / 2;
+export function centerX(gpmlElement) {
+  return gpmlElement.Graphics.centerX - width(gpmlElement) / 2;
 }
 
-export function CenterY(gpmlElement) {
-  const { CenterY } = gpmlElement.Graphics;
-  return CenterY - Height(gpmlElement) / 2;
+export function centerY(gpmlElement) {
+  return gpmlElement.Graphics.centerY - height(gpmlElement) / 2;
 }
 
-export function Rotation(gpmlElement): number {
+export function rotation(gpmlElement): number {
   // NOTE: the rotation input field in the PathVisio-Java UI expects degrees,
   // but GPML expresses rotation in radians. The XSD indicates GPML can also
   // use directional strings, although I haven't seen one used in actual GPML.
@@ -202,7 +162,7 @@ export function Rotation(gpmlElement): number {
   // because we don't actually want States to be rotated.
 
   const { Graphics } = gpmlElement;
-  const Rotation = !isDefinedCXML(Graphics.Rotation) ? 0 : Graphics.Rotation;
+  const rotation = !isDefinedCXML(Graphics.rotation) ? 0 : Graphics.rotation;
 
   // NOTE: Output is in degrees, because that's what the SVG transform
   // attribute accepts. Don't get confused, because we use radians in
@@ -214,66 +174,29 @@ export function Rotation(gpmlElement): number {
   // (3/2) * Math.PI, not -1 * Math.PI/2 or (7/3) * Math.PI
   return radiansToDegrees(
     normalize(
-      GPML_ROTATION_SIDE_TO_RAD.hasOwnProperty(Rotation)
-        ? GPML_ROTATION_SIDE_TO_RAD[Rotation]
-        : parseAsNonNaNNumber(Rotation)
+      GPML_ROTATION_SIDE_TO_RAD.hasOwnProperty(rotation)
+        ? GPML_ROTATION_SIDE_TO_RAD[rotation]
+        : parseAsNonNaNNumber(rotation)
     )
   );
 }
 
-export function LineStyle(gpmlElement) {
-  const { LineStyle } = gpmlElement.Graphics;
-  // TODO hard-coding this here is not the most maintainable
-  if (LineStyle === "Solid") {
-    // this gets converted to strokeDasharray,
-    // and we don't need this value when it's
-    // solid, so we return undefined, because
-    // then this won't be included.
-    return;
-  } else if (LineStyle === "Broken") {
-    return "5,3";
-  } else {
-    throw new Error(`Unrecognized LineStyle: ${LineStyle}`);
-  }
-}
-
-export const Author = flow(
-  get("Author"),
-  decodeIfNotEmpty
-);
-export const DataSource = flow(
-  get("Data-Source"),
-  decodeIfNotEmpty
-);
-export const Email = flow(
-  get("Email"),
-  decodeIfNotEmpty
-);
-export const Maintainer = flow(
-  get("Maintainer"),
-  decodeIfNotEmpty
-);
-export const Name = flow(
-  get("Name"),
-  decodeIfNotEmpty
-);
-
-export const TextLabel = flow(
-  get("TextLabel"),
+export const textLabel = flow(
+  get("textLabel"),
   decodeIfNotEmpty
 );
 
 // TODO is this ever used?
 // The only way I see to create underlined text in PathVisio-Java
 // is to create a Label and fill in the Link field.
-// But the resulting GPML does not have a FontDecoration attribute.
+// But the resulting GPML does not have a fontDecoration attribute.
 export function getTextDecorationFromGPMLElement(gpmlElement) {
-  const { FontDecoration, FontStrikethru } = gpmlElement.Graphics;
+  const { fontDecoration, fontStrikethru } = gpmlElement.Graphics;
   let outputChunks = [];
   const fontDecorationDefined =
-    isDefinedCXML(FontDecoration) && FontDecoration === "Underline";
+    isDefinedCXML(fontDecoration) && fontDecoration === "Underline";
   const fontStrikethruDefined =
-    isDefinedCXML(FontStrikethru) && FontStrikethru === "Strikethru";
+    isDefinedCXML(fontStrikethru) && fontStrikethru === "Strikethru";
   if (fontDecorationDefined || fontStrikethruDefined) {
     if (fontDecorationDefined) {
       outputChunks.push("underline");
@@ -286,22 +209,22 @@ export function getTextDecorationFromGPMLElement(gpmlElement) {
   }
   return outputChunks.join(" ");
 }
-export const Align = flow(
-  get("Graphics.Align"),
+export const hAlign = flow(
+  get("Graphics.hAlign"),
   kebabCase
 );
-export const FontDecoration = getTextDecorationFromGPMLElement;
-export const FontStrikethru = getTextDecorationFromGPMLElement;
-export const FontStyle = flow(
-  get("Graphics.FontStyle"),
+export const fontDecoration = getTextDecorationFromGPMLElement;
+export const fontStrikethru = getTextDecorationFromGPMLElement;
+export const fontStyle = flow(
+  get("Graphics.fontStyle"),
   kebabCase
 );
-export const FontWeight = flow(
-  get("Graphics.FontWeight"),
+export const fontWeight = flow(
+  get("Graphics.fontWeight"),
   kebabCase
 );
-export const Valign = flow(
-  get("Graphics.Valign"),
+export const vAlign = flow(
+  get("Graphics.vAlign"),
   kebabCase
 );
 
@@ -313,7 +236,12 @@ export const Href = flow(
 
 export function gpmlColorToCssColor(colorValue) {
   const colorValueLowerCased = colorValue.toLowerCase();
-  if (["transparent", "none"].indexOf(colorValueLowerCased) > -1) {
+  // TODO: RGBColor can't handle 8 character color hex values,
+  // but GPML2021 uses them. I'm temporarily just passing along
+  // selected values, but that's not a good solution.
+  if (["00000000"].indexOf(colorValueLowerCased) > -1) {
+    return "transparent";
+  } else if (["b4b46419", "0000ff0c", "transparent", "none"].indexOf(colorValueLowerCased) > -1) {
     return colorValueLowerCased;
   } else {
     let color = new RGBColor(colorValue);
@@ -321,7 +249,7 @@ export function gpmlColorToCssColor(colorValue) {
       throw new VError(
         `
 				Failed to get a valid CSS color for gpmlColorToCssColor(${colorValue})
-				Is there an invalid Color or FillColor in the GPML?
+				Is there an invalid border, textColor or fillColor in the GPML?
 				`
       );
       // TODO should we use this?
@@ -331,66 +259,76 @@ export function gpmlColorToCssColor(colorValue) {
   }
 }
 
-export const Color = flow(
-  get("Graphics.Color"),
+export const borderColor = flow(
+  get("Graphics.borderColor"),
   gpmlColorToCssColor
 );
 
-export function FillColor(gpmlElement) {
-  const { FillColor, ShapeType } = gpmlElement.Graphics;
+export const lineColor = flow(
+  get("Graphics.lineColor"),
+  gpmlColorToCssColor
+);
+
+export const textColor = flow(
+  get("Graphics.textColor"),
+  gpmlColorToCssColor
+);
+
+export function fillColor(gpmlElement) {
+  const { fillColor, shapeType } = gpmlElement.Graphics;
   // If it's a GPML Group, DataNode, Shape, Label or State, it needs a
-  // ShapeType in order for it to have a FillColor, but a
-  // GPML Interaction or GraphicalLine can have a FillColor
-  // without having a ShapeType.
-  return (!!ShapeType && ShapeType.toLowerCase() !== "none") ||
-    gpmlElement.Graphics.hasOwnProperty("Point")
-    ? gpmlColorToCssColor(FillColor)
+  // shapeType in order for it to have a fillColor, but a
+  // GPML Interaction or GraphicalLine can have a fillColor
+  // without having a shapeType.
+  return (!!shapeType && shapeType.toLowerCase() !== "none") ||
+    (gpmlElement.hasOwnProperty("Waypoints") && gpmlElement.Waypoints.hasOwnProperty("Point"))
+    ? gpmlColorToCssColor(fillColor)
     : "transparent";
 }
 
-export function LineThickness(gpmlElement) {
-  const { LineThickness, ShapeType } = gpmlElement.Graphics;
-  // See note near Height converter regarding LineThickness.
+export function borderWidth(gpmlElement) {
+  const { borderWidth, shapeType } = gpmlElement.Graphics;
+  // See note near height converter regarding borderWidth.
 
   // If it's a GPML Group, DataNode, Shape, Label or State, it needs a
-  // ShapeType in order for it to have a LineThickness > 0, but a
-  // GPML Interaction or GraphicalLine can have a LineThickness > 0
-  // without having a ShapeType.
-  if (!isDefinedCXML(LineThickness)) {
+  // shapeType in order for it to have a borderWidth > 0, but a
+  // GPML Interaction or GraphicalLine can have a borderWidth > 0
+  // without having a shapeType.
+  if (!isDefinedCXML(borderWidth)) {
     return 0;
-  } else if (isDefinedCXML(ShapeType) && ShapeType.toLowerCase() !== "none") {
-    /*
-		return findIndex(function({ Key, Value }) {
-			return Key === "org.pathvisio.DoubleLineProperty";
-		}, gpmlElement.Attribute) > -1 ? LineThickness * 3 : LineThickness;
-		//*/
-
-    /*
-		return findIndex(function({ Key, Value }) {
-			return Key === "org.pathvisio.DoubleLineProperty";
-		}, gpmlElement.Attribute) > -1 ? LineThickness : LineThickness * 2;
-		//*/
-
-    //return LineThickness * 2;
-    return LineThickness;
-  } else if (gpmlElement.Graphics.hasOwnProperty("Point")) {
-    return LineThickness;
+  } else if (isDefinedCXML(shapeType) && shapeType.toLowerCase() !== "none") {
+    return borderWidth;
   } else {
     return 0;
   }
 }
 
-export function ConnectorType(gpmlElement): string {
-  const { ConnectorType } = gpmlElement.Graphics;
-  return ConnectorType + "Line";
+export function lineWidth(gpmlElement) {
+  const { lineWidth, shapeType } = gpmlElement.Graphics;
+  // See note near height converter regarding lineWidth.
+
+  // If it's a GPML Group, DataNode, Shape, Label or State, it needs a
+  // shapeType in order for it to have a lineWidth > 0, but a
+  // GPML Interaction or GraphicalLine can have a lineWidth > 0
+  // without having a shapeType.
+  if (!isDefinedCXML(lineWidth)) {
+    return 0;
+  } else {
+    return lineWidth;
+  }
+}
+
+export function connectorType(gpmlElement): string {
+  const { connectorType } = gpmlElement.Graphics;
+  return connectorType + "Line";
 }
 
 // We return a partial attachmentDisplay, because it's
 // merged with the other items as we come across them.
-export function Position(gpmlElement): AttachmentDisplay {
-  const { Position } = gpmlElement;
+export function position(gpmlElement): AttachmentDisplay {
+  const { position } = gpmlElement;
   return {
-    position: [Position, 0],
+    position: [position, 0],
     // a GPML Anchor never has an offset
     offset: [0, 0]
   } as AttachmentDisplay;
@@ -431,27 +369,27 @@ function getPositionAndRelativeOffsetScalarsAlongAxis(
   return { relativeOffsetScalar, positionScalar };
 }
 
-// We actually handle both RelX and RelY together
-// when we hit RelX and then ignoring when we
-// hit RelY.
+// We actually handle both relX and relY together
+// when we hit relX and then ignoring when we
+// hit relY.
 // We return a partial attachmentDisplay, because it's
 // merged with the other items as we come across them.
-export function RelX(gpmlElement): AttachmentDisplay {
+export function relX(gpmlElement): AttachmentDisplay {
   // first is for a State (?), second is for a Point
-  const RelXRelYContainer = isDefinedCXML(gpmlElement.Graphics)
+  const relXRelYContainer = isDefinedCXML(gpmlElement.Graphics)
     ? gpmlElement.Graphics
     : gpmlElement;
-  const { RelX, RelY } = RelXRelYContainer;
+  const { relX, relY } = relXRelYContainer;
 
   const {
     relativeOffsetScalar: relativeOffsetScalarX,
     positionScalar: positionScalarX
-  } = getPositionAndRelativeOffsetScalarsAlongAxis(RelX);
+  } = getPositionAndRelativeOffsetScalarsAlongAxis(relX);
 
   const {
     relativeOffsetScalar: relativeOffsetScalarY,
     positionScalar: positionScalarY
-  } = getPositionAndRelativeOffsetScalarsAlongAxis(RelY);
+  } = getPositionAndRelativeOffsetScalarsAlongAxis(relY);
 
   return {
     position: [positionScalarX, positionScalarY],

@@ -184,30 +184,6 @@ export class CXMLXPath<T extends GenericCXML, K extends keyof T> {
       }
     );
 
-    /*
-    streamMapBySelector.startCXML = function() {
-      return hl(parser.parse(inputStream, schema.document)).map(function(
-        Pathway
-      ) {
-        console.log("Pathway");
-        console.log(Pathway);
-        finalRunningSelectors.forEach(function(finalRunningSelector) {
-          streamMapBySelector[finalRunningSelector].end();
-        });
-
-        selectors.forEach(function(selector) {
-          const thisStream = streamMapBySelector[selector];
-          if (!thisStream["ended"]) {
-            //console.log(streamMapBySelector[selector]);
-            console.log(`Failed to end stream for ${selector}. See above.`);
-            //throw new Error(`Failed to end stream for ${selector}. See above.`);
-            //thisStream.end();
-          }
-        });
-      });
-    };
-		//*/
-
     return streamMapBySelector;
   }
 }

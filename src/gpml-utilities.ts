@@ -19,7 +19,6 @@ import {
   PvjsonGroup,
   PvjsonEntity,
   AttachablePoint,
-  EdgeGraphicsTypePointType,
 } from "./gpml2pvjson";
 
 export * from "./geom-utils";
@@ -47,7 +46,7 @@ export const insertIfNotExists = curry(function <T>(item: T, list: T[]): T[] {
 export function isAttachablePoint(
   pvjsonPoint: Point | AttachablePoint
 ): pvjsonPoint is AttachablePoint {
-  return pvjsonPoint.hasOwnProperty("attachmentDisplay");
+  return pvjsonPoint.hasOwnProperty("attachmentDisplay") && pvjsonPoint.hasOwnProperty("isAttachedTo");
 }
 
 export function isDefinedCXML(x: any) {
@@ -112,8 +111,5 @@ export const sortByMap = curry(function (
 });
 
 export const supportedNamespaces = [
-  "http://pathvisio.org/GPML/2013a",
-  "http://genmapp.org/GPML/2010a",
-  "http://genmapp.org/GPML/2008a",
-  "http://genmapp.org/GPML/2007",
+  "http://pathvisio.org/GPML/2021",
 ];

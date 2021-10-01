@@ -24,15 +24,6 @@ import {
   getOrientationOfHyperedgeEndPoint,
   validateOrientation
 } from "./orientation";
-/*
-import {
-  Point,
-  PvjsonEdge,
-  AttachablePoint,
-  ,
-  SegmentPoint
-} from "../gpml2pvjson";
-//*/
 
 const INDEX_TO_DIMENSION = ["x", "y"];
 
