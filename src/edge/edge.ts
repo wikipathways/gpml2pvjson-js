@@ -126,7 +126,7 @@ export function postprocessPVJSON(
   ): Point {
     const { marker, x, y } = point;
 
-    if (!!marker && ["Undirected"].indexOf(marker) == -1) {
+    if (!!marker && ["none"].indexOf(marker) == -1) {
       // NOTE: side effects below
       if (index === 0) {
         pvjsonEdge.markerStart = marker;

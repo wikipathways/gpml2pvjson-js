@@ -239,9 +239,15 @@ export function gpmlColorToCssColor(colorValue) {
   // TODO: RGBColor can't handle 8 character color hex values,
   // but GPML2021 uses them. I'm temporarily just passing along
   // selected values, but that's not a good solution.
-  if (["00000000"].indexOf(colorValueLowerCased) > -1) {
-    return "transparent";
-  } else if (["b4b46419", "0000ff0c", "transparent", "none"].indexOf(colorValueLowerCased) > -1) {
+
+  // If this is an 8-digit hex code
+  if (/^[0-9a-f]{8}$/i.test(colorValueLowerCased)) {
+    if (colorValueLowerCased.slice(-2) == "00") {
+      return "transparent";
+    } else {
+      return `#${colorValueLowerCased}`;
+    }
+  } else if (["transparent", "none"].indexOf(colorValueLowerCased) > -1) {
     return colorValueLowerCased;
   } else {
     let color = new RGBColor(colorValue);

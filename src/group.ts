@@ -1,6 +1,7 @@
 import {
   assign,
   curry,
+  defaultsDeep,
   fromPairs,
   isArray,
   isPlainObject,
@@ -155,6 +156,10 @@ export const preprocessGPML = curry(function(
   Group: GPMLElement
 ): GPMLElement {
   // There are defaults for each Group.type, so we apply them here.
+  // TODO: in GPML2021, many of the values for GPMLDefaults are actually now
+  // specified in the GPML, so we don't need to specify defaults for the ones
+  // that are now explicitly specified.
+  /*
   toPairs(GPML2021GroupMappingsByType[Group.type]).forEach(function([
     mappingKey,
     mappingValue
@@ -162,7 +167,7 @@ export const preprocessGPML = curry(function(
     const oldValue = Group[mappingKey];
     let newValue;
     if (isPlainObject(mappingValue)) {
-      newValue = assign(oldValue || {}, mappingValue);
+      newValue = defaultsDeep(mappingValue, oldValue || {});
     } else if (Group.hasOwnProperty(mappingKey)) {
       if (isArray(mappingValue)) {
         newValue = unionLSV(mappingValue, oldValue);
@@ -170,11 +175,12 @@ export const preprocessGPML = curry(function(
         newValue = oldValue;
       }
     } else {
-      // override prototype with default by style
+      // override prototype with default by Group.type
       newValue = mappingValue;
     }
     Group[mappingKey] = newValue;
   });
+  //*/
   Group.Contains = processor.elementIdsByGroupRef[Group.elementId];
   return Group;
 });

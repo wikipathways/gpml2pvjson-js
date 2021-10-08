@@ -9,6 +9,7 @@ import {
   concat,
   curry,
   defaults,
+  defaultsDeepAll,
   difference,
   findIndex,
   flatten,
@@ -142,19 +143,6 @@ const stringifyKeyValue = curry(function(source, key) {
     : null;
 });
 
-extendDeep(
-  GPML2021.document.Pathway,
-  GPMLDefaults.Pathway
-);
-extendDeep(GPML2021.document.DataNodes.DataNode, GPMLDefaults.DataNode);
-extendDeep(GPML2021.document.GraphicalLines.GraphicalLine, GPMLDefaults.GraphicalLine);
-extendDeep(GPML2021.document.Groups.Group, GPMLDefaults.Group);
-extendDeep(GPML2021.document.Interactions.Interaction, GPMLDefaults.Interaction);
-extendDeep(GPML2021.document.Labels.Label, GPMLDefaults.Label);
-extendDeep(GPML2021.document.Shapes.Shape, GPMLDefaults.Shape);
-extendDeep(GPML2021.document.States.State, GPMLDefaults.State);
-extendDeep(GPML2021.document.Anchor, GPMLDefaults.Anchor);
-
 // TODO specify types
 export function toPvjson(
   inputStreamRaw: NodeJS.ReadableStream,
@@ -168,7 +156,8 @@ export function toPvjson(
     //"/Pathway/Graphics/@*": GPML2021.document.Pathway.Graphics[0],
     "/Pathway/Graphics/@*": GPML2021.document.Pathway.Graphics.constructor.prototype,
     "/Pathway/DataNodes/DataNode": GPML2021.document.DataNodes.DataNode[0],
-    "/Pathway/States/State": GPML2021.document.States.State[0],
+    // State elements are now at /Pathway/DataNodes/DataNode/States/State
+    //"/Pathway/States/State": GPML2021.document.States.State[0],
     "/Pathway/Interactions/Interaction": GPML2021.document.Interactions.Interaction[0],
     "/Pathway/GraphicalLines/GraphicalLine": GPML2021.document.GraphicalLines.GraphicalLine[0],
     "/Pathway/Labels/Label": GPML2021.document.Labels.Label[0],
@@ -336,11 +325,57 @@ export function toPvjson(
       );
     });
 
+  // NOTE: in GPML2013a, State elements are at the top level.
+  //       in GPML2021, they are always children of DataNode elements, like this:
+  //       /Pathway/DataNodes/DataNode/States/State
+  const stateStream: Highland.Stream<any> = cxmlSources["/Pathway/DataNodes/DataNode"]
+    .observe()
+    .filter(function(gpmlDataNode: GPMLElement) {
+      return (
+        isDefinedCXML(gpmlDataNode.States) &&
+        isDefinedCXML(gpmlDataNode.States.State)
+      );
+    })
+    .flatMap(function(gpmlDataNode) {
+      const dataNodeId = gpmlDataNode.elementId;
+      return hl(gpmlDataNode.States.State)
+        .map(function(gpmlState) {
+          gpmlState["elementRef"] = dataNodeId;
+          return gpmlState;
+        })
+        .map(x => defaultsDeepAll([x, GPMLDefaults.State]))
+        .map(preprocessGPMLElement)
+        .map(function(gpmlState) {
+          return fillInGPMLPropertiesFromParent(gpmlDataNode, gpmlState);
+        })
+        .map(processPropertiesAndType("State"))
+        .errors(function(err) {
+          throw new VError(
+            err,
+            ` when processing stateStream (inner)
+            `
+          );
+        });
+    })
+    .errors(function(err) {
+      throw new VError(
+        err,
+        ` when processing stateStream (outer)
+        `
+      );
+    });
+
   const dataNodeStream = cxmlSources["/Pathway/DataNodes/DataNode"]
+    .map(x => defaultsDeepAll([x, GPMLDefaults.DataNode]))
     .map(processGPMLAndPropertiesAndType("DataNode"))
     .map(function(entity: PvjsonSingleFreeNode & any) {
       // TODO fix type def for unionLSV so I don't have to use "as"
       entity.type = unionLSV(entity.type, entity.wpType) as string[];
+      return entity;
+    })
+    .map(function(entity: PvjsonSingleFreeNode & any) {
+      // see note above definition of stateStream
+      delete entity.states;
       return entity;
     })
     .errors(function(err) {
@@ -351,32 +386,25 @@ export function toPvjson(
       );
     });
 
-  const stateStream = cxmlSources["/Pathway/States/State"]
-    .map(preprocessGPMLElement)
-    .flatMap(function(gpmlState) {
-      return hl(getGPMLElementByElementId(gpmlState.elementRef)).map(function(
-        gpmlDataNode
-      ) {
-        return fillInGPMLPropertiesFromParent(gpmlDataNode, gpmlState);
-      });
-    })
-    .map(processPropertiesAndType("State"))
-    .errors(function(err) {
-      throw new VError(
-        err,
-        ` when processing stateStream
-				`
-      );
-    });
-
   const cellularComponents = [
+    "Cell",
     "EndoplasmicReticulum",
+    "ExtracellularRegion",
     "GolgiApparatus",
     "Mitochondria",
+    "Nucleus",
+    "Organelle",
     "SarcoplasmicReticulum",
+    "Vesicle",
   ];
 
   const shapeStream = cxmlSources["/Pathway/Shapes/Shape"]
+    .map(function(x) {
+      // TODO: this is a kludge. It appears defaults from GPMLDefaults.Shape
+      // aren't getting added to without the stringify/parse kludge below.
+      return defaultsDeepAll([JSON.parse(JSON.stringify(x)), GPMLDefaults.Shape])
+    })
+    //.map(x => defaultsDeepAll([x, GPMLDefaults.Shape]))
     .map(processGPMLAndPropertiesAndType("Shape"))
     .map(function(pvjsonEntity: PvjsonSingleFreeNode & any) {
       const { drawAs } = pvjsonEntity;
@@ -390,6 +418,15 @@ export function toPvjson(
           drawAs
         ) as string[];
       }
+
+      // TODO: this is a kludge due to the GPML2021 changes
+      if (["Cell", "ExtracellularRegion", "Organelle", "none"].indexOf(drawAs) > -1) {
+        pvjsonEntity.drawAs = "rect";
+        pvjsonEntity.rx = 15;
+        pvjsonEntity.ry = 15;
+      } else if (["Nucleus"].indexOf(drawAs) > -1) {
+        pvjsonEntity.drawAs = "Ellipse";
+      }
       return pvjsonEntity;
     })
     .errors(function(err) {
@@ -400,9 +437,11 @@ export function toPvjson(
       );
     });
 
-  const labelStream = cxmlSources["/Pathway/Labels/Label"].map(
-    processGPMLAndPropertiesAndType("Label")
-  )
+  const labelStream = cxmlSources["/Pathway/Labels/Label"]
+    .map(x => defaultsDeepAll([x, GPMLDefaults.Label]))
+    .map(
+      processGPMLAndPropertiesAndType("Label")
+    )
     .errors(function(err) {
       throw new VError(
         err,
@@ -412,6 +451,7 @@ export function toPvjson(
     });
 
   const gpmlInteractionStream = cxmlSources["/Pathway/Interactions/Interaction"]
+    .map(x => defaultsDeepAll([x, GPMLDefaults.Interaction]))
     .map(
       preprocessGPMLElement
     )
@@ -423,6 +463,7 @@ export function toPvjson(
       );
     });
   const gpmlGraphicalLineStream = cxmlSources["/Pathway/GraphicalLines/GraphicalLine"]
+    .map(x => defaultsDeepAll([x, GPMLDefaults.GraphicalLine]))
     .map(
       preprocessGPMLElement
     )
@@ -473,6 +514,8 @@ export function toPvjson(
       return hl(gpmlAnchors)
         .map(function(gpmlAnchor: GPMLElement) {
           const anchorShape = gpmlAnchor.shapeType;
+          // TODO: before GPML2021, I didn't need the following line. Why?
+          gpmlAnchor.Graphics = gpmlAnchor.Graphics || {};
           if (anchorShape === "None") {
             // NOTE: For Anchors with Shape="None", PathVisio-Java displays
             // the anchor as a 4x4 square when nothing is connected,
@@ -500,6 +543,7 @@ export function toPvjson(
 
           return gpmlAnchor;
         })
+        .map(x => defaultsDeepAll([x, GPMLDefaults.Anchor]))
         .map(preprocessGPMLElement)
         .map(function(gpmlAnchor: GPMLElement) {
           const filledInAnchor = fillInGPMLPropertiesFromEdge(gpmlAnchor);
@@ -528,11 +572,19 @@ export function toPvjson(
   const groupStream: Highland.Stream<PvjsonGroup> = cxmlSources[
     "/Pathway/Groups/Group"
   ]
+    .map(x => {
+      return defaultsDeepAll([x, GPMLDefaults["Group" + x.type]]);
+    })
     .map(preprocessGroupGPML(processor))
     // PathVisio shouldn't do this, but it sometimes makes empty Groups.
     // We filter them out here.
     .filter((Group: GPMLElement) => !!Group.Contains)
     .map(processGPMLAndPropertiesAndType("Group"))
+    .map(x => {
+      const groupDefaults = GPMLDefaults["Group" + x["wpType"]];
+      x.type = groupDefaults.type;
+      return x;
+    })
     .errors(function(err) {
       throw new VError(
         err,

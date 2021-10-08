@@ -24,12 +24,6 @@ const ShapeStyleAttributes = {
   padding: 8
 };
 
-export const Pathway = {
-  // These not in the XSD
-  boardHeight: 500,
-  title: "Untitled Pathway"
-};
-
 export const DataNode = {
   "type": "Unknown",
   Graphics: defaultsDeepAll([
@@ -42,7 +36,11 @@ export const DataNode = {
   ])
 };
 
-export const Group = {
+export const GroupAttributes = {
+  // TODO: in GPML2021, Group elements have a Graphics element child.
+  // For that reason or some other reason, specifying anything in
+  // Graphics below doesn't appear to change anything.
+  // This may also apply to Shape elements.
   // these aren't explicitly set in the XSD but maybe should be.
   Graphics: {
     hAlign: "Center",
@@ -52,10 +50,70 @@ export const Group = {
     fontSize: 1,
     fontWeight: "Bold",
     borderWidth: 1,
-    fillOpacity: 0.1
-  },
-  "type": "None"
+    //fillOpacity: 0.1
+  }
 };
+
+export const GroupNone = defaultsDeepAll([{
+  Graphics: {
+    padding: 8,
+    shapeType: "Rectangle",
+    borderStyle: "Dashed",
+    borderWidth: 1,
+    fillColor: "B4B464"
+    //fillColor: "B4B46419"
+  },
+  type: [
+    "Group",
+    "GroupNone"
+  ]
+}, GroupAttributes]);
+
+export const GroupGroup = defaultsDeepAll([{
+  Graphics: {
+    padding: 8,
+    shapeType: "None",
+    borderStyle: "Dashed",
+    borderWidth: 0,
+    fillColor: "00000000"
+  },
+  type: [
+    "Group",
+    "GroupGroup"
+  ]
+}, GroupAttributes]);
+
+export const GroupComplex = defaultsDeepAll([{
+  Graphics: {
+    padding: 11,
+    shapeType: "Octagon",
+    borderStyle: "Solid",
+    borderWidth: 1,
+    fillColor: "B4B464"
+    //fillColor: "B4B46419"
+  },
+  type: [
+    "Group",
+    "Complex",
+    "GroupComplex"
+  ]
+}, GroupAttributes]);
+
+export const GroupPathway = defaultsDeepAll([{
+  Graphics: {
+    padding: 8,
+    shapeType: "Rectangle",
+    borderStyle: "Dashed",
+    borderWidth: 0.5,
+    fillColor: "00FF00"
+    //fillColor: "00FF0019"
+  },
+  type: [
+    "Group",
+    "Pathway",
+    "GroupPathway"
+  ]
+}, GroupAttributes]);
 
 export const Anchor = {
   Graphics: {
@@ -100,7 +158,7 @@ export const Shape = {
     {
       fillColor: "00000000",
       fontSize: 10,
-      rotation: "Top"
+      rotation: 0
     },
     FontAttributes,
     ShapeStyleAttributes

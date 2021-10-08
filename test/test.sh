@@ -29,22 +29,26 @@ for f in "$gpml_dir"/*.gpml{,.xml}; do
 
     echo "" 1>&2
 
-    echo "Compare expected vs. actual:" 1>&2
-    echo "jq . \"$SCRIPT_DIR/expected/$filename.json\" > old.json" 1>&2
-    echo "jq . \"$output_dir/$filename.json\" > new.json" 1>&2
-    echo "vim -d old.json new.json" 1>&2
+    if cmp -s <(jq -S 'del(.pathway.id)' "$SCRIPT_DIR/expected/$filename.json") \
+      <(jq -S 'del(.pathway.id)' "$output_dir/$filename.json"); then
+      echo "  Only different due to key sorting (and/or .pathway.id)" 1>&2
+    else
+      echo "  Compare expected vs. actual:" 1>&2
+
+      echo "    jq . \"$SCRIPT_DIR/expected/$filename.json\" > old.json" 1>&2
+      echo "    jq . \"$output_dir/$filename.json\" > new.json" 1>&2
+      echo "    vim -d old.json new.json" 1>&2
+
+      echo "" 1>&2
+    fi
+
+    echo "    jq -S . \"$SCRIPT_DIR/expected/$filename.json\" > fold.json" 1>&2
+    echo "    jq -S . \"$output_dir/$filename.json\" > fnew.json" 1>&2
+    echo "    vim -d fold.json fnew.json" 1>&2
 
     echo "" 1>&2
 
-    echo "Is it just a key sorting issue?" 1>&2
-    echo "jq -S . \"$SCRIPT_DIR/expected/$filename.json\" > fold.json" 1>&2
-    echo "jq -S . \"$output_dir/$filename.json\" > fnew.json" 1>&2
-    echo "vim -d fold.json fnew.json" 1>&2
-
-    echo "" 1>&2
-
-    echo "If the changes look OK, update expected JSON files and hashes:" 1>&2
-    echo "npm run expected" 1>&2
+    echo "  If the changes look OK, update expected JSON files and hashes: npm run expected" 1>&2
 
     echo "" 1>&2
 
