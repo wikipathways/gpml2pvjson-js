@@ -424,7 +424,7 @@ export function toPvjson(
         pvjsonEntity.drawAs = "rect";
         pvjsonEntity.rx = 15;
         pvjsonEntity.ry = 15;
-      } else if (["Nucleus"].indexOf(drawAs) > -1) {
+      } else if (["Nucleus", "Vesicle"].indexOf(drawAs) > -1) {
         pvjsonEntity.drawAs = "Ellipse";
       }
       return pvjsonEntity;
