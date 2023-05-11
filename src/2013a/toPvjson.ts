@@ -272,13 +272,11 @@ export function toPvjson(
             mergedPathway.displayName = name;
           }
 
-          const stringifyKeyValueForPathway = stringifyKeyValue(mergedPathway);
-          mergedPathway.textContent = compact([
-            stringifyKeyValueForPathway("name"),
-            stringifyKeyValueForPathway("license"),
-            stringifyKeyValueForPathway("lastModified"),
-            stringifyKeyValueForPathway("organism")
-          ]).join("\n");
+          mergedPathway.textContent = "";
+          mergedPathway.textContent += mergedPathway.hasOwnProperty("name") ? mergedPathway["name"] : "";
+          if (!!mergedPathway.id) {
+            mergedPathway.textContent += " (" + mergedPathway.id + ")";
+          }
 
           const context: (string | Record<string, any>)[] = [
             "https://cdn.rawgit.com/wikipathways/WpVocabularies/7a46a05/contexts/pvjs.jsonld"
