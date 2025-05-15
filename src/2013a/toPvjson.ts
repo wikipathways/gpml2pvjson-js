@@ -272,11 +272,11 @@ export function toPvjson(
             mergedPathway.displayName = name;
           }
 
-          mergedPathway.textContent = "";
-          mergedPathway.textContent += mergedPathway.hasOwnProperty("name") ? mergedPathway["name"] : "";
-          if (!!mergedPathway.id) {
-            mergedPathway.textContent += " (" + mergedPathway.id + ")";
-          }
+          // mergedPathway.textContent = "";
+          // mergedPathway.textContent += mergedPathway.hasOwnProperty("name") ? mergedPathway["name"] : "";
+          // if (!!mergedPathway.id) {
+          //  mergedPathway.textContent += " (" + mergedPathway.id + ")";
+          // }
 
           const context: (string | Record<string, any>)[] = [
             "https://cdn.rawgit.com/wikipathways/WpVocabularies/7a46a05/contexts/pvjs.jsonld"
